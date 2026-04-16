@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operatori Occasionali - Spazio Ireos</title>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Roboto',sans-serif;background:#f4f5f7;color:#000;font-size:14px;line-height:1.25}
+.cover-header{background:linear-gradient(135deg,#37474f,#546e7a);color:#fff;padding:12px 20px;text-align:center}
+.cover-header h1{font-size:20px;font-weight:900;letter-spacing:0.5px}
+.cover-header p{font-size:12px;opacity:0.7;margin-top:2px}
+.cover-body{padding:8px 14px;max-width:100%}
+.toolbar{display:flex;gap:6px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
+.toolbar input{padding:5px 9px;border:1px solid #aaa;border-radius:4px;font-size:14px;font-family:'Roboto',sans-serif;width:240px}
+.toolbar select{padding:6px 9px;border:1px solid #aaa;border-radius:4px;font-size:13px;font-family:'Roboto',sans-serif}
+.btn{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-family:'Roboto',sans-serif;font-size:13px;font-weight:700;transition:all 0.15s}
+.btn-new{background:#2e7d32;color:#fff}.btn-new:hover{background:#1b5e20}
+.btn-save{background:#1565c0;color:#fff}.btn-save:hover{background:#0d47a1}
+.btn-del{background:#c62828;color:#fff}.btn-del:hover{background:#b71c1c}
+.btn-back{background:#546e7a;color:#fff}.btn-back:hover{background:#37474f}
+.btn-reset{background:#fff;border:1px solid #999;color:#555;font-size:10px}.btn-reset:hover{background:#eee}
+.btn-sm{padding:3px 8px;font-size:10px}
+.btn-xls{background:#1b5e20;color:#fff;padding:5px 12px}.btn-xls:hover{background:#0d3b0d}
+.btn-add-svc{padding:2px 7px;font-size:12px;background:rgba(0,0,0,0.1);border:1px solid rgba(0,0,0,0.2);color:#fff;border-radius:3px;cursor:pointer;font-family:'Roboto',sans-serif;font-weight:600}
+.btn-add-svc:hover{background:rgba(0,0,0,0.25)}
+.btn-add-yr{padding:4px 12px;font-size:11px;background:#ef6c00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:'Roboto',sans-serif;font-weight:700}
+.btn-add-yr:hover{background:#e65100}
+.btn-del-yr{padding:2px 7px;font-size:12px;background:rgba(0,0,0,0.1);border:1px solid rgba(0,0,0,0.2);color:#fff;border-radius:3px;cursor:pointer;font-family:'Roboto',sans-serif;font-weight:600}
+.btn-add-pay{padding:4px 10px;font-size:10px;background:#0277bd;color:#fff;border:none;border-radius:3px;cursor:pointer;font-family:'Roboto',sans-serif;font-weight:700}
+.btn-add-pay:hover{background:#01579b}
+.btn-del-row{padding:1px 5px;font-size:12px;background:#ef5350;color:#fff;border:none;border-radius:2px;cursor:pointer;font-family:'Roboto',sans-serif}
+.kpi-bar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.kpi{background:#fff;border-radius:5px;padding:6px 10px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,0.08);min-width:95px}
+.kpi .kl{font-size:10px;text-transform:uppercase;color:#555;font-weight:700}
+.kpi .kv{font-size:17px;font-weight:900;color:#000}
+.kpi .kv.red{color:#c62828}
+.op-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:7px}
+.op-card{background:#fff;border-radius:6px;padding:8px 10px;box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:pointer;border-left:3px solid #78909c;transition:all 0.12s}
+.op-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.15);transform:translateY(-1px)}
+.op-card .on{font-size:14px;font-weight:700;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op-card .os{font-size:11px;color:#666;margin:1px 0 4px}
+.op-card .ost{display:flex;gap:8px;font-size:12px;flex-wrap:wrap}
+.op-card .sv{text-align:center}
+.op-card .sv .sl{color:#888;text-transform:uppercase;font-weight:600;font-size:10px}
+.op-card .sv .sn{font-size:14px;font-weight:700;color:#000}
+.op-card .sv .sn.red{color:#c62828}
+.sheet-header{background:#455a64;color:#fff;padding:7px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.2)}
+.sheet-header h2{font-size:16px;font-weight:700}
+.sheet-header .acts{display:flex;gap:4px;align-items:center}
+.sheet-body{padding:8px}
+
+/* YEAR SEPARATOR */
+.year-sep{height:6px;background:linear-gradient(90deg,#90a4ae,#b0bec5,#90a4ae);margin:16px 0;border-radius:3px}
+
+.year-block{border-radius:4px;margin-bottom:4px;overflow:hidden;border-width:2px;border-style:solid}
+.ytitle{padding:5px 10px;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.carry-box{padding:5px 12px;font-size:13px;color:#000;display:flex;align-items:center;gap:6px;border-bottom:1px solid #ddd}
+.carry-box strong{color:#e65100}
+.sec-lbl{padding:5px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:4px 5px;text-align:center;font-size:12px;font-weight:700;color:#000;white-space:nowrap;border:1px solid rgba(0,0,0,0.15)}
+th.month-hdr{font-size:15px;font-weight:900;letter-spacing:0.3px}
+td{padding:3px 4px;border:1px solid #ccc;text-align:center;white-space:nowrap;color:#000;background:#fff}
+td.lbl{text-align:left;font-weight:700;font-size:12px;background:#f5f5f5;padding-left:5px;min-width:90px;color:#000}
+td.comp{background:#f9f9f9;color:#000}
+td.edit-cell{background:#fff9c4}
+td.date-cell{background:#c8e6c9}
+td.net-cell{background:#e8f5e9}
+/* RESIDUAL cells: big font */
+td.res-big{font-size:15px;font-weight:900;padding:3px 5px}
+td.res-big-pos{font-size:15px;font-weight:900;padding:3px 5px;background:#e8f5e9}
+td.res-big-neg{font-size:15px;font-weight:900;padding:3px 5px;background:#ffebee;color:#c62828}
+td.bal-pos{background:#e8f5e9;font-weight:700}
+td.bal-neg{background:#ffebee;font-weight:700}
+.zero{color:#c8ced6}
+.neg{color:#c62828;font-weight:700}
+/* No spin buttons on number inputs */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+.edit-cell input.zero-val,.date-cell input.zero-val{color:#c8ced6}
+.edit-cell input,.date-cell input{width:100%;border:none;background:transparent;text-align:center;font-size:13px;font-family:'Roboto',sans-serif;padding:0;outline:none;color:#000}
+.edit-cell input.svc-input,input.svc-input{font-size:9px!important;text-align:left;width:100%;border:none;background:transparent;font-family:'Roboto',sans-serif;outline:none;color:#000}
+.rate-in{width:55px;text-align:center;border:none;background:transparent;font-size:13px;font-family:'Roboto',sans-serif;outline:none;color:#000;font-weight:700}
+.rate-hdr{width:65px;text-align:center;border:1px solid rgba(0,0,0,0.2);border-radius:3px;background:rgba(255,255,255,0.5);color:#000;font-weight:700;font-size:13px;font-family:'Roboto',sans-serif}
+.unsaved{display:inline-block;background:#ef6c00;color:#fff;padding:1px 6px;border-radius:8px;font-size:12px;font-weight:700;margin-left:6px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:8px;padding:16px;width:440px;max-width:95vw;box-shadow:0 6px 24px rgba(0,0,0,0.3)}
+.modal h3{color:#000;margin-bottom:10px;font-size:15px;font-weight:900}
+.modal label{display:block;font-size:11px;font-weight:600;margin:6px 0 2px;color:#333}
+.modal input{width:100%;padding:6px 8px;border:1px solid #bbb;border-radius:4px;font-size:14px;font-family:'Roboto',sans-serif}
+.modal .ma{margin-top:12px;display:flex;gap:6px;justify-content:flex-end}
+.modal .cf-info{background:#fff3e0;border:1px solid #ffb74d;border-radius:4px;padding:6px 10px;margin-top:8px;font-size:11px}
+.modal .cf-info strong{color:#e65100}
+.bal-summary{margin:5px 0;padding:8px 12px;border-radius:4px;font-size:13px;display:flex;gap:16px;align-items:center;font-weight:700;flex-wrap:wrap}
+.toast{position:fixed;bottom:16px;right:16px;color:#fff;padding:8px 16px;border-radius:5px;font-weight:700;z-index:300;font-size:14px;animation:fi 0.3s}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media print{.cover-header,.sheet-header,.toolbar,.btn,.btn-add-pay,.btn-del-row,.btn-add-svc,.btn-del-yr,.btn-add-yr,.unsaved,.toast{display:none !important}.year-block{break-inside:avoid;border:1px solid #000 !important}table{font-size:10px !important}td,th{border:1px solid #000 !important}}
+
+.pin-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#37474f,#546e7a);z-index:500;display:flex;align-items:center;justify-content:center}
+.pin-box{background:#fff;border-radius:12px;padding:30px 40px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.3);width:360px}
+.pin-box h2{font-size:18px;font-weight:900;color:#000;margin-bottom:4px}
+.pin-box p{font-size:12px;color:#666;margin-bottom:16px}
+.pin-input{width:180px;padding:10px 14px;font-size:22px;font-weight:700;font-family:'Roboto',sans-serif;text-align:center;letter-spacing:8px;border:2px solid #bbb;border-radius:8px;outline:none;color:#000}
+.pin-input:focus{border-color:#37474f}
+.pin-input.err{border-color:#c62828;animation:shake 0.3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pin-btn{margin-top:14px;padding:8px 28px;font-size:14px;font-weight:700;font-family:'Roboto',sans-serif;background:#37474f;color:#fff;border:none;border-radius:6px;cursor:pointer}
+.pin-btn:hover{background:#263238}
+.pin-msg{font-size:12px;margin-top:10px;min-height:18px}
+.pin-msg.err{color:#c62828;font-weight:700}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+var SEED=[{"sheet":"Abdel","name":"ABDEL RAOUF HASSAN AMIRA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[2,3,3,3,4,1,4,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,1,4,4,3],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":5.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":11.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":4.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18,"services":[{"name":null,"residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18}],"payments":[{"date":"13/02/2026","hours":12.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Agnella","name":"AGNELLA MORENO MARIO","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[7.5,10,7.5,7.5,10,2.5,0,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,1.5,9,12,9],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":17.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/06/2025","hours":27.5,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"(da Agnella (20))","residual":0,"hours":[15,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"13/02/2026","hours":46.5,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Barattini","name":"BARATTINI LUCA CARLO","years":{"2025":{"default_rate":18.0,"services":[{"name":"2021 CAM MI3","residual":11,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18.0},{"name":"2021 CAM MUN3","residual":0,"hours":[3,3,4,2,4,1,0,0,0,0,0,0],"rate":18.0},{"name":"2024 CSRC MUN3","residual":18,"hours":[6,6,6,4,8,0,0,0,0,0,0,0],"rate":18.0},{"name":"2025/2026 -AS- CSRC MUN3 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,9,12,6],"rate":22.0}],"payments":[{"date":"20/01/2025","hours":11.0,"attrib":null,"rate":18.0},{"date":"20/01/2025","hours":18.0,"attrib":null,"rate":18.0},{"date":"01/07/2025","hours":20.4446,"attrib":"2024 CSRC MUN3","rate":18.0},{"date":"01/07/2025","hours":5.111,"attrib":"2024 CSRC MUN3","rate":18.0},{"date":"01/07/2025","hours":21.4444,"attrib":"2025 CAM MUN3","rate":18.0}]},"2026":{"default_rate":18,"services":[{"name":null,"residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18}],"payments":[{"date":"02/02/2026","hours":9.409,"attrib":"2024 CSRC MUN3","rate":22.0},{"date":"02/02/2026","hours":18.0,"attrib":"2025 -A- INVECCH","rate":22.0}]}}},{"sheet":"Biondo","name":"BIONDO RENATA","years":{"2025":{"default_rate":12.5,"services":[{"name":"2025 CAM MUN3","residual":0,"hours":[0,0,0,0,0,0,0,0,0,15,15,6.5],"rate":12.5},{"name":"2025 CAM MUN3","residual":0,"hours":[0,0,0,0,0,0,0,0,0,4,4,3],"rate":18.0}],"payments":[]},"2026":{"default_rate":18,"services":[{"name":null,"residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18}],"payments":[{"date":"26/01/2026","hours":36.5,"attrib":"2025 CAM MUN3","rate":12.5},{"date":"26/01/2026","hours":11.0,"attrib":"2025 CAM MUN3","rate":18.0}]}}},{"sheet":"Boccalari","name":"BOCCALARI ELEONORA","years":{"2025":{"default_rate":12.5,"services":[{"name":"2025 CAM MUN3","residual":0,"hours":[0,0,0,0,0,18.5,0,0,0,0,0,0],"rate":12.5}],"payments":[{"date":"14/07/2025","hours":18.5,"attrib":"2025 CAM MUN3","rate":12.5}]},"2026":{"default_rate":12.5,"services":[],"payments":[]}}},{"sheet":"Bonelli","name":"BONELLI EGIZIA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[3,4,5,3,4,1,0,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,10,8,6],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":7.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/06/2025","hours":13.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18,"services":[{"name":null,"residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18}],"payments":[{"date":"01/02/2026","hours":24.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Bosco","name":"BOSCO GIORGIA","years":{"2025":{"default_rate":15.0,"services":[{"name":"2024 PORPORA","residual":-51.1,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":15.0},{"name":"2025 PORPORA","residual":0,"hours":[26.33,16,4,3,3,0,0,0,0,0,0,0],"rate":15.0}],"payments":[{"date":"18/06/2025","hours":1.23,"attrib":null,"rate":15.0}]},"2026":{"default_rate":15.0,"services":[],"payments":[]}}},{"sheet":"Bostina","name":"BOSTINA RAMONA","years":{"2025":{"default_rate":12.5,"services":[{"name":"2025 COLZATE","residual":0,"hours":[0,0,0,0,0,0,25,0,0,0,0,0],"rate":12.5}],"payments":[{"date":"07/08/2025","hours":25.0,"attrib":null,"rate":12.5}]},"2026":{"default_rate":12.5,"services":[],"payments":[]}}},{"sheet":"Brambilla","name":"BRAMBILLA GIULIA ESTER","years":{"2025":{"default_rate":16.0,"services":[{"name":"2024 SENSORIALI","residual":15,"hours":[25,28,17,0,0,6,0,0,0,0,0,0],"rate":16.0}],"payments":[{"date":"15/01/2025","hours":15.0,"attrib":null,"rate":16.0},{"date":"14/02/2025","hours":25.0,"attrib":null,"rate":16.0},{"date":"14/03/2025","hours":28.0,"attrib":null,"rate":16.0},{"date":"14/04/2025","hours":17.0,"attrib":null,"rate":16.0},{"date":"14/07/2025","hours":6.0,"attrib":null,"rate":16.0}]},"2026":{"default_rate":16.0,"services":[],"payments":[]}}},{"sheet":"Bucchieri","name":"BUCCHIERI MARIA ROBERTA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[4.5,4.5,6,4.5,6,1.5,7.5,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":9.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":18.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":7.5,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Bulfaro","name":"BULFARO FILOMENA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2024 CSRC MUN3 EXTRA","residual":32.5,"hours":[10.5,10.5,9,11.5,0,0,0,0,0,0,0,0],"rate":18.0},{"name":"2025/2026 -AS- CSRC MUN3 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,7.5,7.5,5],"rate":18.0}],"payments":[{"date":"20/01/2025","hours":32.5,"attrib":null,"rate":18.0},{"date":"01/07/2025","hours":41.5,"attrib":null,"rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[{"date":"02/02/2026","hours":20.4445,"attrib":"2024 CSRC MUN3","rate":18.0}]}}},{"sheet":"Cappo","name":"CAPPO ANTONELLA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[4.5,6,4.5,4.5,6,1.5,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":10.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":16.5,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Castellanos","name":"CASTELLANOS MAVIS DE LA CARIDAD","years":{"2025":{"default_rate":20.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,10,8,6],"rate":20.0}],"payments":[{"date":"14/11/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"15/12/2025","hours":8.0,"attrib":"2025 CAM MUN1","rate":20.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[8,8,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"15/01/2026","hours":6.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"16/02/2026","hours":8.0,"attrib":"2026 -A- CAM MUN1","rate":20.0},{"date":"16/03/2026","hours":8.0,"attrib":"2026 -A- CAM MUN1","rate":20.0}]}}},{"sheet":"Catalano","name":"CATALANO ARIANNA","years":{"2025":{"default_rate":25.0,"services":[{"name":"2021 CAM MI3","residual":3,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":25.0},{"name":"2025 CAM MUN3","residual":0,"hours":[3,3,4,4,5.5,3,4,0,0,0,0,0],"rate":25.0},{"name":"2025 CAM MUN3","residual":0,"hours":[0,0,0,0,0,0,0,0,0,4,4,3],"rate":27.5}],"payments":[{"date":"14/02/2025","hours":6.0,"attrib":"2025 CAM MUN3","rate":25.0},{"date":"14/04/2025","hours":7.0,"attrib":"2025 CAM MUN3","rate":25.0},{"date":"18/06/2025","hours":9.5,"attrib":"2025 CAM MUN3","rate":25.0},{"date":"19/09/2025","hours":7.0,"attrib":null,"rate":25.0},{"date":"15/12/2025","hours":8.0,"attrib":"2025 CAM MUN3","rate":27.5}]},"2026":{"default_rate":27.5,"services":[{"name":"2026 -A- CAM MUN3","residual":0,"hours":[3,0,0,0,0,0,0,0,0,0,0,0],"rate":27.5}],"payments":[{"date":"16/02/2026","hours":6.0,"attrib":"2025 CAM MUN3","rate":27.5}]}}},{"sheet":"Cavalli","name":"CAVALLI PONTIROLI ALESSANDRO","years":{"2025":{"default_rate":20.0,"services":[{"name":"2024 CSRC MUN1","residual":26,"hours":[8,8,8,4,6,2,0,0,0,0,0,0],"rate":20.0},{"name":"2025 CAM MUN1","residual":0,"hours":[28,32,39,32,31,8,20,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"20/01/2025","hours":26.0,"attrib":null,"rate":20.0},{"date":"13/03/2025","hours":60.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"20/06/2025","hours":110.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"23/06/2025","hours":36.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"08/09/2025","hours":18.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"08/09/2025","hours":2.0,"attrib":"RS KM","rate":20.0}]},"2026":{"default_rate":20.0,"services":[],"payments":[]}}},{"sheet":"Ceresoli","name":"CERESOLI CHIARA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2024 CSRC MUN1","residual":0,"hours":[4,6,4,8,6,0,0,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[6,4,6,6,6,0,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"14/02/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"13/03/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/04/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/05/2025","hours":14.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/06/2025","hours":12.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Cianfagna","name":"CIANFAGNA CRISTIANA","years":{"2025":{"default_rate":20.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,4,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"08/09/2025","hours":4.0,"attrib":"2025 CAM MUN1","rate":20.0}]},"2026":{"default_rate":20.0,"services":[],"payments":[]}}},{"sheet":"Colussi","name":"COLUSSI DANIELA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2021 CAM MI3","residual":11,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN3","residual":0,"hours":[3,3,4,2,4,1,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"20/01/2025","hours":11.0,"attrib":null,"rate":18.0},{"date":"01/07/2025","hours":17.0,"attrib":"2025 CAM MUN3","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Confalonieri","name":"CONFALONIERI SIMONA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[6,6,8,4,6,0,0,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,5,5,7.5],"rate":20.0}],"payments":[{"date":"19/03/2025","hours":12.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":18.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"(da Confalonieri 20)","residual":0,"hours":[7.5,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"13/02/2026","hours":25.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Cucchi","name":"CUCCHI MARIANGIOLA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[9.5,12,11,10,12,3,16,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,2,12,2,0],"rate":20.0}],"payments":[{"date":"19/03/2025","hours":21.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":36.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":16.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[6,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"14/02/2026","hours":22.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Perla","name":"DAVIDE PERLA","years":{"2025":{"default_rate":20.0,"services":[],"payments":[]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[0,15,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"16/03/2026","hours":13.5,"attrib":"2026 -A- CAM MUN1","rate":20.0}]}}},{"sheet":"De Maio","name":"DE MAIO BARBARA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[33.5,58,0,0,0,0,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"28/02/2025","hours":18.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"28/02/2025","hours":7.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"28/02/2025","hours":65.5,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Delfino","name":"DELFINO AURELIA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[5,7,7,6,9,0,0,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,10,6,9],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":12.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":22.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"(da Delfino (20))","residual":0,"hours":[2,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"13/02/2026","hours":27.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Demuro","name":"DEMURO OLIVIA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[8,9,12,10,12,3,19.5,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,5,14,12.75],"rate":20.0}],"payments":[{"date":"14/05/2025","hours":39.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":15.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":19.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/11/2025","hours":5.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"15/12/2025","hours":14.0,"attrib":"2025 CAM MUN1","rate":20.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026-A-CAM MUN1","residual":0,"hours":[4.25,6.5,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"15/01/2026","hours":12.75,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"16/03/2026","hours":10.75,"attrib":"2026-A-CAM MUN1","rate":20.0}]}}},{"sheet":"Depedro","name":"DEPEDRO GIOVANNI","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN3","residual":0,"hours":[0,0,0,0,0,1.5,6,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"06/10/2025","hours":7.5,"attrib":"2025 CAM MUN3","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Derna","name":"DERNA NOEMI","years":{"2025":{"default_rate":16.0,"services":[{"name":"2025 PORPORA","residual":0,"hours":[0,21,44,45,39,15,48,0,0,0,0,0],"rate":16.0}],"payments":[{"date":"14/03/2025","hours":21.0,"attrib":null,"rate":16.0},{"date":"14/04/2025","hours":44.0,"attrib":null,"rate":16.0},{"date":"14/05/2025","hours":45.0,"attrib":null,"rate":16.0},{"date":"18/06/2025","hours":39.0,"attrib":null,"rate":16.0},{"date":"14/07/2025","hours":15.0,"attrib":null,"rate":16.0},{"date":"19/09/2025","hours":45.0,"attrib":null,"rate":16.0},{"date":"19/09/2025","hours":3.0,"attrib":null,"rate":16.0}]},"2026":{"default_rate":16.0,"services":[],"payments":[]}}},{"sheet":"Di Bari","name":"DI BARI BEATRICE","years":{"2025":{"default_rate":20.0,"services":[{"name":"2024 CSRC MUN3","residual":0,"hours":[0,0,0,0,0,0,0,0,0,4.5,6,3],"rate":20.0}],"payments":[{"date":"15/12/2025","hours":15.0,"attrib":null,"rate":20.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CSRC MUN3 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"05/03/2026","hours":10.5,"attrib":null,"rate":20.0}]}}},{"sheet":"Di Perna","name":"DI PERNA MICHELE","years":{"2025":{"default_rate":20.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[3,4,4,3,4,2,7.5,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,7.5,6,7],"rate":20.0},{"name":"2025/2026 -AS- CSRC MUN1 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,7.5,6,4.5],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":7.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":13.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":7.5,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[6,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"02/02/2026","hours":16.2,"attrib":null,"rate":20.0},{"date":"02/02/2026","hours":1.8,"attrib":null,"rate":20.0},{"date":"07/02/2026","hours":26.5,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Di Sano","name":"DI SANO EMANUELA MARIA ANTONIETTA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[20,28,33,28,26,9,31,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":48.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/04/2025","hours":33.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/05/2025","hours":28.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/06/2025","hours":35.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"07/08/2025","hours":31.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[0,13,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"20/03/2026","hours":13.0,"attrib":"2026 -A- CAM MUN1","rate":20.0}]}}},{"sheet":"Filippi","name":"FILIPPI FABRIZIA","years":{"2025":{"default_rate":30.91,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,3.5,6,4.5],"rate":30.91}],"payments":[]},"2026":{"default_rate":30.91,"services":[],"payments":[{"date":"13/02/2026","hours":14.00017,"attrib":"2025 CAM MUN1","rate":30.91}]}}},{"sheet":"Floreani","name":"FLOREANI STEFANO","years":{"2025":{"default_rate":22.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[6,8,8,4,8,2,0,0,0,14.5,8,7],"rate":22.0},{"name":"2025 CAM MUN1 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,3],"rate":37.5}],"payments":[{"date":"13/03/2025","hours":14.0,"attrib":"2025 CAM MUN1","rate":22.0},{"date":"20/06/2025","hours":22.0,"attrib":"2025 CAM MUN1","rate":22.0}]},"2026":{"default_rate":18,"services":[{"name":null,"residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18}],"payments":[{"date":"13/02/2026","hours":29.5,"attrib":"2025 CAM MUN1","rate":22.0},{"date":"13/02/2026","hours":3.0,"attrib":null,"rate":37.5}]}}},{"sheet":"Forzani","name":"FORZANI VALENTINA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[9,12,12,9,12,3,10,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,10,11,9],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":36.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[10,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"07/02/2026","hours":40.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Gallo","name":"GALLO MIRKO","years":{"2025":{"default_rate":18.0,"services":[{"name":"2021 CAM MI3","residual":9,"hours":[2,2,3,2,4,2.5,0,0,0,3,3,2],"rate":18.0}],"payments":[{"date":"20/01/2025","hours":9.0,"attrib":null,"rate":18.0},{"date":"01/07/2025","hours":15.5,"attrib":"2025 CAM MUN3","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[{"date":"26/01/2026","hours":8.0,"attrib":"2025 CAM MUN3","rate":18.0}]}}},{"sheet":"Gelmini","name":"GELMINI EMILIA","years":{"2025":{"default_rate":30.0,"services":[{"name":"2025 CAM MUN3","residual":0,"hours":[0,0,0,2,4,0,0,0,2,0,0,0],"rate":30.0}],"payments":[{"date":"01/07/2025","hours":6.0,"attrib":"2025 CAM MUN3","rate":30.0},{"date":"13/10/2025","hours":2.0,"attrib":null,"rate":30.0}]},"2026":{"default_rate":30.0,"services":[],"payments":[]}}},{"sheet":"Gianotti","name":"GIANOTTI LORENZA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[4.5,6,6,6,6,1.5,2,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,1.5,6,3,9],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":10.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":19.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"06/10/2025","hours":2.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[10.5,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"07/02/2026","hours":24.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"18/02/2026","hours":6.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Gioia","name":"GIOIA ANTONIETTA","years":{"2025":{"default_rate":16.6666,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,6,1.5,0,0,0,0,0,0],"rate":16.6666}],"payments":[{"date":"01-gen-25","hours":7.5,"attrib":null,"rate":16.6666}]},"2026":{"default_rate":16.6666,"services":[],"payments":[]}}},{"sheet":"Grazian","name":"GRAZIAN ALESSANDRO","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[9,12,12,9,18,3,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/04/2025","hours":12.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/05/2025","hours":9.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/06/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Guerini","name":"GUERINI MATTEO","years":{"2025":{"default_rate":10.0,"services":[{"name":"2025 COLZATE","residual":0,"hours":[0,0,0,0,0,0,200,0,0,0,0,0],"rate":10.0}],"payments":[{"date":"07/08/2025","hours":81.4,"attrib":null,"rate":10.0},{"date":"07/08/2025","hours":117.3,"attrib":"2024 CSRC MUN1","rate":10.0},{"date":"07/08/2025","hours":1.3,"attrib":null,"rate":10.0}]},"2026":{"default_rate":10.0,"services":[],"payments":[]}}},{"sheet":"Gussetti","name":"GUSSETTI GIUSEPPE","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[6,8,10,4,8,0,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":14.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":22.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Lembi","name":"LEMBI MARIAPAOLA","years":{"2025":{"default_rate":20.0,"services":[{"name":"2025/2026 -AS- CSRC MUN1 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,6,8,6],"rate":20.0}],"payments":[]},"2026":{"default_rate":20.0,"services":[],"payments":[{"date":"15/01/2026","hours":20.0,"attrib":null,"rate":20.0}]}}},{"sheet":"Licari","name":"LICARI VITTORIA ANGELA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[6,8,8,4,8,6,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":14.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":20.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":6.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Losciale","name":"LOSCIALE ELISA","years":{"2025":{"default_rate":16.0,"services":[{"name":"2024 PORPORA","residual":9,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":16.0},{"name":"2025 PORPORA","residual":0,"hours":[9.5,0,11,3,0,12,49.75,20.585,52,0,0,0],"rate":16.0}],"payments":[{"date":"15/01/2025","hours":9.0,"attrib":null,"rate":16.0},{"date":"14/02/2025","hours":9.5,"attrib":null,"rate":16.0},{"date":"14/04/2025","hours":11.0,"attrib":null,"rate":16.0},{"date":"14/05/2025","hours":3.0,"attrib":null,"rate":16.0},{"date":"14/07/2025","hours":12.0,"attrib":null,"rate":16.0},{"date":"07/08/2025","hours":48.125,"attrib":"2024 EXQUBI","rate":16.0},{"date":"07/08/2025","hours":1.625,"attrib":null,"rate":16.0},{"date":"28/08/2025","hours":20.625,"attrib":"2024 EXQUBI","rate":16.0},{"date":"13/10/2025","hours":52.0,"attrib":null,"rate":16.0}]},"2026":{"default_rate":16.0,"services":[{"name":"2026 -A- PORPORA","residual":0,"hours":[49,55.25,0,0,0,0,0,0,0,0,0,0],"rate":16.0}],"payments":[{"date":"16/02/2026","hours":49.0,"attrib":null,"rate":16.0},{"date":"16/03/2026","hours":55.25,"attrib":null,"rate":16.0}]}}},{"sheet":"Marcocci","name":"MARCOCCI ANTONELLA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[6,8,8,8,8,2,10,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,12,12,9],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":14.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":26.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[9,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"13/02/2026","hours":42.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Marconetti","name":"MARCONETTI ANGELA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[6,6,10,8,16,16,22.5,0,20,36.5,29.5,31.5],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":12.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/05/2025","hours":18.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":19.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/07/2025","hours":13.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"07/08/2025","hours":22.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/11/2025","hours":49.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"15/12/2025","hours":29.5,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[10.5,10.5,0,0,0,0,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"15/01/2026","hours":18.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/02/2026","hours":10.5,"attrib":"2026 -A- CAM MUN1","rate":18.0},{"date":"16/03/2026","hours":10.5,"attrib":"2026 -A- CAM MUN1","rate":18.0}]}}},{"sheet":"Massara","name":"MASSARA PATRIZIA MARIA","years":{"2025":{"default_rate":18.75,"services":[{"name":"2021 CAM MI3","residual":46,"hours":[0,0,0,0,0,0,0,0,0,16,16,12],"rate":18.75},{"name":"2025 CAM MUN3","residual":0,"hours":[12,12,16,16,16,4,30,0,2,0,0,0],"rate":18.75}],"payments":[{"date":"20/01/2025","hours":46.0,"attrib":null,"rate":18.75},{"date":"01/07/2025","hours":76.0,"attrib":"2025 CAM MUN3","rate":18.75},{"date":"13/10/2025","hours":32.0,"attrib":"2025 CAM MUN3","rate":18.75}]},"2026":{"default_rate":18.75,"services":[],"payments":[{"date":"26/01/2026","hours":44.0,"attrib":"2025 CAM MUN3","rate":18.75}]}}},{"sheet":"Mirai","name":"MIRAI GIULIA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,7,7,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"01/07/2025","hours":14.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Monti","name":"MONTI LIANA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,6,6,4.5],"rate":18.0}],"payments":[]},"2026":{"default_rate":18.0,"services":[],"payments":[{"date":"26/01/2026","hours":16.5,"attrib":"2025 CAM MUN3","rate":18.0}]}}},{"sheet":"Moreo","name":"MOREO STEFANIA","years":{"2025":{"default_rate":31.25,"services":[{"name":"2025 CAM MUN1 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,4],"rate":31.25}],"payments":[]},"2026":{"default_rate":31.25,"services":[{"name":"2026 -A- CAM MUN1 EXTRA","residual":0,"hours":[5,0,0,0,0,0,0,0,0,0,0,0],"rate":31.25}],"payments":[{"date":"15/01/2026","hours":4.0,"attrib":null,"rate":31.25},{"date":"10/02/2026","hours":5.0,"attrib":null,"rate":31.25},{"date":"05/03/2026","hours":4.0,"attrib":null,"rate":31.25}]}}},{"sheet":"Morin","name":"MORIN MURIEL SUZANNE LOUISE","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[9,12,12,12,12,3,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":39.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Murgia","name":"MURGIA MELISSA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,10.5,21,17.5,21,21,21,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,6.5,24.5,23,16],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":10.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/04/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/05/2025","hours":17.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/06/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"17/07/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"07/08/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"13/10/2025","hours":6.5,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"14/11/2025","hours":24.5,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"15/12/2025","hours":23.0,"attrib":"2025 CAM MUN1","rate":20.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[23,23,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"15/01/2026","hours":16.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"15/02/2026","hours":23.0,"attrib":"2026 -A- CAM MUN1","rate":20.0},{"date":"16/03/2026","hours":23.0,"attrib":"2026 -A- CAM MUN1","rate":20.0}]}}},{"sheet":"Pasquinelli","name":"PASQUINELLI BIANCA","years":{"2025":{"default_rate":20.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,5,5,0],"rate":20.0}],"payments":[{"date":"15/12/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":20.0}]},"2026":{"default_rate":20.0,"services":[],"payments":[]}}},{"sheet":"Peirano","name":"PEIRANO GINEVRA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[4.5,6,6,4.5,6,1.5,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":10.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/04/2025","hours":6.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/05/2025","hours":4.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/06/2025","hours":7.5,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Polopoli","name":"POLOPOLI DIANA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[4,8,8,6,8,0,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":12.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":22.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Pozzi","name":"POZZI CLARA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[2,4,6,6,7.5,4,6,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN3","residual":0,"hours":[0,0,0,3,6,1.5,0,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,2,8,8,6],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":6.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":19.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"01/07/2025","hours":10.5,"attrib":"2025 CAM MUN3","rate":18.0},{"date":"08/09/2025","hours":10.0,"attrib":"2025 CAM MUN3","rate":18.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"13/02/2026","hours":24.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Quagliarella","name":"QUAGLIARELLA ROBERTO","years":{"2025":{"default_rate":20.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,0,10,8,6],"rate":20.0}],"payments":[{"date":"14/11/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"15/12/2025","hours":8.0,"attrib":"2025 CAM MUN1","rate":20.0}]},"2026":{"default_rate":20.0,"services":[{"name":"2026 -A- CAM MUN1","residual":0,"hours":[8,6,0,0,0,0,0,0,0,0,0,0],"rate":20.0}],"payments":[{"date":"15/01/2026","hours":6.0,"attrib":"2025 CAM MUN1","rate":20.0},{"date":"14/02/2026","hours":8.0,"attrib":"2026 -A- CAM MUN1","rate":20.0},{"date":"16/03/2026","hours":6.0,"attrib":"2026 -A- CAM MUN1","rate":20.0}]}}},{"sheet":"Quinn","name":"QUINN NICOLE","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,3.5,0,0,0,0,0,0,0,0],"rate":18.0}],"payments":[]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Quispe","name":"QUISPE TAPIA BRAYZUN","years":{"2025":{"default_rate":18.75,"services":[{"name":"2025 CAM MUN3","residual":0,"hours":[4.5,4.5,6,6,6,5,0,0,0,6,6,4.5],"rate":18.75}],"payments":[{"date":"01/07/2025","hours":32.0,"attrib":"2025 CAM MUN3","rate":18.75}]},"2026":{"default_rate":18.75,"services":[],"payments":[{"date":"26/01/2026","hours":16.5,"attrib":"2025 CAM MUN3","rate":18.75}]}}},{"sheet":"Rossi","name":"ROSSI MONICA AMARILLIS","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[13.5,18,18,17,21.5,3,6,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN1","residual":0,"hours":[0,0,0,0,0,0,0,0,2,8,8,4],"rate":20.0}],"payments":[{"date":"13/03/2025","hours":24.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":64.5,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"08/09/2025","hours":8.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18,"services":[{"name":null,"residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18}],"payments":[{"date":"13/02/2026","hours":22.0,"attrib":"2025 CAM MUN1","rate":20.0}]}}},{"sheet":"Russo","name":"RUSSO GIUSEPPINA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2024 CSRC MUN3","residual":15,"hours":[4.5,4.5,6,4.5,0,0,0,0,0,0,0,0],"rate":18.0},{"name":"2025/2026 -AS- CSRC MUN3 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,8.5,8.5,5.5],"rate":18.0}],"payments":[{"date":"20/01/2025","hours":15.0,"attrib":null,"rate":18.0},{"date":"01/07/2025","hours":19.5,"attrib":null,"rate":18.0}]},"2026":{"default_rate":18.0,"services":[{"name":"2025/2026 -AS- CSRC MUN3 EXTRA","residual":0,"hours":[5,5,5,5,6.88,0,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"02/02/2026","hours":30.0275,"attrib":"2024 CSRC MUN1","rate":18.0}]}}},{"sheet":"Sabatino","name":"SABATINO ROBERTO","years":{"2025":{"default_rate":18.0,"services":[{"name":"2021 CAM MI3","residual":-1.5,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18.0},{"name":"2024 CSRC MUN3","residual":0,"hours":[4.5,4.5,6,3,6,1.5,0,0,0,0,0,0],"rate":18.0},{"name":"2025 CAM MUN3","residual":0,"hours":[4.5,4.5,6,7.5,6,1.5,10.5,1.5,0,0,0,0],"rate":18.0},{"name":"2024 CSRC MUN1","residual":18.35,"hours":[8,8,8,6,6,5,0,0,0,0,0,0],"rate":20.0},{"name":"2025 CAM MUN3","residual":0,"hours":[0,0,0,0,0,0,0,0,0,6,6,4.5],"rate":20.0}],"payments":[{"date":"20/01/2025","hours":18.35,"attrib":null,"rate":20.0},{"date":"01/07/2025","hours":30.0,"attrib":"2025 CAM MUN3","rate":18.0},{"date":"01/07/2025","hours":20.4442,"attrib":"2024 CSRC MUN3","rate":18.0},{"date":"01/07/2025","hours":5.111,"attrib":"2024 CSRC MUN3","rate":18.0},{"date":"01/07/2025","hours":27.6,"attrib":"2024 CSRC MUN1","rate":20.0},{"date":"01/07/2025","hours":6.9,"attrib":"2024 CSRC MUN1","rate":20.0},{"date":"13/10/2025","hours":10.5,"attrib":"2025 CAM MUN3","rate":18.0},{"date":"01-mag-25","hours":16.5,"attrib":null,"rate":18.0}]},"2026":{"default_rate":18,"services":[{"name":null,"residual":0,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18}],"payments":[{"date":"04/02/2026","hours":16.5,"attrib":"2025 CAM MUN3","rate":20.0}]}}},{"sheet":"Schinocca","name":"SCHINOCCA ROBERTA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[0,2,2,2,0,0,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"31/03/2025","hours":4.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":2.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Sequi","name":"SEQUI LORENZA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[9,12,8,8,8,2,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/04/2025","hours":8.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"14/05/2025","hours":8.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"18/06/2025","hours":10.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Sugamosto","name":"SUGAMOSTO FRANCESCO ANGELO","years":{"2025":{"default_rate":18.0,"services":[{"name":"2021 CAM MI 3","residual":5.5,"hours":[0,0,0,0,0,0,0,0,0,0,0,0],"rate":18.0},{"name":"2024 CSRC MUN3","residual":13.5,"hours":[4.5,4.5,4.5,4.5,6,0,0,0,0,4.5,6,3],"rate":18.0},{"name":"2025 CAM MUN3","residual":0,"hours":[4.5,6,4.5,4.5,7.5,1.5,3,0,0,4.5,4.5,4.5],"rate":18.0},{"name":"2025/2026 -AS- CSRC MUN1 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,3,3,3],"rate":18.0}],"payments":[{"date":"20/01/2025","hours":5.5,"attrib":null,"rate":18.0},{"date":"20/01/2025","hours":13.5,"attrib":null,"rate":18.0},{"date":"01/07/2025","hours":32.5835,"attrib":"2024 CSRC MUN3","rate":18.0},{"date":"01/07/2025","hours":9.6,"attrib":"2024 CSRC MUN3","rate":18.0},{"date":"01/07/2025","hours":10.3165,"attrib":"2025 CAM MUN3","rate":18.0},{"date":"13/10/2025","hours":3.0,"attrib":null,"rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[{"date":"26/01/2026","hours":13.5,"attrib":"2025 CAM MUN3","rate":18.0},{"date":"02/02/2026","hours":23.0,"attrib":"2024 CSRC MUN3","rate":18.0}]}}},{"sheet":"Tavarone","name":"TAVARONE VALENTINA","years":{"2025":{"default_rate":18.5,"services":[{"name":"2025 SENSORIALI","residual":0,"hours":[0,0,0,0,0,0,0,0,30,90.5,85,55],"rate":18.5}],"payments":[{"date":"13/10/2025","hours":30.0,"attrib":null,"rate":18.5},{"date":"14/11/2025","hours":90.5,"attrib":null,"rate":18.5},{"date":"15/12/2025","hours":85.0,"attrib":null,"rate":18.5},{"date":"30/12/2025","hours":32.4055,"attrib":null,"rate":18.5},{"date":"30/12/2025","hours":22.5945,"attrib":"2024 EXQUBI","rate":18.5}]},"2026":{"default_rate":18.5,"services":[{"name":"2025 SENSORIALI","residual":0,"hours":[59,94,0,0,0,0,0,0,0,0,0,0],"rate":18.5}],"payments":[{"date":"15/02/2026","hours":59.0,"attrib":null,"rate":18.5},{"date":"16/03/2026","hours":94.0,"attrib":null,"rate":18.5}]}}},{"sheet":"Toso","name":"TOSO BEATRICE","years":{"2025":{"default_rate":16.0,"services":[{"name":"2024 SENSORIALI","residual":25,"hours":[30,42,41,32,39,1,0,0,0,0,0,0],"rate":16.0}],"payments":[{"date":"15/01/2025","hours":25.0,"attrib":null,"rate":16.0},{"date":"14/02/2025","hours":30.0,"attrib":null,"rate":16.0},{"date":"14/03/2025","hours":42.0,"attrib":null,"rate":16.0},{"date":"14/04/2025","hours":41.0,"attrib":null,"rate":16.0},{"date":"14/05/2025","hours":32.0,"attrib":null,"rate":16.0},{"date":"18/06/2025","hours":40.0,"attrib":null,"rate":16.0}]},"2026":{"default_rate":16.0,"services":[],"payments":[]}}},{"sheet":"Vernocchi","name":"VERNOCCHI LAURA","years":{"2025":{"default_rate":18.0,"services":[{"name":"2025 CAM MUN1","residual":0,"hours":[9,12,15,12,9,3,0,0,0,0,0,0],"rate":18.0}],"payments":[{"date":"13/03/2025","hours":21.0,"attrib":"2025 CAM MUN1","rate":18.0},{"date":"20/06/2025","hours":39.0,"attrib":"2025 CAM MUN1","rate":18.0}]},"2026":{"default_rate":18.0,"services":[],"payments":[]}}},{"sheet":"Yagi","name":"YAGI RYOKO","years":{"2025":{"default_rate":31.25,"services":[{"name":"2024 CSRC MUN1","residual":1.4,"hours":[8,8,11,6,8,6,0,0,0,0,0,0],"rate":31.25},{"name":"2025/2026 -AS- CSRC MUN1 EXTRA","residual":0,"hours":[0,0,0,0,0,0,0,0,0,10,8,7],"rate":31.25}],"payments":[{"date":"14/07/2025","hours":35.328,"attrib":"2024 CSRC MUN1","rate":31.25},{"date":"14/07/2025","hours":11.776,"attrib":"2024 CSRC MUN1","rate":31.25}]},"2026":{"default_rate":31.25,"services":[],"payments":[{"date":"15/01/2026","hours":19.136,"attrib":"2024 CSRC MUN1","rate":31.25},{"date":"15/01/2026","hours":5.864,"attrib":"2024 CSRC MUN1","rate":31.25}]}}}];
+var MO3=["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
+var LSK="spazioireos_opoc_v9";
+// Pastel year colors
+// 3 colori pastello tenui che si ripetono ciclicamente
+var YC=[
+  {bg:"#c7d9e8",lt:"#e4ecf3",s:"#3d5a6c"},  // azzurro spento
+  {bg:"#e5ddc8",lt:"#f0ebdb",s:"#6b5e3d"},  // sabbia
+  {bg:"#ccd9c8",lt:"#e4ebe1",s:"#4e6a48"}   // salvia
+];
+// Frame: dispari verdone, pari bordeaux
+var FRAME_ODD="#2e5c31";
+var FRAME_EVEN="#7b1f2e";
+
+function moYr(m,yr){return MO3[m]+"-"+String(yr).slice(-2)}
+function ld(){var s=localStorage.getItem(LSK);if(s){try{return JSON.parse(s)}catch(e){}}return JSON.parse(JSON.stringify(SEED))}
+function sv(){localStorage.setItem(LSK,JSON.stringify(A.d));A.dirty=false;render();toast("Salvato!","#2e7d32")}
+function rst(){if(confirm("Ripristinare dati originali Excel?\nModifiche perse.")){localStorage.removeItem(LSK);A.d=ld();A.v="cover";A.dirty=false;render();toast("Ripristinato","#546e7a")}}
+var A={d:ld(),v:"cover",sel:null,q:"",fr:"",modal:null,dirty:false};
+function f2(v){var n=parseFloat(v);if(isNaN(n))return"";if(n===0)return'<span class="zero">0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212'+s+'</span>';return s}
+function fE(v){var n=parseFloat(v);if(isNaN(n))return"";if(n===0)return'<span class="zero">\u20ac 0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212\u20ac '+s+'</span>';return"\u20ac "+s}
+function n2(v){return parseFloat(v||0).toFixed(2).replace(".",",")}
+function raw(v){return parseFloat(String(v).replace(",","."))||0}
+function blurFmt(el){var v=raw(el.value);el.value=v.toFixed(2).replace(".",",");if(v===0){el.classList.add("zero-val")}else{el.classList.remove("zero-val")}}
+function normDT(s){
+  if(!s)return"";
+  s=String(s).trim();
+  var d=parseDT(s);
+  if(!d)return s;
+  var p=function(n){return n<10?"0"+n:""+n};
+  return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear();
+}
+function blurDT(el){var v=normDT(el.value);el.value=v}
+function fcl(el){if(raw(el.value)===0)el.value=""}
+function markD(){if(!A.dirty){A.dirty=true;var b=document.getElementById('ubadge');if(b)b.style.display='inline-block'}}
+function toast(m,c){var o=document.getElementById('toast');if(o)o.remove();var d=document.createElement('div');d.id='toast';d.className='toast';d.setAttribute('role','alert');d.style.background=c||'#2e7d32';d.textContent=m;document.body.appendChild(d);setTimeout(function(){d.remove()},2200)}
+function escHTML(s){if(s===null||s===undefined)return'';s=String(s);var map={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;','/':'&#x2F;'};return s.replace(/[&<>"'\/]/g,function(m){return map[m]})}
+function rM(v){return Math.round((parseFloat(v)||0)*100)/100}
+function parseDT(s){
+  if(!s)return null;
+  s=String(s).trim();
+  var m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){var d=parseInt(m[1],10),mo=parseInt(m[2],10),y=parseInt(m[3],10);
+    if(y<100)y+=2000;
+    if(d<1||d>31||mo<1||mo>12)return null;
+    return new Date(y,mo-1,d);}
+  return null;
+}
+function dtKey(s){var d=parseDT(s);if(!d)return "";var p=function(n){return n<10?"0"+n:""+n};return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
+
+function compOre(op,yr){
+  var yd=op.years[yr];if(!yd)return null;
+  var svcs=yd.services||[];
+  var oM=[0,0,0,0,0,0,0,0,0,0,0,0];
+  var totH=0,totHRes=0,totImp=0;
+  var svcData=[];
+  for(var s=0;s<svcs.length;s++){
+    var svc=svcs[s];var rt=svc.rate||0;var res=svc.residual||0;
+    var hTot=0;
+    for(var m=0;m<12;m++){var h=svc.hours[m]||0;oM[m]+=h;hTot+=h}
+    var svcH=res+hTot;var svcImp=rM(svcH*rt);
+    totH+=hTot;totHRes+=res;totImp=rM(totImp+svcImp);
+    svcData.push({rate:rt,hours:hTot,residual:res,totalH:svcH,imp:svcImp});
+  }
+  return{oM:oM,totH:totH,totHRes:totHRes,totOreDisp:totHRes+totH,totImp:totImp,svcData:svcData}
+}
+function compLiq(op,yr){
+  var co=compOre(op,yr);if(!co)return null;
+  var cf=cfwd(op,yr);
+  var dispH=co.totOreDisp+cf.h;
+  var dispImp=rM(co.totImp+cf.a);
+  var yd=op.years[yr];var pays=yd.payments||[];
+  var totHLiq=0,totLordo=0;var rows=[];
+  for(var p=0;p<pays.length;p++){
+    var h=parseFloat(pays[p].hours)||0;var rt=parseFloat(pays[p].rate)||0;
+    totHLiq+=h;var lordo=rM(h*rt);totLordo=rM(totLordo+lordo);
+    var rit=rM(lordo*0.20);var netto=rM(lordo-rit);
+    var balH=dispH-totHLiq;var balImp=rM(dispImp-totLordo);
+    rows.push({date:pays[p].date,hours:h,rate:rt,lordo:lordo,rit:rit,netto:netto,attrib:pays[p].attrib,balH:balH,balImp:balImp});
+  }
+  return{rows:rows,totHLiq:totHLiq,totLordo:totLordo,totRit:rM(totLordo*0.20),totNetto:rM(totLordo*0.80),oreRes:dispH-totHLiq,impRes:rM(dispImp-totLordo),cfH:cf.h,cfA:cf.a,dispH:dispH,dispImp:dispImp}
+}
+function gY(op){return Object.keys(op.years).sort()}
+function nY(op){var y=gY(op);return parseInt(y[y.length-1])+1}
+function cfwd(op,yr){var y=gY(op);var i=y.indexOf(String(yr));if(i<=0)return{h:0,a:0};var cl=compLiq(op,y[i-1]);if(!cl)return{h:0,a:0};return{h:cl.oreRes,a:cl.impRes}}
+function eL(){return[0,0,0,0,0,0,0,0,0,0,0,0]}
+function eD(){return[null,null,null,null,null,null,null,null,null,null,null,null]}
+function eSvc(rt){return{name:null,residual:0,hours:eL(),rate:rt||18}}
+// Clone services from previous year
+function cloneSvcs(op,prevYr){
+  var pyd=op.years[prevYr];if(!pyd||!pyd.services)return[eSvc(pyd?pyd.default_rate:18)];
+  var out=[];
+  for(var s=0;s<pyd.services.length;s++){
+    var ps=pyd.services[s];
+    out.push({name:ps.name,residual:0,hours:eL(),rate:ps.rate||0});
+  }
+  return out.length>0?out:[eSvc(pyd.default_rate||18)];
+}
+
+// EXCEL
+function exportYear(yr){
+  if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return;}
+  var wb=XLSX.utils.book_new();
+  var r1=[["RIEPILOGO OPERATORI OCCASIONALI - ANNO "+yr],["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],
+    ["N.","Operatore","Foglio","Res.Ore "+(parseInt(yr)-1),"Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic","Tot.Ore","Imp.Maturato","Ore Liq.","Lordo","Rit.20%","Netto","Ore Residue","Imp.Residuo"]];
+  var n=0;
+  for(var i=0;i<A.d.length;i++){
+    var op=A.d[i];if(!op.years[yr])continue;n++;var co=compOre(op,yr);var cl=compLiq(op,yr);
+    var row=[n,op.name,op.sheet,co.totHRes];for(var m=0;m<12;m++)row.push(co.oM[m]);
+    row.push(co.totH,co.totImp,cl.totHLiq,cl.totLordo,cl.totRit,cl.totNetto,cl.oreRes,cl.impRes);r1.push(row);
+  }
+  if(n>0){var tR=["","TOTALI","",""];for(var col=4;col<r1[4].length;col++){var sum=0;for(var r=4;r<r1.length;r++){var v=r1[r][col];if(typeof v==='number')sum+=v}tR.push(sum)}r1.push([]);r1.push(tR)}
+  var ws1=XLSX.utils.aoa_to_sheet(r1);ws1['!cols']=[{wch:4},{wch:32},{wch:16},{wch:8},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:8},{wch:12},{wch:8},{wch:12},{wch:12},{wch:12},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws1,"Riepilogo "+yr);
+  var r2=[["REGISTRO LIQUIDAZIONI - ANNO "+yr],["Spazio Ireos soc. Cooperativa sociale"],[],
+    ["N.","Operatore","Data Pag.","Ore Liq.","\u20ac/h","Lordo","Rit.20%","Netto","Attribuzione","Ore Res.","Imp.Res."]];
+  var dn=0;
+  for(var i=0;i<A.d.length;i++){
+    var op=A.d[i];if(!op.years[yr])continue;dn++;var cl=compLiq(op,yr);
+    for(var p=0;p<cl.rows.length;p++){var pr=cl.rows[p];r2.push([dn,op.name,pr.date,pr.hours,pr.rate,pr.lordo,pr.rit,pr.netto,pr.attrib||"",pr.balH,pr.balImp])}
+    r2.push(["",op.name+" - SALDO","","","",cl.totLordo,cl.totRit,cl.totNetto,"",cl.oreRes,cl.impRes]);r2.push([]);
+  }
+  var ws2=XLSX.utils.aoa_to_sheet(r2);ws2['!cols']=[{wch:4},{wch:32},{wch:14},{wch:8},{wch:8},{wch:12},{wch:12},{wch:12},{wch:18},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws2,"Liquidazioni "+yr);
+  var r3=[["DATI PER CERTIFICAZIONI - ANNO "+yr],["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],
+    ["N.","Cognome e Nome","Tot.Ore Liq.","Lordo Liq.","Ritenuta 20%","Netto Liq.","Ore Residue","Imp.Residuo"]];
+  var cn=0;
+  for(var i=0;i<A.d.length;i++){
+    var op=A.d[i];if(!op.years[yr])continue;var co=compOre(op,yr);var cl=compLiq(op,yr);
+    if(cl.totHLiq===0&&co.totH===0)continue;cn++;
+    r3.push([cn,op.name,cl.totHLiq,cl.totLordo,cl.totRit,cl.totNetto,cl.oreRes,cl.impRes]);
+  }
+  if(cn>0){var t3=["","TOTALI"];for(var col=2;col<r3[4].length;col++){var sum=0;for(var r=4;r<r3.length;r++){var v=r3[r][col];if(typeof v==='number')sum+=v}t3.push(sum)}r3.push([]);r3.push(t3)}
+  var ws3=XLSX.utils.aoa_to_sheet(r3);ws3['!cols']=[{wch:4},{wch:35},{wch:12},{wch:14},{wch:14},{wch:14},{wch:10},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws3,"Certificazioni "+yr);
+  XLSX.writeFile(wb,"Operatori_Occasionali_"+yr+"_Spazio_Ireos.xlsx");toast("Excel "+yr+" scaricato!","#1b5e20");
+}
+
+// ADMIN REPORT: liquidations by date
+function exportByDate(from,to){
+  if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova.");return;}
+  var fromKey=dtKey(from);var toKey=dtKey(to);
+  if(!fromKey||!toKey){alert("Date non valide. Usa formato gg/mm/aaaa");return;}
+  var rows=[];
+  for(var i=0;i<A.d.length;i++){
+    var op=A.d[i];var yrs=gY(op);
+    for(var y=0;y<yrs.length;y++){
+      var yd=op.years[yrs[y]];var pays=yd.payments||[];
+      for(var p=0;p<pays.length;p++){
+        var pr=pays[p];var pk=dtKey(pr.date);
+        if(!pk)continue;
+        if(pk>=fromKey&&pk<=toKey){
+          var h=parseFloat(pr.hours)||0;var rt=parseFloat(pr.rate)||0;
+          var lordo=rM(h*rt);var rit=rM(lordo*0.20);var netto=rM(lordo-rit);
+          rows.push({date:pr.date,dtKey:pk,name:op.name,sheet:op.sheet,year:yrs[y],hours:h,rate:rt,lordo:lordo,rit:rit,netto:netto,attrib:pr.attrib||""});
+        }
+      }
+    }
+  }
+  rows.sort(function(a,b){if(a.dtKey!==b.dtKey)return a.dtKey<b.dtKey?-1:1;return a.name<b.name?-1:1});
+  var title=fromKey===toKey?("REPORT LIQUIDAZIONI DEL "+from):("REPORT LIQUIDAZIONI DAL "+from+" AL "+to);
+  var aoa=[[title],["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],
+    ["N.","Data pag.","Operatore","Foglio","Anno","Ore","\u20ac/h","Lordo","Ritenuta 20%","Netto","Attribuzione"]];
+  var totH=0,totL=0,totR=0,totN=0;
+  for(var r=0;r<rows.length;r++){
+    var rr=rows[r];
+    aoa.push([r+1,rr.date,rr.name,rr.sheet,rr.year,rr.hours,rr.rate,rr.lordo,rr.rit,rr.netto,rr.attrib]);
+    totH+=rr.hours;totL+=rr.lordo;totR+=rr.rit;totN+=rr.netto;
+  }
+  if(rows.length>0){aoa.push([]);aoa.push(["","","TOTALI ("+rows.length+" liquidazioni)","","",rM(totH),"",rM(totL),rM(totR),rM(totN),""]);}
+  else{aoa.push([]);aoa.push(["","","Nessuna liquidazione trovata nel periodo"]);}
+  var ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=[{wch:4},{wch:13},{wch:32},{wch:16},{wch:6},{wch:8},{wch:8},{wch:12},{wch:12},{wch:12},{wch:22}];
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Report liquidazioni");
+  var fn="Report_Liquidazioni_"+fromKey+(fromKey!==toKey?"_"+toKey:"")+"_Spazio_Ireos.xlsx";
+  XLSX.writeFile(wb,fn);
+  toast("Report scaricato ("+rows.length+" righe)","#1b5e20");
+}
+
+// RENDER
+function render(){
+  var el=document.getElementById('app');
+  if(A.v==="cover")el.innerHTML=rCov();
+  else el.innerHTML=rSh();
+  if(A.modal==="newop")el.innerHTML+=rMNO();
+  if(A.modal==="newyr")el.innerHTML+=rMNY();
+  if(A.modal==="report")el.innerHTML+=rMReport();
+}
+function rCov(){
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede</p></div><div class="cover-body">';
+  var kpis={},allYrs={};
+  for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
+  var kYrs=Object.keys(kpis).sort();
+  h+='<div class="kpi-bar"><div class="kpi"><div class="kl">Schede</div><div class="kv">'+A.d.length+'</div></div>';
+  for(var k=0;k<kYrs.length;k++){var ky=kYrs[k],kd=kpis[ky];h+='<div class="kpi"><div class="kl">Ore res.'+ky+'</div><div class="kv'+(kd.oR>0?' red':'')+'">'+f2(kd.oR)+'</div></div>';h+='<div class="kpi"><div class="kl">Imp.res.'+ky+'</div><div class="kv'+(kd.iR>0?' red':'')+'">'+fE(kd.iR)+'</div></div>'}
+  h+='</div><div class="toolbar"><input placeholder="Cerca operatore..." value="'+A.q+'" oninput="A.q=this.value;render()">';
+  h+='<select onchange="A.fr=this.value;render()"><option value="">Tutte le tariffe</option>';
+  var rts={};for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){var svcs=A.d[i].years[yrs[y]].services||[];for(var s=0;s<svcs.length;s++)if(svcs[s].rate)rts[svcs[s].rate]=1}}
+  var rk=Object.keys(rts).sort(function(a,b){return a-b});
+  for(var r=0;r<rk.length;r++)h+='<option value="'+rk[r]+'"'+(A.fr===rk[r]?' selected':'')+'>\u20ac '+parseFloat(rk[r]).toFixed(2).replace(".",",")+'/h</option>';
+  h+='</select><button class="btn btn-new" onclick="A.modal=\'newop\';render()">+ Nuovo operatore</button>';
+  var aYrs=Object.keys(allYrs).sort();for(var y=0;y<aYrs.length;y++)h+='<button class="btn btn-xls" onclick="exportYear(\''+aYrs[y]+'\')">\u2B07 Excel '+aYrs[y]+'</button>';
+  h+='<button class="btn" style="background:#6a1b9a;color:#fff" onclick="A.modal=\'report\';render()">Report per data</button>';
+  h+='<button class="btn btn-reset" onclick="rst()">Ripristina</button>';
+  if(A.dirty)h+='<button class="btn btn-save" onclick="sv()">\u2714 Salva</button>';
+  h+='</div><div class="op-grid">';
+  for(var i=0;i<A.d.length;i++){
+    var op=A.d[i];if(A.q&&op.name.toLowerCase().indexOf(A.q.toLowerCase())<0&&op.sheet.toLowerCase().indexOf(A.q.toLowerCase())<0)continue;
+    var yrs=gY(op);
+    if(A.fr){var mt=false;for(var y=0;y<yrs.length;y++){var svcs=op.years[yrs[y]].services||[];for(var s=0;s<svcs.length;s++){if(String(svcs[s].rate)===A.fr){mt=true;break}}if(mt)break}if(!mt)continue}
+    h+='<div class="op-card" onclick="openS('+i+')">';
+    h+='<div class="on">'+escHTML(op.name)+'</div>';
+    h+='<div class="os">'+escHTML(op.sheet)+' \u2014 '+yrs.join(", ")+'</div>';
+    h+='<div class="ost">';
+    for(var y=0;y<yrs.length;y++){var cl=compLiq(op,yrs[y]);if(!cl)continue;h+='<div class="sv"><div class="sl">Res.'+yrs[y]+'</div><div class="sn'+(cl.oreRes>0?' red':'')+'">'+f2(cl.oreRes)+'h</div></div>'}
+    h+='</div></div>';
+  }
+  h+='</div></div>';return h;
+}
+function rSh(){
+  var op=A.d[A.sel];var yrs=gY(op);
+  var h='<div class="sheet-header"><div><h2>'+escHTML(op.name)+'</h2><span style="font-size:10px;opacity:0.8"> '+escHTML(op.sheet)+'</span>';
+  if(A.dirty)h+='<span id="ubadge" class="unsaved">NON SALVATO</span>';
+  h+='</div><div class="acts">';
+  h+='<button class="btn btn-save btn-sm" onclick="sv()">\u2714 Salva</button> ';
+  h+='<button class="btn btn-add-yr" onclick="prepAY()">+ Anno '+nY(op)+'</button> ';
+  var aY=Object.keys(op.years).sort();for(var y=0;y<aY.length;y++)h+='<button class="btn btn-xls btn-sm" onclick="exportYear(\''+aY[y]+'\')">\u2B07 '+aY[y]+'</button> ';
+  h+='<button class="btn btn-del btn-sm" onclick="delOp('+A.sel+')">Elimina</button> ';
+  h+='<button class="btn btn-back btn-sm" onclick="goBack()">Chiudi</button>';
+  h+='</div></div><div class="sheet-body">';
+  for(var y=0;y<yrs.length;y++){
+    if(y>0)h+='<div class="year-sep"></div>';
+    h+=rYB(A.sel,yrs[y],y);
+  }
+  h+='</div>';return h;
+}
+function rYB(idx,yr,ci){
+  var op=A.d[idx];var yd=op.years[yr];if(!yd)return'';
+  var co=compOre(op,yr);var cl=compLiq(op,yr);
+  var svcs=yd.services||[];var pays=yd.payments||[];
+  var defRt=yd.default_rate||18;
+  var yc=YC[ci%YC.length];var P="A.d["+idx+"].years['"+yr+"']";
+  var cf=cfwd(op,yr);var cfH='';
+  if(cf.h!==0){cfH='<div class="carry-box" style="background:'+yc.bg+'"><strong>\u26a0 Residuo dal '+(parseInt(yr)-1)+':</strong> '+f2(cf.h)+' ore = '+fE(cf.a)+'</div>'}
+  var FRAME=(parseInt(yr)%2===0)?FRAME_EVEN:FRAME_ODD;
+  var h='<div class="year-block" style="border-color:'+FRAME+';border-width:4px">'+cfH;
+  h+='<div class="ytitle" style="background:'+yc.bg+';color:'+yc.s+'"><span>ANNO '+yr+'</span><span>';
+  h+='\u20ac/h pred. <input class="rate-hdr" type="text" value="'+n2(defRt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.default_rate=raw(this.value);markD()"> ';
+  h+='<button class="btn-add-svc" onclick="addSvc('+idx+',\''+yr+'\')">+ Servizio</button>';
+  if(Object.keys(op.years).length>1)h+=' <button class="btn-del-yr" onclick="delYr('+idx+',\''+yr+'\')">Elimina '+yr+'</button>';
+  h+='</span></div>';
+  // ORE EFFETTUATE
+  h+='<div class="sec-lbl" style="background:'+yc.s+';color:#fff">ORE EFFETTUATE</div>';
+  h+='<table><thead><tr style="background:'+yc.bg+'"><th></th><th>Servizio</th><th>\u20ac/h</th><th>Res.'+(parseInt(yr)-1)+'</th>';
+  for(var m=0;m<12;m++)h+='<th class="month-hdr">'+moYr(m,yr)+'</th>';
+  h+='<th>Ore</th><th>Imp.Mat.</th></tr></thead><tbody>';
+  for(var s=0;s<svcs.length;s++){
+    var svc=svcs[s];var srt=svc.rate||0;var hTot=0;for(var m=0;m<12;m++)hTot+=(svc.hours[m]||0);
+    var cfv2=cfwd(op,yr);
+    var svcTotH=(s===0&&cfv2.h!==0?cfv2.h:(svc.residual||0))+hTot;
+    h+='<tr><td class="lbl">Serv.'+(s+1)+'</td>';
+    h+='<td class="edit-cell"><input class="svc-input" value="'+escHTML(svc.name||'')+'" placeholder="Servizio..." onchange="'+P+'.services['+s+'].name=this.value||null;markD()"></td>';
+    h+='<td class="edit-cell" style="font-size:9px"><span style="color:#888;margin-right:2px">€</span><input class="rate-in" type="text" value="'+n2(srt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].rate=raw(this.value);markD();render()"></td>';
+    if(s===0&&cl.cfH!==0){h+='<td class="comp" style="font-weight:700">'+f2(cl.cfH)+'</td>';}else{var cfv=cfwd(op,yr);
+    if(s===0&&cfv.h!==0){h+='<td class="comp" style="font-weight:700">'+f2(cfv.h)+'</td>';}
+    else{h+='<td class="edit-cell"><input type="text" value="'+n2(svc.residual||0)+'" style="width:52px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].residual=raw(this.value);markD();render()"></td>';}}
+    for(var m=0;m<12;m++)h+='<td class="edit-cell"><input type="text" value="'+n2(svc.hours[m]||0)+'" style="width:48px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].hours['+m+']=raw(this.value);markD();render()"></td>';
+    h+='<td class="comp" style="font-weight:700">'+f2(svcTotH)+'</td>';
+    h+='<td class="comp" style="font-weight:700">'+fE(rM(svcTotH*srt))+'</td></tr>';
+  }
+  if(svcs.length===0)h+='<tr><td class="lbl" colspan="17" style="text-align:center;color:#999;padding:4px">Nessun servizio</td></tr>';
+  var cfO=cfwd(op,yr);
+  h+='<tr style="background:'+yc.bg+'"><td class="lbl">ORE MESE</td><td></td><td></td><td class="comp" style="font-weight:700">'+(cfO.h!==0?f2(cfO.h):'')+'</td>';
+  for(var m=0;m<12;m++)h+='<td class="comp" style="font-weight:700;color:#000">'+f2(co.oM[m])+'</td>';
+  h+='<td class="comp" style="font-weight:900">'+f2(co.totH)+'</td>';
+  h+='<td class="comp" style="font-weight:900">'+fE(co.totImp)+'</td></tr>';
+  h+='</tbody></table>';
+  h+='<div class="bal-summary" style="background:'+yc.bg+';border:1px solid '+yc.b+'">';
+  if(cl.cfH!==0){h+='<span>Ore disponibili: <strong>'+f2(cl.cfH)+'</strong> (residuo '+(parseInt(yr)-1)+') + '+f2(co.totH)+' (lav. '+yr+') = <strong>'+f2(cl.dispH)+'</strong></span>';
+  h+='<span>Importo: <strong>'+fE(cl.cfA)+'</strong> (res.) + '+fE(co.totImp)+' (mat.) = <strong>'+fE(cl.dispImp)+'</strong></span>';}
+  else{h+='<span>Ore disponibili: '+f2(co.totH)+' (lav.) = <strong>'+f2(cl.dispH)+'</strong></span>';
+  h+='<span>Importo maturato: <strong>'+fE(cl.dispImp)+'</strong></span>';}
+  h+='</div>';
+  // REGISTRO LIQUIDAZIONI
+  h+='<div class="sec-lbl" style="background:'+yc.s+';color:#fff">REGISTRO LIQUIDAZIONI / PAGAMENTI</div>';
+  h+='<table><thead><tr style="background:'+yc.bg+'"><th style="width:25px">N.</th><th style="min-width:90px">Data pag.</th><th>Ore liq.</th><th>\u20ac/h</th>';
+  h+='<th>Lordo</th><th>Rit. 20%</th><th>Netto</th><th style="min-width:90px">Attribuzione</th>';
+  h+='<th style="font-size:14px;font-weight:900">ORE RES.</th><th style="font-size:14px;font-weight:900">IMP. RES.</th><th style="width:25px"></th></tr></thead><tbody>';
+  if(cl.rows.length===0)h+='<tr><td colspan="11" style="text-align:center;color:#999;padding:6px">Nessuna liquidazione registrata</td></tr>';
+  for(var p=0;p<cl.rows.length;p++){
+    var pr=cl.rows[p];var brc=pr.balH>=0?'res-big-pos':'res-big-neg';
+    h+='<tr><td style="font-weight:700">'+(p+1)+'</td>';
+    h+='<td class="date-cell"><input value="'+escHTML(pr.date||'')+'" placeholder="gg/mm/aaaa" onblur="blurDT(this);'+P+'.payments['+p+'].date=this.value;markD()" onchange="'+P+'.payments['+p+'].date=this.value;markD()"></td>';
+    h+='<td class="edit-cell"><input type="text" value="'+n2(pr.hours)+'" style="width:58px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.payments['+p+'].hours=raw(this.value);markD();render()"></td>';
+    h+='<td class="edit-cell" style="font-size:9px"><span style="color:#888;margin-right:2px">€</span><input class="rate-in" type="text" value="'+n2(pr.rate)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.payments['+p+'].rate=raw(this.value);markD();render()"></td>';
+    h+='<td class="comp">'+fE(pr.lordo)+'</td>';
+    h+='<td class="comp">'+fE(pr.rit)+'</td>';
+    h+='<td class="net-cell">'+fE(pr.netto)+'</td>';
+    h+='<td class="edit-cell"><input class="svc-input" style="text-align:center;font-size:12px" value="'+escHTML(pr.attrib||'')+'" onchange="'+P+'.payments['+p+'].attrib=this.value||null;markD()"></td>';
+    h+='<td class="'+brc+'">'+f2(pr.balH)+'</td>';
+    h+='<td class="'+brc+'">'+fE(pr.balImp)+'</td>';
+    h+='<td><button class="btn-del-row" onclick="delPay('+idx+',\''+yr+'\','+p+')">\u2716</button></td></tr>';
+  }
+  if(cl.rows.length>0){
+    var frc=cl.oreRes>=0?'res-big-pos':'res-big-neg';
+    h+='<tr style="background:'+yc.bg+';font-weight:700"><td></td><td style="text-align:left;padding-left:5px">TOTALE</td>';
+    h+='<td>'+f2(cl.totHLiq)+'</td><td></td>';
+    h+='<td>'+fE(cl.totLordo)+'</td><td>'+fE(cl.totRit)+'</td><td class="net-cell">'+fE(cl.totNetto)+'</td><td></td>';
+    h+='<td class="'+frc+'">'+f2(cl.oreRes)+'</td>';
+    h+='<td class="'+frc+'">'+fE(cl.impRes)+'</td><td></td></tr>';
+  }
+  h+='</tbody></table>';
+  h+='<div style="margin-top:4px"><button class="btn-add-pay" onclick="addPay('+idx+',\''+yr+'\')">+ Aggiungi liquidazione</button></div></div>';
+  return h;
+}
+// MODALS
+function rMNO(){
+  var h='<div class="modal-overlay" onclick="if(event.target===this){A.modal=null;render()}" onkeydown="if(event.key===\'Escape\'){A.modal=null;render()}">';
+  h+='<div class="modal" role="dialog" aria-modal="true"><h3>Nuovo Operatore</h3>';
+  h+='<label>Cognome e Nome</label><input id="nN" placeholder="COGNOME NOME">';
+  h+='<label>Etichetta foglio</label><input id="nS" placeholder="Es. Rossi (18)">';
+  h+='<label>Costo orario \u20ac</label><input id="nR" type="number" step="0.01" value="18.00">';
+  h+='<label>Anno iniziale</label><input id="nYr" type="number" value="2025">';
+  h+='<label>Servizio principale</label><input id="nV" placeholder="Es. 2025 CAM MUN1">';
+  h+='<div class="ma"><button class="btn btn-back" onclick="A.modal=null;render()">Annulla</button>';
+  h+='<button class="btn btn-new" onclick="creaOp()">Crea</button></div></div></div>';return h;
+}
+function rMNY(){
+  var op=A.d[A.sel];var ny=nY(op);var yrs=gY(op);var lastY=yrs[yrs.length-1];
+  var cl=compLiq(op,lastY);var defRt=op.years[lastY]?op.years[lastY].default_rate||18:18;
+  var prevSvcs=op.years[lastY]?op.years[lastY].services:[];
+  var svcList='';for(var s=0;s<prevSvcs.length;s++){svcList+='<br>\u2022 '+(prevSvcs[s].name||'Serv.'+(s+1))+' @ \u20ac'+n2(prevSvcs[s].rate)}
+  var h='<div class="modal-overlay" onclick="if(event.target===this){A.modal=null;render()}" onkeydown="if(event.key===\'Escape\'){A.modal=null;render()}">';
+  h+='<div class="modal" role="dialog" aria-modal="true"><h3>Aggiungi Anno '+ny+'</h3>';
+  h+='<p style="font-size:14px;color:#555;margin-bottom:6px">Operatore: <strong>'+escHTML(op.name)+'</strong></p>';
+  if(cl&&cl.oreRes!==0){
+    h+='<div class="cf-info"><strong>\u26a0 Residuo dal '+lastY+':</strong><br>';
+    h+='Ore: <strong>'+f2(cl.oreRes)+'</strong> \u2014 Importo: <strong>'+fE(cl.impRes)+'</strong><br>';
+    h+='<em style="font-size:10px">Ore riportate automaticamente.</em></div>';
+  } else {h+='<div class="cf-info" style="background:#e8f5e9;border-color:#66bb6a">\u2705 Nessun residuo dal '+lastY+'</div>'}
+  if(svcList){h+='<div class="cf-info" style="background:#e1f5fe;border-color:#4fc3f7"><strong>Servizi duplicati dal '+lastY+':</strong>'+svcList+'</div>'}
+  h+='<label>Costo orario predefinito \u20ac per '+ny+'</label><input id="nyR" type="number" step="0.01" value="'+defRt.toFixed(2)+'">';
+  h+='<div class="ma"><button class="btn btn-back" onclick="A.modal=null;render()">Annulla</button>';
+  h+='<button class="btn btn-new" onclick="confAY('+ny+')">Aggiungi '+ny+'</button></div></div></div>';return h;
+}
+
+function rMReport(){
+  var h='<div class="modal-overlay" onclick="if(event.target===this){A.modal=null;render()}" onkeydown="if(event.key===\'Escape\'){A.modal=null;render()}">';
+  h+='<div class="modal" role="dialog" aria-modal="true"><h3>Report Liquidazioni per Data</h3>';
+  h+='<p style="font-size:11px;color:#666;margin-bottom:10px">Per il commercialista o controllo interno</p>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:8px">';
+  h+='<button class="btn" id="rbSingle" onclick="toggleRepMode(\'single\')" style="flex:1;background:#37474f;color:#fff">Data singola</button>';
+  h+='<button class="btn" id="rbRange" onclick="toggleRepMode(\'range\')" style="flex:1;background:#fff;border:1px solid #aaa;color:#000">Intervallo</button>';
+  h+='</div>';
+  h+='<div id="repSingle"><label>Data (gg/mm/aaaa)</label><input id="repFrom" placeholder="15/03/2026" value="" onblur="blurDT(this)"></div>';
+  h+='<div id="repRange" style="display:none"><label>Dal (gg/mm/aaaa)</label><input id="repFrom2" placeholder="01/01/2026" onblur="blurDT(this)"><label>Al (gg/mm/aaaa)</label><input id="repTo" placeholder="31/03/2026" onblur="blurDT(this)"></div>';
+  h+='<div class="ma"><button class="btn btn-back" onclick="A.modal=null;render()">Annulla</button>';
+  h+='<button class="btn" style="background:#1b5e20;color:#fff" onclick="doReport()">Scarica Excel</button></div></div></div>';
+  return h;
+}
+var _repMode="single";
+function toggleRepMode(m){
+  _repMode=m;
+  var s=document.getElementById("repSingle");var r=document.getElementById("repRange");
+  var bs=document.getElementById("rbSingle");var br=document.getElementById("rbRange");
+  if(m==="single"){s.style.display="block";r.style.display="none";bs.style.background="#37474f";bs.style.color="#fff";bs.style.border="none";br.style.background="#fff";br.style.color="#000";br.style.border="1px solid #aaa"}
+  else{s.style.display="none";r.style.display="block";bs.style.background="#fff";bs.style.color="#000";bs.style.border="1px solid #aaa";br.style.background="#37474f";br.style.color="#fff";br.style.border="none"}
+}
+function doReport(){
+  if(_repMode==="single"){var d=document.getElementById("repFrom").value.trim();if(!d){alert("Inserire la data");return;}exportByDate(d,d);}
+  else{var f=document.getElementById("repFrom2").value.trim();var t=document.getElementById("repTo").value.trim();if(!f||!t){alert("Inserire entrambe le date");return;}exportByDate(f,t);}
+  A.modal=null;render();
+}
+// ACTIONS
+function addSvc(idx,yr){var yd=A.d[idx].years[yr];if(!yd.services)yd.services=[];yd.services.push(eSvc(yd.default_rate||18));markD();render()}
+function addPay(idx,yr){var yd=A.d[idx].years[yr];if(!yd.payments)yd.payments=[];yd.payments.push({date:"",hours:0,rate:yd.default_rate||18,attrib:null});markD();render()}
+function delPay(idx,yr,pi){A.d[idx].years[yr].payments.splice(pi,1);markD();render()}
+function delYr(idx,yr){if(confirm("Eliminare anno "+yr+"?")){delete A.d[idx].years[yr];markD();render()}}
+function prepAY(){A.modal="newyr";render()}
+function confAY(ny){
+  var op=A.d[A.sel];var rt=parseFloat(document.getElementById('nyR').value)||18;
+  var yrs=gY(op);var lastY=yrs[yrs.length-1];var cl=compLiq(op,lastY);
+  // carry-forward handled by compLiq automatically
+  // Clone services from previous year
+  var newSvcs=cloneSvcs(op,lastY);
+  // Put carry-forward into first service residual
+  // residual stays 0, cfwd displayed automatically
+  op.years[String(ny)]={default_rate:rt,services:newSvcs,payments:[]};
+  A.modal=null;markD();render();toast("Anno "+ny+" aggiunto con servizi duplicati","#ef6c00");
+}
+function openS(i){A.sel=i;A.v="sheet";render();window.scrollTo(0,0)}
+function goBack(){if(A.dirty&&!confirm("Modifiche non salvate. Uscire?"))return;A.v="cover";render()}
+function delOp(i){if(confirm("Eliminare "+A.d[i].sheet+"?")){A.d.splice(i,1);markD();A.v="cover";render()}}
+function creaOp(){
+  var nm=document.getElementById('nN').value.trim().toUpperCase();
+  var sh=document.getElementById('nS').value.trim();
+  var rt=parseFloat(document.getElementById('nR').value)||18;
+  var yr=document.getElementById('nYr').value.trim()||"2025";
+  var vc=document.getElementById('nV').value.trim()||null;
+  if(!nm){alert("Inserire il nome");return}
+  if(!sh)sh=nm;
+  var yrs={};yrs[yr]={default_rate:rt,services:[{name:vc,residual:0,hours:eL(),rate:rt}],payments:[]};
+  A.d.push({sheet:sh,name:nm,years:yrs});
+  A.modal=null;markD();A.sel=A.d.length-1;A.v="sheet";render();
+}
+render();
+
+// ===== PIN PROTECTION =====
+var PIN_KEY="spazioireos_opoc_pin";
+var pinUnlocked=false;
+var pinMode="check"; // "check","set","confirm"
+var pinEntry="";
+var pinFirst="";
+var pinMsg="";
+var pinMsgErr=false;
+
+function hasPin(){return!!localStorage.getItem(PIN_KEY)}
+function checkPin(p){return localStorage.getItem(PIN_KEY)===p}
+function setPin(p){localStorage.setItem(PIN_KEY,p)}
+
+function renderPin(){
+  var el=document.getElementById('app');
+  var h='<div class="pin-overlay"><div class="pin-box">';
+  h+='<h2>OPERATORI OCCASIONALI</h2>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale</p>';
+  if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
+  else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
+  else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
+  h+='<input type="password" id="pinInput" class="pin-input'+(pinMsgErr?' err':'')+'" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" autofocus>';
+  h+='<br><button class="pin-btn" onclick="pinSubmit()">Conferma</button>';
+  h+='<div class="pin-msg'+(pinMsgErr?' err':'')+'">'+pinMsg+'</div>';
+  h+='</div></div>';
+  el.innerHTML=h;
+  var inp=document.getElementById('pinInput');
+  if(inp){inp.focus();inp.addEventListener('keydown',function(e){if(e.key==='Enter')pinSubmit()});}
+}
+
+function pinSubmit(){
+  var inp=document.getElementById('pinInput');
+  var val=inp?inp.value.trim():'';
+  if(val.length!==6||!/^[0-9]{6}$/.test(val)){pinMsg="Inserire 6 cifre";pinMsgErr=true;renderPin();return;}
+  if(pinMode==="check"){
+    if(checkPin(val)){pinUnlocked=true;render();}
+    else{pinMsg="PIN errato";pinMsgErr=true;renderPin();}
+  }else if(pinMode==="set"){
+    pinFirst=val;pinMode="confirm";pinMsg="";pinMsgErr=false;renderPin();
+  }else if(pinMode==="confirm"){
+    if(val===pinFirst){setPin(val);pinUnlocked=true;render();toast("PIN impostato","#2e7d32");}
+    else{pinMode="set";pinFirst="";pinMsg="PIN non coincide, riprova";pinMsgErr=true;renderPin();}
+  }
+}
+
+// Override render to check PIN first
+var _baseRender=render;
+render=function(){
+  if(!pinUnlocked){
+    if(!hasPin()){pinMode="set";}else{pinMode="check";}
+    renderPin();return;
+  }
+  _baseRender();
+};
+
+function applyZeroStyle(){var inputs=document.querySelectorAll(".edit-cell input, .rate-in, .rate-hdr");for(var i=0;i<inputs.length;i++){if(raw(inputs[i].value)===0){inputs[i].classList.add("zero-val")}else{inputs[i].classList.remove("zero-val")}}}
+window.addEventListener('beforeunload',function(e){if(A&&A.dirty){e.preventDefault();e.returnValue='';return'Modifiche non salvate.'}});
+var _origRender=render;render=function(){_origRender();setTimeout(applyZeroStyle,0)};render();
+</script>
+</body>
+</html>
