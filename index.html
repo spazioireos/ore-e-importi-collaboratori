@@ -217,6 +217,7 @@ function ld(){
 }
 function sv(){try{
   sortPayments();
+  A.d.sort(function(a,b){var na=(a.name||"").toLowerCase();var nb=(b.name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
   localStorage.setItem(LSK,JSON.stringify(A.d));
   A.dirty=false;render();
   // Auto-backup: scarica JSON nei Download
@@ -475,8 +476,16 @@ function rCov(){
   h+='<button class="btn" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()">⬆ Ripristina backup</button>';
   if(A.dirty)h+='<button class="btn btn-save" onclick="sv()">\u2714 Salva</button>';
   h+='</div><div class="op-grid">';
-  for(var i=0;i<A.d.length;i++){
-    var op=A.d[i];if(A.q&&op.name.toLowerCase().indexOf(A.q.toLowerCase())<0&&op.sheet.toLowerCase().indexOf(A.q.toLowerCase())<0)continue;
+  // Ordina alfabeticamente per nome, mantenendo l'indice originale per openS
+  var ordered=[];
+  for(var i=0;i<A.d.length;i++){ordered.push({op:A.d[i],idx:i})}
+  ordered.sort(function(a,b){
+    var na=(a.op.name||"").toLowerCase();var nb=(b.op.name||"").toLowerCase();
+    return na<nb?-1:na>nb?1:0;
+  });
+  for(var k=0;k<ordered.length;k++){
+    var op=ordered[k].op;var i=ordered[k].idx;
+    if(A.q&&op.name.toLowerCase().indexOf(A.q.toLowerCase())<0&&op.sheet.toLowerCase().indexOf(A.q.toLowerCase())<0)continue;
     var yrs=gY(op);
     if(A.fr){var mt=false;for(var y=0;y<yrs.length;y++){var svcs=op.years[yrs[y]].services||[];for(var s=0;s<svcs.length;s++){if(String(svcs[s].rate)===A.fr){mt=true;break}}if(mt)break}if(!mt)continue}
     h+='<div class="op-card" onclick="openS('+i+')">';
@@ -505,7 +514,9 @@ function rSh(){
   h+='</div><div class="nav-right">';
   h+='<select class="op-selector" onchange="if(this.value!==\'\')openS(parseInt(this.value))">';
   h+='<option value="">Vai a operatore...</option>';
-  for(var oi=0;oi<A.d.length;oi++){h+='<option value="'+oi+'"'+(oi===A.sel?' selected':'')+'>'+escHTML(A.d[oi].name)+'</option>';}
+  var ddOrder=[];for(var oi=0;oi<A.d.length;oi++){ddOrder.push({name:A.d[oi].name,idx:oi})}
+  ddOrder.sort(function(a,b){var na=(a.name||"").toLowerCase();var nb=(b.name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
+  for(var oi=0;oi<ddOrder.length;oi++){h+='<option value="'+ddOrder[oi].idx+'"'+(ddOrder[oi].idx===A.sel?' selected':'')+'>'+escHTML(ddOrder[oi].name)+'</option>';}
   h+='</select></div></div>';
   h+='<div class="sheet-body">';
   for(var y=0;y<yrs.length;y++){
@@ -538,12 +549,25 @@ function rYB(idx,yr,ci){
     var svc=svcs[s];var srt=svc.rate||0;var hTot=0;for(var m=0;m<12;m++)hTot+=(svc.hours[m]||0);
     var cfv2=cfwd(op,yr);
     var svcTotH=(s===0&&cfv2.h!==0?cfv2.h:(svc.residual||0))+hTot;
-    h+='<tr><td class="lbl">Serv.'+(s+1)+'</td>';
+    h+='<tr><td class="lbl" style="white-space:nowrap">Serv.'+(s+1)+' <button onclick="delSvc('+idx+',\''+yr+'\','+s+')" style="background:#c62828;color:#fff;border:none;border-radius:3px;width:16px;height:16px;font-size:11px;line-height:1;cursor:pointer;padding:0;vertical-align:middle" title="Elimina servizio">\u00d7</button></td>';
     h+='<td class="edit-cell"><input class="svc-input" value="'+escHTML(svc.name||'')+'" placeholder="Servizio..." onchange="'+P+'.services['+s+'].name=this.value||null;markD()"></td>';
     h+='<td class="edit-cell" style="font-size:9px"><span style="color:#888;margin-right:2px">€</span><input class="rate-in" type="text" value="'+n2(srt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].rate=raw(this.value);markD();render()"></td>';
-    if(s===0&&cl.cfH!==0){h+='<td class="comp" style="font-weight:700">'+f2(cl.cfH)+'</td>';}else{var cfv=cfwd(op,yr);
-    if(s===0&&cfv.h!==0){h+='<td class="comp" style="font-weight:700">'+f2(cfv.h)+'</td>';}
-    else{h+='<td class="edit-cell"><input type="text" value="'+n2(svc.residual||0)+'" style="width:52px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].residual=raw(this.value);markD();render()"></td>';}}
+    // Residuo: prima riga = carry-forward automatico (bloccato), altre = residuo servizio editabile
+    var cfv=cfwd(op,yr);
+    if(s===0&&cfv.h!==0){
+      // Provenienza: nomi servizi anno precedente
+      var prevYrs=gY(op);var pi=prevYrs.indexOf(String(yr));var prov="";
+      if(pi>0){var psvcs=op.years[prevYrs[pi-1]].services||[];var pn=[];for(var pp=0;pp<psvcs.length;pp++){if(psvcs[pp].name)pn.push(psvcs[pp].name)}prov=pn.join(", ")}
+      h+='<td class="comp" style="font-weight:700;background:#eceff1" title="Residuo da '+(parseInt(yr)-1)+(prov?": "+escHTML(prov):"")+'">'+f2(cfv.h)+'</td>';
+    }
+    else if(svc.residual&&svc.residual!==0){
+      // Residuo individuale del servizio (es. da residual nei dati) - editabile
+      h+='<td class="edit-cell"><input type="text" value="'+n2(svc.residual||0)+'" style="width:52px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].residual=raw(this.value);markD();render()" title="Residuo iniziale del servizio (modificabile)"></td>';
+    }
+    else{
+      // Cella residuo vuota: BLOCCATA con trattino e sfondo grigio
+      h+='<td class="comp" style="background:#eceff1;color:#999;text-align:center" title="Cella residuo bloccata - il residuo si calcola automaticamente">\u2013</td>';
+    }
     for(var m=0;m<12;m++)h+='<td class="edit-cell"><input type="text" value="'+n2(svc.hours[m]||0)+'" style="width:48px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].hours['+m+']=raw(this.value);markD();render()"></td>';
     h+='<td class="comp" style="font-weight:700">'+f2(svcTotH)+'</td>';
     h+='<td class="comp" style="font-weight:700">'+fE(rM(svcTotH*srt))+'</td></tr>';
@@ -654,6 +678,7 @@ function doReport(){
 }
 // ACTIONS
 function addSvc(idx,yr){var yd=A.d[idx].years[yr];if(!yd.services)yd.services=[];yd.services.push(eSvc(yd.default_rate||18));markD();render()}
+function delSvc(i,yr,s){var op=A.d[i];var svcs=op.years[yr].services;if(s<0||s>=svcs.length)return;if(!confirm("Eliminare il servizio \""+(svcs[s].name||"senza nome")+"\"?\nLe ore inserite andranno perse."))return;svcs.splice(s,1);markD();render()}
 function addPay(idx,yr){var yd=A.d[idx].years[yr];if(!yd.payments)yd.payments=[];yd.payments.push({date:"",hours:0,rate:yd.default_rate||18,attrib:null});markD();render()}
 function delPay(idx,yr,pi){A.d[idx].years[yr].payments.splice(pi,1);markD();render()}
 function delYr(idx,yr){if(confirm("Eliminare anno "+yr+"?")){delete A.d[idx].years[yr];markD();render()}}
