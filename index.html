@@ -329,9 +329,9 @@ function compOre(op,yr){
     var svc=svcs[s];var rt=svc.rate||0;var res=svc.residual||0;
     var hTot=0;
     for(var m=0;m<12;m++){var h=svc.hours[m]||0;oM[m]+=h;hTot+=h}
-    var svcH=res+hTot;var svcImpGross=rM(svcH*rt);var svcImp=rM(svcImpGross*0.80);
+    var svcH=res+hTot;var svcImp=rM(svcH*rt);
     totH+=hTot;totHRes+=res;totImp=rM(totImp+svcImp);
-    svcData.push({rate:rt,hours:hTot,residual:res,totalH:svcH,imp:svcImp,impGross:svcImpGross});
+    svcData.push({rate:rt,hours:hTot,residual:res,totalH:svcH,imp:svcImp});
   }
   return{oM:oM,totH:totH,totHRes:totHRes,totOreDisp:totHRes+totH,totImp:totImp,svcData:svcData}
 }
@@ -341,28 +341,31 @@ function compLiq(op,yr){
   var dispH=co.totOreDisp+cf.h;
   var dispImp=rM(co.totImp+cf.a);
   var yd=op.years[yr];var pays=yd.payments||[];
-  var totHLiq=0,totLordo=0,totNetto=0,totRimborso=0;var rows=[];
+  var totHLiq=0,totLordo=0,totNetto=0,totRimborso=0,totGross=0;var rows=[];
   for(var p=0;p<pays.length;p++){
     var h=parseFloat(pays[p].hours)||0;var rt=parseFloat(pays[p].rate)||0;
     var isRimb=pays[p].rimborso===true;
     totHLiq+=h;
     var calcLordo=rM(h*rt);
+    // Il credito operatore si calcola SEMPRE sul lordo (anche per il rimborso)
+    totGross=rM(totGross+calcLordo);
     var lordo,rit,netto;
     if(isRimb){
-      // Rimborso spese: non è reddito. Lordo e ritenuta = 0. Netto = importo pieno.
-      lordo=0;rit=0;netto=calcLordo;
-      totRimborso=rM(totRimborso+calcLordo);
+      // Rimborso: si dà il netto (lordo-ritenuta) senza applicare ritenuta.
+      // Lordo e ritenuta restano figurativi (esclusi dai totali fiscali).
+      // Ma il credito cala comunque del LORDO pieno.
+      lordo=0;rit=0;netto=rM(calcLordo*0.80);
+      totRimborso=rM(totRimborso+netto);
     }else{
       lordo=calcLordo;rit=rM(lordo*0.20);netto=rM(lordo-rit);
       totLordo=rM(totLordo+lordo);
     }
     totNetto=rM(totNetto+netto);
-    // Il saldo ore/importo scala comunque (le ore sono state consumate)
-    var balH=dispH-totHLiq;var balImp=rM(dispImp-totNetto);
+    var balH=dispH-totHLiq;var balImp=rM(dispImp-totGross);
     var lordoTeor=calcLordo,ritTeor=rM(calcLordo*0.20);
     rows.push({date:pays[p].date,hours:h,rate:rt,lordo:lordo,rit:rit,netto:netto,lordoTeor:lordoTeor,ritTeor:ritTeor,attrib:pays[p].attrib,rimborso:isRimb,balH:balH,balImp:balImp});
   }
-  return{rows:rows,totHLiq:totHLiq,totLordo:totLordo,totRit:rM(totLordo*0.20),totNetto:totNetto,totRimborso:totRimborso,oreRes:dispH-totHLiq,impRes:rM(dispImp-totNetto),cfH:cf.h,cfA:cf.a,dispH:dispH,dispImp:dispImp}
+  return{rows:rows,totHLiq:totHLiq,totLordo:totLordo,totRit:rM(totLordo*0.20),totNetto:totNetto,totRimborso:totRimborso,oreRes:dispH-totHLiq,impRes:rM(dispImp-totGross),cfH:cf.h,cfA:cf.a,dispH:dispH,dispImp:dispImp}
 }
 function gY(op){return Object.keys(op.years).sort()}
 function nY(op){var y=gY(op);return parseInt(y[y.length-1])+1}
@@ -386,7 +389,7 @@ function exportYear(yr){
   if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return;}
   var wb=XLSX.utils.book_new();
   var r1=[["RIEPILOGO OPERATORI OCCASIONALI - ANNO "+yr],["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],
-    ["N.","Operatore","Foglio","Res.Ore "+(parseInt(yr)-1),"Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic","Tot.Ore","Imp.Maturato NETTO","Ore Liq.","Lordo","Rit.20%","Netto","Ore Residue","Imp.Residuo NETTO"]];
+    ["N.","Operatore","Foglio","Res.Ore "+(parseInt(yr)-1),"Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic","Tot.Ore","Imp.Maturato","Ore Liq.","Lordo","Rit.20%","Netto","Ore Residue","Imp.Residuo"]];
   var n=0;
   for(var i=0;i<A.d.length;i++){
     var op=A.d[i];if(!op.years[yr])continue;n++;var co=compOre(op,yr);var cl=compLiq(op,yr);
@@ -407,7 +410,7 @@ function exportYear(yr){
   var ws2=XLSX.utils.aoa_to_sheet(r2);ws2['!cols']=[{wch:4},{wch:32},{wch:14},{wch:8},{wch:8},{wch:12},{wch:12},{wch:12},{wch:18},{wch:10},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws2,"Liquidazioni "+yr);
   var r3=[["DATI PER CERTIFICAZIONI - ANNO "+yr],["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],
-    ["N.","Cognome e Nome","Tot.Ore Liq.","Lordo Liq.","Ritenuta 20%","Netto Liq.","Ore Residue","Imp.Residuo NETTO"]];
+    ["N.","Cognome e Nome","Tot.Ore Liq.","Lordo Liq.","Ritenuta 20%","Netto Liq.","Ore Residue","Imp.Residuo"]];
   var cn=0;
   for(var i=0;i<A.d.length;i++){
     var op=A.d[i];if(!op.years[yr])continue;var co=compOre(op,yr);var cl=compLiq(op,yr);
@@ -558,7 +561,7 @@ function rYB(idx,yr,ci){
   h+='<div class="sec-lbl" style="background:'+yc.s+';color:#fff">ORE EFFETTUATE</div>';
   h+='<table><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th>\u20ac/h anno</th><th>Res.'+(parseInt(yr)-1)+'</th>';
   for(var m=0;m<12;m++)h+='<th class="month-hdr">'+moYr(m,yr)+'</th>';
-  h+='<th>Ore</th><th>Imp.Mat.<br><span style="font-size:8px;font-weight:400;font-style:italic">netto</span></th></tr></thead><tbody>';
+  h+='<th>Ore</th><th>Imp.Mat.</th></tr></thead><tbody>';
   for(var s=0;s<svcs.length;s++){
     var svc=svcs[s];var srt=svc.rate||0;var hTot=0;for(var m=0;m<12;m++)hTot+=(svc.hours[m]||0);
     var cfv2=cfwd(op,yr);
@@ -587,8 +590,8 @@ function rYB(idx,yr,ci){
     }
     for(var m=0;m<12;m++)h+='<td class="edit-cell"><input type="text" value="'+n2(svc.hours[m]||0)+'" style="width:48px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].hours['+m+']=raw(this.value);markD();render()"></td>';
     // Imp.Mat: ore lavorate × tariffa corrente + importo residuo (già valorizzato all'anno prima)
-    var resImp=(s===0&&cfv.h!==0)?cfv.a:rM((svc.residual||0)*srt*0.80);
-    var svcImpMat=rM(rM(hTot*srt*0.80)+resImp);
+    var resImp=(s===0&&cfv.h!==0)?cfv.a:rM((svc.residual||0)*srt);
+    var svcImpMat=rM(rM(hTot*srt)+resImp);
     h+='<td class="comp" style="font-weight:700">'+f2(svcTotH)+'</td>';
     h+='<td class="comp" style="font-weight:700">'+fE(svcImpMat)+'</td></tr>';
   }
@@ -602,14 +605,14 @@ function rYB(idx,yr,ci){
   h+='<div style="margin-top:4px"><button class="btn-add-pay" style="background:#2e5c31" onclick="addSvc('+idx+',\''+yr+'\')">'+'+ Aggiungi servizio</button></div>';
   h+='<div class="bal-summary" style="background:'+yc.bg+';border:1px solid '+yc.b+'">';
   if(cl.cfH!==0){h+='<span>Ore disponibili: <strong>'+f2(cl.cfH)+'</strong> (residuo '+(parseInt(yr)-1)+') + '+f2(co.totH)+' (lav. '+yr+') = <strong>'+f2(cl.dispH)+'</strong></span>';
-  h+='<span>Importo: <strong>'+fE(cl.cfA)+'</strong> (res.) + '+fE(co.totImp)+' (mat. netto) = <strong>'+fE(cl.dispImp)+'</strong></span>';}
+  h+='<span>Importo: <strong>'+fE(cl.cfA)+'</strong> (res.) + '+fE(co.totImp)+' (mat.) = <strong>'+fE(cl.dispImp)+'</strong></span>';}
   else{h+='<span>Ore disponibili: '+f2(co.totH)+' (lav.) = <strong>'+f2(cl.dispH)+'</strong></span>';
-  h+='<span>Importo maturato (netto): <strong>'+fE(cl.dispImp)+'</strong></span>';}
+  h+='<span>Importo maturato: <strong>'+fE(cl.dispImp)+'</strong></span>';}
   h+='</div>';
   // REGISTRO LIQUIDAZIONI
   h+='<div class="sec-lbl" style="background:'+yc.s+';color:#fff">REGISTRO LIQUIDAZIONI / PAGAMENTI</div>';
   h+='<table><thead><tr style="background:'+yc.bg+'"><th style="width:25px">N.</th><th style="min-width:90px">Data pag.</th><th>Ore liq.</th><th>\u20ac/h<br><span style="font-size:9px;font-weight:400;font-style:italic">(inserisci importo in funz. della notula per il serv. di attribuzione)</span></th>';
-  h+='<th>Lordo</th><th>Rit. 20%</th><th>Netto</th><th style="width:45px">Solo<br><span style="font-size:8px;font-weight:400;font-style:italic">netto</span></th><th style="min-width:200px">Attribuzione</th>';
+  h+='<th>Lordo</th><th>Rit. 20%</th><th>Netto</th><th style="width:55px">Rimborso</th><th style="min-width:200px">Attribuzione</th>';
   h+='<th style="font-size:13px;font-weight:900">ORE A CREDITO OPERATORE</th><th style="font-size:13px;font-weight:900">IMPORTO A CREDITO OPERATORE</th><th style="width:25px"></th></tr></thead><tbody>';
   if(cl.rows.length===0)h+='<tr><td colspan="12" style="text-align:center;color:#999;padding:6px">Nessuna liquidazione registrata</td></tr>';
   for(var p=0;p<cl.rows.length;p++){
@@ -625,7 +628,7 @@ function rYB(idx,yr,ci){
       h+='<td class="comp">'+fE(pr.lordo)+'</td>';
       h+='<td class="comp">'+fE(pr.rit)+'</td>';
     }
-    h+='<td class="net-cell"'+(pr.rimborso?' style="background:#fff3e0" title="Rimborso spese - non concorre al reddito"':'')+'>'+fE(pr.netto)+(pr.rimborso?' <span style="font-size:8px;color:#e65100;font-weight:700">R</span>':'')+'</td>';
+    h+='<td class="net-cell"'+(pr.rimborso?' style="background:#fff3e0" title="Netto dato come rimborso: nessuna ritenuta applicata"':'')+'>'+fE(pr.netto)+(pr.rimborso?' <span style="font-size:8px;color:#e65100;font-weight:700">R</span>':'')+'</td>';
     h+='<td style="text-align:center"><span onclick="'+P+'.payments['+p+'].rimborso=!'+P+'.payments['+p+'].rimborso;markD();render()" style="display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid '+(pr.rimborso?'#e65100':'#bbb')+';background:'+(pr.rimborso?'#e65100':'#fff')+';cursor:pointer;vertical-align:middle" title="Pallino rimborso: se attivo, lordo e ritenuta diventano teorici (grigi) e non contano nei totali; resta solo il netto"></span></td>';
     h+='<td class="edit-cell" style="min-width:200px"><input class="svc-input" style="text-align:left;font-size:12px" value="'+escHTML(pr.attrib||'')+'" onchange="'+P+'.payments['+p+'].attrib=this.value||null;markD()"></td>';
     h+='<td class="'+brc+'">'+f2(pr.balH)+'</td>';
