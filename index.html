@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Christian Canonica">
+<meta name="copyright" content="Spazio Ireos Societa Cooperativa Sociale ETS">
+<meta name="description" content="Gestione Operatori Occasionali - Spazio Ireos Societa Cooperativa Sociale ETS - Autore: Christian Canonica">
 <title>Operatori Occasionali - Spazio Ireos</title>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -388,6 +391,59 @@ function compLiq(op,yr){
 function gY(op){return Object.keys(op.years).sort()}
 function nY(op){var y=gY(op);return parseInt(y[y.length-1])+1}
 function cfwd(op,yr){var y=gY(op);var i=y.indexOf(String(yr));if(i<=0)return{h:0,a:0};var cl=compLiq(op,y[i-1]);if(!cl)return{h:0,a:0};return{h:cl.oreRes,a:cl.impRes}}
+// ===== MOTORE A SECCHI: residuo scomposto per servizio di provenienza =====
+// Un secchio = {nome, tariffa, ore}. Le liquidazioni consumano i secchi con la
+// STESSA tariffa, in ordine. I secchi non consumati passano all'anno dopo.
+function bkAvail(op,yr){
+  var y=gY(op);var i=y.indexOf(String(yr));var out=[];
+  if(i>0){var prev=bkResid(op,y[i-1]);for(var k=0;k<prev.length;k++){out.push({name:prev[k].name,rate:prev[k].rate,hours:prev[k].hours,yr:prev[k].yr,idx:prev[k].idx})}}
+  var svcs=(op.years[yr]&&op.years[yr].services)?op.years[yr].services:[];
+  for(var s=0;s<svcs.length;s++){
+    var svc=svcs[s];var rt=svc.rate||0;var res=svc.residual||0;var hTot=0;
+    for(var m=0;m<12;m++){hTot+=(svc.hours[m]||0)}
+    var tot=res+hTot;
+    if(Math.abs(tot)>0.0001)out.push({name:svc.name,rate:rt,hours:tot,yr:String(yr),idx:s});
+  }
+  return out;
+}
+function bkResid(op,yr){
+  var av=bkAvail(op,yr);
+  var yd=op.years[yr];if(!yd)return[];
+  var pays=yd.payments||[];
+  for(var p=0;p<pays.length;p++){
+    var need=parseFloat(pays[p].hours)||0;var prt=parseFloat(pays[p].rate)||0;
+    if(need===0)continue;
+    for(var b=0;b<av.length;b++){
+      if(need<=0)break;
+      if(av[b].rate!==prt||av[b].hours<=0)continue;
+      var take=Math.min(av[b].hours,need);av[b].hours=av[b].hours-take;need=need-take;
+    }
+    if(need>0.0001){
+      var tgt=null;
+      for(var b2=0;b2<av.length;b2++){if(av[b2].rate===prt)tgt=av[b2]}
+      if(!tgt){tgt={name:null,rate:prt,hours:0,yr:String(yr),idx:-1};av.push(tgt)}
+      tgt.hours=tgt.hours-need;
+    }
+  }
+  var rettO=parseFloat(yd.rettOre)||0;
+  if(rettO>0){
+    for(var b3=0;b3<av.length;b3++){
+      if(rettO<=0)break;
+      if(av[b3].hours<=0)continue;
+      var tk=Math.min(av[b3].hours,rettO);av[b3].hours=av[b3].hours-tk;rettO=rettO-tk;
+    }
+    if(rettO>0.0001&&av.length>0){av[av.length-1].hours=av[av.length-1].hours-rettO}
+  }
+  var out=[];
+  for(var b4=0;b4<av.length;b4++){if(Math.abs(av[b4].hours)>0.0001)out.push(av[b4])}
+  return out;
+}
+// Secchi portati dagli anni precedenti (da mostrare in cima alla tabella ore)
+function bkPortati(op,yr){
+  var av=bkAvail(op,yr);var out=[];
+  for(var k=0;k<av.length;k++){if(av[k].yr!==String(yr))out.push(av[k])}
+  return out;
+}
 function azzeraCredito(i,yr){
   var op=A.d[i];var cl=compLiq(op,yr);if(!cl)return;
   if(!confirm("Azzerare il credito residuo?\nOre: "+f2(cl.oreRes)+" \u2192 0\nImporto: "+fE(cl.impRes)+" \u2192 0\n\nIl saldo verr\u00e0 chiuso a zero."))return;
@@ -598,7 +654,6 @@ function rYB(idx,yr,ci){
   var defRt=yd.default_rate||18;
   var yc=YC[ci%YC.length];var P="A.d["+idx+"].years['"+yr+"']";
   var cf=cfwd(op,yr);var cfH='';
-  if(cf.h!==0){cfH='<div class="carry-box" style="background:'+yc.bg+'"><strong>\u26a0 Residuo dal '+(parseInt(yr)-1)+':</strong> '+f2(cf.h)+' ore = '+fE(cf.a)+'</div>'}
   var FRAME=(parseInt(yr)%2===0)?FRAME_EVEN:FRAME_ODD;
   var h='<div class="year-block" style="border-color:'+FRAME+';border-width:4px">'+cfH;
   h+='<div class="ytitle" style="background:#A72920;color:#fff"><span>ANNO '+yr+'</span><span>';
@@ -611,11 +666,25 @@ function rYB(idx,yr,ci){
   h+='<table><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th>\u20ac/h anno</th><th>Res.'+(parseInt(yr)-1)+'</th>';
   for(var m=0;m<12;m++)h+='<th class="month-hdr">'+moYr(m,yr)+'</th>';
   h+='<th>Ore anno</th><th>Ore+Res</th><th>Imp.Mat.</th></tr></thead><tbody>';
+  // Righe grigie: residuo portato dagli anni precedenti, con servizio di provenienza
+  var port=bkPortati(op,yr);
+  for(var pb=0;pb<port.length;pb++){
+    var bpo=port[pb];var bnm=bpo.name||'(senza nome)';
+    var bcol=valColor(bpo.name);
+    h+='<tr style="background:#eceff1">';
+    h+='<td class="lbl" style="white-space:nowrap;min-width:78px;font-size:9px;color:#607d8b" title="Riga non modificabile: ore maturate in un anno precedente e non ancora liquidate">Res.'+bpo.yr+'</td>';
+    h+='<td style="min-width:200px;text-align:left;background:#eceff1;font-size:11px;font-weight:700;color:'+(bcol?darken(bcol):'#607d8b')+'" title="Servizio di provenienza del residuo">'+escHTML(bnm)+'</td>';
+    h+='<td style="background:#eceff1;font-weight:700;color:#607d8b"><span style="color:#aaa;margin-right:2px">\u20ac</span>'+f2(bpo.rate)+'</td>';
+    h+='<td class="comp" style="background:#eceff1;font-weight:700;color:#607d8b">'+f2(bpo.hours)+'</td>';
+    for(var bm=0;bm<12;bm++)h+='<td style="background:#eceff1"></td>';
+    h+='<td class="comp" style="background:#eceff1;color:#bbb">\u2013</td>';
+    h+='<td class="comp" style="background:#eceff1;font-weight:700;color:#607d8b">'+f2(bpo.hours)+'</td>';
+    h+='<td class="comp" style="background:#eceff1;font-weight:700;color:#607d8b">'+fE(rM(bpo.hours*bpo.rate))+'</td></tr>';
+  }
   for(var s=0;s<svcs.length;s++){
     var svc=svcs[s];var srt=svc.rate||0;var hTot=0;for(var m=0;m<12;m++)hTot+=(svc.hours[m]||0);
-    var cfv2=cfwd(op,yr);
-    var svcTotH=(s===0&&cfv2.h!==0?cfv2.h:(svc.residual||0))+hTot;
-    h+='<td class="lbl" style="white-space:nowrap;min-width:78px">Serv.'+(s+1);
+    var svcTotH=(svc.residual||0)+hTot;
+    h+='<tr><td class="lbl" style="white-space:nowrap;min-width:78px">Serv.'+(s+1);
     h+=' <button onclick="moveSvc('+idx+',\''+yr+'\','+s+',-1)" style="background:'+(s===0?'#ccc':'#607d8b')+';color:#fff;border:none;border-radius:3px;width:16px;height:16px;font-size:10px;line-height:1;cursor:'+(s===0?'default':'pointer')+';padding:0;vertical-align:middle" title="Sposta su"'+(s===0?' disabled':'')+'>\u25b2</button>';
     h+=' <button onclick="moveSvc('+idx+',\''+yr+'\','+s+',1)" style="background:'+(s===svcs.length-1?'#ccc':'#607d8b')+';color:#fff;border:none;border-radius:3px;width:16px;height:16px;font-size:10px;line-height:1;cursor:'+(s===svcs.length-1?'default':'pointer')+';padding:0;vertical-align:middle" title="Sposta gi\u00f9"'+(s===svcs.length-1?' disabled':'')+'>\u25bc</button>';
     h+=' <button onclick="delSvc('+idx+',\''+yr+'\','+s+')" style="background:#c62828;color:#fff;border:none;border-radius:3px;width:16px;height:16px;font-size:11px;line-height:1;cursor:pointer;padding:0;vertical-align:middle" title="Elimina servizio">\u00d7</button></td>';
@@ -625,15 +694,9 @@ function rYB(idx,yr,ci){
     if(svc.name){h+='<span onclick="openPicker(\''+escHTML(String(svc.name).replace(/'/g,"")).replace(/"/g,'')+'\',event)" style="position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:3px;border:1px solid #888;background:'+(svcCol||'#fff')+';cursor:pointer" title="Cambia colore"></span>'}
     h+='</td>';
     h+='<td class="edit-cell" style="font-size:9px"><span style="color:#888;margin-right:2px">€</span><input class="rate-in" type="text" value="'+n2(srt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].rate=raw(this.value);markD();render()"></td>';
-    // Residuo: prima riga = carry-forward automatico (bloccato), altre = residuo servizio editabile
-    var cfv=cfwd(op,yr);
-    if(s===0&&cfv.h!==0){
-      // Provenienza: nomi servizi anno precedente
-      var prevYrs=gY(op);var pi=prevYrs.indexOf(String(yr));var prov="";
-      if(pi>0){var psvcs=op.years[prevYrs[pi-1]].services||[];var pn=[];for(var pp=0;pp<psvcs.length;pp++){if(psvcs[pp].name)pn.push(psvcs[pp].name)}prov=pn.join(", ")}
-      h+='<td class="comp" style="font-weight:700;background:#eceff1" title="Residuo da '+(parseInt(yr)-1)+(prov?": "+escHTML(prov):"")+'">'+f2(cfv.h)+'</td>';
-    }
-    else if(svc.residual&&svc.residual!==0){
+    // Residuo: solo quello proprio del servizio. Il residuo portato dagli anni
+    // precedenti ha righe grigie dedicate in cima, con il servizio di provenienza.
+    if(svc.residual&&svc.residual!==0){
       // Residuo individuale del servizio (es. da residual nei dati) - editabile
       h+='<td class="edit-cell"><input type="text" value="'+n2(svc.residual||0)+'" style="width:52px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].residual=raw(this.value);markD();render()" title="Residuo iniziale del servizio (modificabile)"></td>';
     }
@@ -643,7 +706,7 @@ function rYB(idx,yr,ci){
     }
     for(var m=0;m<12;m++)h+='<td class="edit-cell"><input type="text" value="'+n2(svc.hours[m]||0)+'" style="width:48px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].hours['+m+']=raw(this.value);markD();render()"></td>';
     // Imp.Mat: ore lavorate × tariffa corrente + importo residuo (già valorizzato all'anno prima)
-    var resImp=(s===0&&cfv.h!==0)?cfv.a:rM((svc.residual||0)*srt);
+    var resImp=rM((svc.residual||0)*srt);
     var svcImpMat=rM(rM(hTot*srt)+resImp);
     h+='<td class="comp" style="font-weight:700">'+f2(hTot)+'</td>';
     h+='<td class="comp" style="font-weight:700">'+f2(svcTotH)+'</td>';
@@ -651,11 +714,12 @@ function rYB(idx,yr,ci){
   }
   if(svcs.length===0)h+='<tr><td class="lbl" colspan="18" style="text-align:center;color:#999;padding:4px">Nessun servizio</td></tr>';
   var cfO=cfwd(op,yr);
-  h+='<tr style="background:'+yc.bg+'"><td class="lbl">ORE MESE</td><td></td><td></td><td class="comp" style="font-weight:700">'+(cfO.h!==0?f2(cfO.h):'')+'</td>';
+  var totResCol=rM(co.totHRes+cfO.h);
+  h+='<tr style="background:'+yc.bg+'"><td class="lbl">ORE MESE</td><td></td><td></td><td class="comp" style="font-weight:700" title="Residui dei servizi + residuo portato dagli anni precedenti">'+(totResCol!==0?f2(totResCol):'')+'</td>';
   for(var m=0;m<12;m++)h+='<td class="comp" style="font-weight:700;color:#000">'+f2(co.oM[m])+'</td>';
-  h+='<td class="comp" style="font-weight:900">'+f2(co.totH)+'</td>';
-  h+='<td class="comp" style="font-weight:900">'+f2(co.totOreDisp)+'</td>';
-  h+='<td class="comp" style="font-weight:900">'+fE(co.totImp)+'</td></tr>';
+  h+='<td class="comp" style="font-weight:900" title="Ore lavorate in questo anno">'+f2(co.totH)+'</td>';
+  h+='<td class="comp" style="font-weight:900" title="Ore lavorate + tutti i residui = ore disponibili">'+f2(rM(co.totOreDisp+cfO.h))+'</td>';
+  h+='<td class="comp" style="font-weight:900" title="Importo maturato complessivo disponibile">'+fE(rM(co.totImp+cfO.a))+'</td></tr>';
   h+='</tbody></table>';
   h+='<div style="margin-top:4px"><button class="btn-add-pay" style="background:#2e5c31" onclick="addSvc('+idx+',\''+yr+'\')">'+'+ Aggiungi servizio</button></div>';
   h+='<div class="bal-summary" style="background:'+yc.bg+';border:1px solid '+yc.b+'">';
@@ -713,7 +777,28 @@ function rYB(idx,yr,ci){
   h+='<button class="btn" style="background:#c62828;color:#fff;font-size:12px;padding:4px 10px" onclick="azzeraCredito('+idx+',\''+yr+'\')">Azzera credito residuo</button>';
   if(hasRett){h+='<button class="btn" style="background:#607d8b;color:#fff;font-size:11px;padding:4px 8px" onclick="resetRettifica('+idx+',\''+yr+'\')">Annulla rettifica</button>';}
   if(hasRett){h+='<span style="font-size:11px;color:#e65100;font-style:italic">Credito rettificato di '+f2(cl.rettOre)+' ore / '+fE(cl.rettImp)+'</span>';}
-  h+='</div></div>';
+  h+='</div>';
+  // COMPOSIZIONE DEL CREDITO: da quale servizio proviene
+  var comp=bkResid(op,yr);
+  if(comp.length>0){
+    h+='<div style="margin-top:8px;padding:8px 10px;background:#fbfbfb;border:1px solid #e0e0e0;border-radius:6px">';
+    h+='<div style="font-weight:700;font-size:12px;color:#555;margin-bottom:4px">Il credito viene da:</div>';
+    for(var q=0;q<comp.length;q++){
+      var cb=comp[q];var cnm=cb.name||'(senza nome)';var ccol=valColor(cb.name);
+      var neg=cb.hours<0;
+      h+='<div style="font-size:12px;padding:2px 0;display:flex;gap:10px;align-items:center">';
+      h+='<span style="display:inline-block;width:10px;height:10px;border-radius:2px;border:1px solid #bbb;background:'+(ccol||'#fff')+'"></span>';
+      h+='<span style="min-width:230px;font-weight:700;color:'+(ccol?darken(ccol):'#444')+'">'+escHTML(cnm)+'</span>';
+      h+='<span style="color:#888">anno '+cb.yr+'</span>';
+      h+='<span style="color:#888">\u20ac/h '+f2(cb.rate)+'</span>';
+      h+='<span style="color:#999;font-weight:400">'+f2(rM(cb.hours))+' ore</span>';
+      h+='<span style="font-weight:900;color:'+(neg?'#c62828':'#1b5e20')+'">'+fE(rM(cb.hours*cb.rate))+'</span>';
+      if(neg)h+='<span style="font-size:10px;color:#c62828;font-style:italic">scoperto: liquidato pi\u00f9 del maturato</span>';
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+  h+='</div>';
   return h;
 }
 // MODALS
@@ -776,7 +861,19 @@ function doReport(){
 }
 // ACTIONS
 function addSvc(idx,yr){var yd=A.d[idx].years[yr];if(!yd.services)yd.services=[];yd.services.push(eSvc(yd.default_rate||18));markD();render()}
-function delSvc(i,yr,s){var op=A.d[i];var svcs=op.years[yr].services;if(s<0||s>=svcs.length)return;if(!confirm("Eliminare il servizio \""+(svcs[s].name||"senza nome")+"\"?\nLe ore inserite andranno perse."))return;svcs.splice(s,1);markD();render()}
+function delSvc(i,yr,s){
+  var op=A.d[i];var svcs=op.years[yr].services;if(s<0||s>=svcs.length)return;
+  var svc=svcs[s];var hTot=0;for(var m=0;m<12;m++){hTot+=(svc.hours[m]||0)}
+  var res=svc.residual||0;var tot=rM(res+hTot);var nm=svc.name||"senza nome";
+  var msg;
+  if(Math.abs(tot)<0.0001){
+    msg="QUESTO SERVIZIO NON HA ORE N\u00c9 RESIDUI.\n\nServizio: "+nm+"\n\nLo vuoi cancellare?";
+  }else{
+    msg="ATTENZIONE: questo servizio contiene del credito.\n\nServizio: "+nm+"\nOre lavorate: "+f2(hTot)+"\nResiduo iniziale: "+f2(res)+"\nTOTALE: "+f2(tot)+" ore = "+fE(rM(tot*(svc.rate||0)))+"\n\nSe lo cancelli perdi questo credito. Procedo?";
+  }
+  if(!confirm(msg))return;
+  svcs.splice(s,1);markD();render();
+}
 function moveSvc(i,yr,s,dir){var op=A.d[i];var svcs=op.years[yr].services;var ns=s+dir;if(ns<0||ns>=svcs.length)return;var tmp=svcs[s];svcs[s]=svcs[ns];svcs[ns]=tmp;markD();render()}
 function addPay(idx,yr){var yd=A.d[idx].years[yr];if(!yd.payments)yd.payments=[];yd.payments.push({date:"",hours:0,rate:yd.default_rate||18,attrib:null});markD();render()}
 function delPay(idx,yr,pi){A.d[idx].years[yr].payments.splice(pi,1);markD();render()}
