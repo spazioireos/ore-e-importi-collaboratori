@@ -286,7 +286,16 @@ function saveColors(){try{localStorage.setItem(CKEY,JSON.stringify(colorMap))}ca
 function autoColor(txt){if(!txt)return"";var t=String(txt).trim();if(!t)return"";var hh=0;for(var i=0;i<t.length;i++){hh=((hh<<5)-hh+t.charCodeAt(i))|0}return PALETTE[Math.abs(hh)%PALETTE.length]}
 // Colore effettivo: manuale se scelto, altrimenti automatico
 function valColor(txt){if(!txt)return"";var t=String(txt).trim();if(!t)return"";if(colorMap[t])return colorMap[t];return autoColor(t)}
-function darken(hex){if(!hex||hex.charAt(0)!=="#"||hex.length<7)return"#333";var r=parseInt(hex.substr(1,2),16),g=parseInt(hex.substr(3,2),16),b=parseInt(hex.substr(5,2),16);var f=0.45;r=Math.round(r*f);g=Math.round(g*f);b=Math.round(b*f);var h2=function(n){var s=n.toString(16);return s.length<2?"0"+s:s};return"#"+h2(r)+h2(g)+h2(b)}
+function lum(hex){if(!hex||hex.charAt(0)!=="#"||hex.length<7)return 1;var r=parseInt(hex.substr(1,2),16)/255,g=parseInt(hex.substr(3,2),16)/255,b=parseInt(hex.substr(5,2),16)/255;return 0.2126*r+0.7152*g+0.0722*b}
+function darken(hex){
+  if(!hex||hex.charAt(0)!=="#"||hex.length<7)return"#333";
+  // Su fondo scuro il testo scuro sarebbe illeggibile: passa al bianco
+  if(lum(hex)<0.5)return"#ffffff";
+  var r=parseInt(hex.substr(1,2),16),g=parseInt(hex.substr(3,2),16),b=parseInt(hex.substr(5,2),16);
+  var f=0.45;r=Math.round(r*f);g=Math.round(g*f);b=Math.round(b*f);
+  var h2=function(n){var s=n.toString(16);return s.length<2?"0"+s:s};
+  return"#"+h2(r)+h2(g)+h2(b);
+}
 // Apre il picker tavolozza per un valore
 var pickerFor=null;
 function openPicker(txt,ev){if(ev){ev.stopPropagation()}var t=String(txt||"").trim();if(!t)return;pickerFor=t;render()}
@@ -472,6 +481,61 @@ function cloneSvcs(op,prevYr){
 }
 
 // EXCEL
+function exportCreditoProgetto(){
+  if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return;}
+  try{
+  // Credito aperto = secchi residui dell'ULTIMO anno di ciascun operatore
+  var mappa={};var dett=[];
+  for(var i=0;i<A.d.length;i++){
+    var op=A.d[i];var yrs=gY(op);if(yrs.length===0)continue;
+    var last=yrs[yrs.length-1];
+    var bk=bkResid(op,last);
+    for(var b=0;b<bk.length;b++){
+      var cb=bk[b];var nm=cb.name||"(senza nome)";
+      var key=nm+"||"+cb.rate;
+      if(!mappa[key])mappa[key]={nome:nm,tar:cb.rate,orePos:0,eurPos:0,oreNeg:0,eurNeg:0,nPos:0,nNeg:0};
+      var eur=cb.hours*cb.rate;
+      if(cb.hours>0){mappa[key].orePos+=cb.hours;mappa[key].eurPos+=eur;mappa[key].nPos++}
+      else{mappa[key].oreNeg+=cb.hours;mappa[key].eurNeg+=eur;mappa[key].nNeg++}
+      dett.push([nm,cb.rate,op.name,op.sheet,last,rM(cb.hours),rM(eur),cb.hours<0?"A DEBITO":""]);
+    }
+  }
+  var keys=Object.keys(mappa);
+  keys.sort(function(a,b){return (mappa[b].eurPos-mappa[b].eurNeg)-(mappa[a].eurPos-mappa[a].eurNeg)});
+  var wb=XLSX.utils.book_new();
+  // Foglio 1: riepilogo per progetto, positivi e negativi NON compensati
+  var r1=[["CREDITO RESIDUO PER PROGETTO"],
+    ["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],
+    ["Positivi e negativi esposti separatamente, non compensati"],[],
+    ["Progetto","\u20ac/h","Oper. a credito","Ore a credito","Euro a credito","Oper. a debito","Ore a debito","Euro a debito","Netto ore","Netto euro"]];
+  var tOP=0,tEP=0,tON=0,tEN=0;
+  for(var k=0;k<keys.length;k++){
+    var m=mappa[keys[k]];
+    tOP+=m.orePos;tEP+=m.eurPos;tON+=m.oreNeg;tEN+=m.eurNeg;
+    r1.push([m.nome,m.tar,m.nPos,rM(m.orePos),rM(m.eurPos),m.nNeg,rM(m.oreNeg),rM(m.eurNeg),rM(m.orePos+m.oreNeg),rM(m.eurPos+m.eurNeg)]);
+  }
+  r1.push([]);
+  r1.push(["TOTALE","","",rM(tOP),rM(tEP),"",rM(tON),rM(tEN),rM(tOP+tON),rM(tEP+tEN)]);
+  r1.push([]);
+  r1.push(["Esposizione lorda a credito (quanto si deve):","",""," ",rM(tEP)]);
+  r1.push(["Esposizione lorda a debito (gia liquidato in piu):","",""," ",rM(tEN)]);
+  r1.push(["Saldo netto:","",""," ",rM(tEP+tEN)]);
+  var ws1=XLSX.utils.aoa_to_sheet(r1);
+  ws1['!cols']=[{wch:38},{wch:8},{wch:14},{wch:13},{wch:14},{wch:13},{wch:12},{wch:13},{wch:11},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws1,"Credito per progetto");
+  // Foglio 2: dettaglio operatore per operatore
+  var r2=[["DETTAGLIO PER OPERATORE"],["Spazio Ireos soc. Cooperativa sociale"],[],
+    ["Progetto","\u20ac/h","Operatore","Foglio","Ultimo anno","Ore","Euro","Nota"]];
+  dett.sort(function(a,b){if(a[0]<b[0])return -1;if(a[0]>b[0])return 1;return b[6]-a[6]});
+  for(var q=0;q<dett.length;q++)r2.push(dett[q]);
+  var ws2=XLSX.utils.aoa_to_sheet(r2);
+  ws2['!cols']=[{wch:38},{wch:8},{wch:32},{wch:16},{wch:11},{wch:10},{wch:11},{wch:11}];
+  XLSX.utils.book_append_sheet(wb,ws2,"Dettaglio operatori");
+  var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
+  XLSX.writeFile(wb,"Spazio Ireos Credito per progetto "+p2(dt.getDate())+p2(dt.getMonth()+1)+dt.getFullYear()+".xlsx");
+  toast("Report credito per progetto scaricato","#2e7d32");
+  }catch(e){toast("Errore report: "+e.message,"#c62828")}
+}
 function exportYear(yr){
   if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return;}
   var wb=XLSX.utils.book_new();
@@ -573,6 +637,16 @@ function rPicker(){
     h+='<span onclick="setColor(\''+pickerFor.replace(/'/g,"")+'\',\''+PALETTE[i]+'\')" style="width:34px;height:34px;border-radius:6px;background:'+PALETTE[i]+';'+sel+';cursor:pointer;display:inline-block" title="'+PALETTE[i]+'"></span>';
   }
   h+='</div>';
+  // Spettro completo: qualsiasi colore
+  var curFull=cur||valColor(pickerFor)||'#ffffff';
+  h+='<div style="border-top:1px solid #e0e0e0;padding-top:12px;margin-bottom:12px">';
+  h+='<div style="font-size:12px;font-weight:700;color:#555;margin-bottom:6px">Oppure scegli un colore qualsiasi</div>';
+  h+='<div style="display:flex;gap:8px;align-items:center">';
+  h+='<input type="color" id="fullPick" value="'+curFull+'" style="width:52px;height:34px;border:1px solid #bbb;border-radius:6px;cursor:pointer;padding:2px;background:#fff">';
+  h+='<button class="btn" onclick="setColor(\''+pickerFor.replace(/'/g,"")+'\',document.getElementById(\'fullPick\').value)" style="background:#1565c0;color:#fff;font-size:12px">Applica questo colore</button>';
+  h+='</div>';
+  h+='<div style="font-size:10px;color:#888;margin-top:5px;font-style:italic">Sui colori scuri il testo del servizio diventa bianco in automatico.</div>';
+  h+='</div>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end">';
   h+='<button class="btn" onclick="setColor(\''+pickerFor.replace(/'/g,"")+'\',\'\')" style="background:#eceff1">Auto (default)</button>';
   h+='<button class="btn" onclick="closePicker()" style="background:#607d8b;color:#fff">Chiudi</button>';
@@ -594,6 +668,7 @@ function rCov(){
   h+='</select><button class="btn btn-new" onclick="A.modal=\'newop\';render()">+ Nuovo operatore</button>';
   var aYrs=Object.keys(allYrs).sort();for(var y=0;y<aYrs.length;y++)h+='<button class="btn btn-xls" onclick="exportYear(\''+aYrs[y]+'\')">\u2B07 Excel '+aYrs[y]+'</button>';
   h+='<button class="btn" style="background:#6a1b9a;color:#fff" onclick="A.modal=\'report\';render()">Report per data</button>';
+  h+='<button class="btn" style="background:#00695c;color:#fff" onclick="exportCreditoProgetto()" title="Quanto si deve ancora agli operatori, diviso per progetto, senza compensare positivi e negativi">\u2B07 Credito per progetto</button>';
   h+='<button class="btn" style="background:#1565c0;color:#fff" onclick="expJSON()">⬇ Backup JSON</button>';
   h+='<button class="btn" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()">⬆ Ripristina backup</button>';
   if(A.dirty)h+='<button class="btn btn-save" onclick="sv()">\u2714 Salva</button>';
@@ -613,6 +688,9 @@ function rCov(){
     h+='<div class="op-card" onclick="openS('+i+')">';
     h+='<div class="on">'+escHTML(op.name)+'</div>';
     h+='<div class="os">'+escHTML(op.sheet)+' \u2014 '+yrs.join(", ")+'</div>';
+    var aDeb=false;
+    for(var yd2=0;yd2<yrs.length;yd2++){var cld=compLiq(op,yrs[yd2]);if(cld&&cld.impRes<0)aDeb=true}
+    if(aDeb)h+='<div style="background:#c62828;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:3px;margin-bottom:3px;display:inline-block">\u26a0 A DEBITO</div>';
     h+='<div class="ost">';
     for(var y=0;y<yrs.length;y++){var cl=compLiq(op,yrs[y]);if(!cl)continue;h+='<div class="sv"><div class="sl">Res.'+yrs[y]+'</div><div class="sn'+(cl.oreRes>0?' red':'')+'">'+f2(cl.oreRes)+'h</div></div>'}
     h+='</div></div>';
@@ -661,6 +739,15 @@ function rYB(idx,yr,ci){
   // btn servizio spostato sotto tabella ore
   if(Object.keys(op.years).length>1)h+=' <button class="btn-del-yr" onclick="delYr('+idx+',\''+yr+'\')">Elimina '+yr+'</button>';
   h+='</span></div>';
+  // ALERT: operatore a debito (credito in euro sotto zero)
+  var clAl=compLiq(op,yr);
+  if(clAl&&clAl.impRes<0){
+    h+='<div style="background:#c62828;color:#fff;padding:8px 12px;font-weight:900;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+    h+='<span style="font-size:16px">\u26a0</span>';
+    h+='<span>ATTENZIONE: L\'OPERATORE \u00c8 A DEBITO</span>';
+    h+='<span style="font-weight:400;font-size:12px">\u00c8 stato liquidato '+fE(rM(-clAl.impRes))+' in pi\u00f9 di quanto maturato'+(clAl.oreRes<0?' ('+f2(-clAl.oreRes)+' ore)':'')+'</span>';
+    h+='</div>';
+  }
   // ORE EFFETTUATE
   h+='<div class="sec-lbl" style="background:#DC143C;color:#fff">ORE EFFETTUATE</div>';
   h+='<table><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th>\u20ac/h anno</th><th>Res.'+(parseInt(yr)-1)+'</th>';
