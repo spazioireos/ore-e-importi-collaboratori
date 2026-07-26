@@ -735,7 +735,7 @@ function rYB(idx,yr,ci){
   var FRAME=(parseInt(yr)%2===0)?FRAME_EVEN:FRAME_ODD;
   var h='<div class="year-block" style="border-color:'+FRAME+';border-width:4px">'+cfH;
   h+='<div class="ytitle" style="background:#A72920;color:#fff"><span>ANNO '+yr+'</span><span>';
-  h+='\u20ac/h anno pred. <input class="rate-hdr" type="text" value="'+n2(defRt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.default_rate=raw(this.value);markD()"> ';
+  h+='Imp. contratt. pred. <input class="rate-hdr" type="text" value="'+n2(defRt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.default_rate=raw(this.value);markD()"> ';
   // btn servizio spostato sotto tabella ore
   if(Object.keys(op.years).length>1)h+=' <button class="btn-del-yr" onclick="delYr('+idx+',\''+yr+'\')">Elimina '+yr+'</button>';
   h+='</span></div>';
@@ -750,7 +750,7 @@ function rYB(idx,yr,ci){
   }
   // ORE EFFETTUATE
   h+='<div class="sec-lbl" style="background:#DC143C;color:#fff">ORE EFFETTUATE</div>';
-  h+='<table><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th>\u20ac/h anno</th><th>Res.'+(parseInt(yr)-1)+'</th>';
+  h+='<table><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th style="min-width:110px">Importo<br><span style="font-size:9px;font-weight:400">contrattuale</span></th><th>Res.'+(parseInt(yr)-1)+'</th>';
   for(var m=0;m<12;m++)h+='<th class="month-hdr">'+moYr(m,yr)+'</th>';
   h+='<th>Ore anno</th><th>Ore+Res</th><th>Imp.Mat.</th></tr></thead><tbody>';
   // Righe grigie: residuo portato dagli anni precedenti, con servizio di provenienza
@@ -780,7 +780,21 @@ function rYB(idx,yr,ci){
     h+='<input class="svc-input" style="font-size:11px!important;background:transparent;'+(svcCol?'color:'+darken(svcCol)+';font-weight:700':'')+'" value="'+escHTML(svc.name||'')+'" placeholder="Servizio..." onchange="'+P+'.services['+s+'].name=this.value||null;markD();render()">';
     if(svc.name){h+='<span onclick="openPicker(\''+escHTML(String(svc.name).replace(/'/g,"")).replace(/"/g,'')+'\',event)" style="position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:3px;border:1px solid #888;background:'+(svcCol||'#fff')+';cursor:pointer" title="Cambia colore"></span>'}
     h+='</td>';
-    h+='<td class="edit-cell" style="font-size:9px"><span style="color:#888;margin-right:2px">€</span><input class="rate-in" type="text" value="'+n2(srt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].rate=raw(this.value);markD();render()"></td>';
+    var lk=(svc.locked!==false);
+    h+='<td class="edit-cell" style="font-size:9px;'+(lk?'background:#eef2f5':'')+'">';
+    h+='<span onclick="toggleLock('+idx+',\''+yr+'\','+s+')" style="cursor:pointer;font-size:12px;margin-right:2px;vertical-align:middle" title="'+(lk?'Bloccato: clicca per sbloccare e modificare':'Sbloccato: clicca per bloccare')+'">'+(lk?'\ud83d\udd12':'\ud83d\udd13')+'</span>';
+    h+='<span style="color:#888;margin-right:1px">€</span>';
+    var sm=svc.startM||0;
+    if(lk){
+      h+='<span style="font-weight:700;font-size:13px" title="Importo contrattuale bloccato">'+n2(srt)+'</span>';
+      if(sm>0)h+='<div style="font-size:8px;color:#607d8b;font-weight:700;margin-top:1px">dal mese: '+MESI_IT[sm]+'</div>';
+    }else{
+      h+='<input class="rate-in" style="width:44px" type="text" value="'+n2(srt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].rate=raw(this.value);markD();render()">';
+      h+='<div style="margin-top:2px"><span style="font-size:8px;color:#555">dal </span><select onchange="setStartM('+idx+',\''+yr+'\','+s+',this.value)" style="font-size:9px;font-family:\'Inter\',sans-serif;border:1px solid #bbb;border-radius:3px;background:#fff">';
+      for(var mm=0;mm<12;mm++)h+='<option value="'+mm+'"'+(sm===mm?' selected':'')+'>'+MESI_IT[mm]+'</option>';
+      h+='</select></div>';
+    }
+    h+='</td>';
     // Residuo: solo quello proprio del servizio. Il residuo portato dagli anni
     // precedenti ha righe grigie dedicate in cima, con il servizio di provenienza.
     if(svc.residual&&svc.residual!==0){
@@ -791,7 +805,17 @@ function rYB(idx,yr,ci){
       // Cella residuo vuota: BLOCCATA con trattino e sfondo grigio
       h+='<td class="comp" style="background:#eceff1;color:#999;text-align:center" title="Cella residuo bloccata - il residuo si calcola automaticamente">\u2013</td>';
     }
-    for(var m=0;m<12;m++)h+='<td class="edit-cell"><input type="text" value="'+n2(svc.hours[m]||0)+'" style="width:48px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].hours['+m+']=raw(this.value);markD();render()"></td>';
+    for(var m=0;m<12;m++){
+      if(m<sm&&!(svc.hours[m]>0)){
+        // Mese precedente all'inizio contrattuale: bloccato
+        h+='<td class="comp" style="background:#eceff1;color:#b0bec5;text-align:center" title="Mese precedente all\'inizio contrattuale ('+MESI_IT[sm]+'): non compilabile">\u2013</td>';
+      }else if(m<sm&&svc.hours[m]>0){
+        // Mese precedente MA con ore storiche: mostrale, non modificabili, evidenziate
+        h+='<td class="comp" style="background:#fff3e0;color:#e65100;font-weight:700" title="Ore inserite prima di impostare l\'inizio contrattuale: restano nei calcoli. Per modificarle riporta l\'inizio a Gennaio.">'+n2(svc.hours[m])+'</td>';
+      }else{
+        h+='<td class="edit-cell"><input type="text" value="'+n2(svc.hours[m]||0)+'" style="width:48px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].hours['+m+']=raw(this.value);markD();render()"></td>';
+      }
+    }
     // Imp.Mat: ore lavorate × tariffa corrente + importo residuo (già valorizzato all'anno prima)
     var resImp=rM((svc.residual||0)*srt);
     var svcImpMat=rM(rM(hTot*srt)+resImp);
@@ -948,6 +972,27 @@ function doReport(){
 }
 // ACTIONS
 function addSvc(idx,yr){var yd=A.d[idx].years[yr];if(!yd.services)yd.services=[];yd.services.push(eSvc(yd.default_rate||18));markD();render()}
+var MESI_IT=["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
+function setStartM(i,yr,s,val){
+  var svc=A.d[i].years[yr].services[s];
+  var nm=parseInt(val)||0;
+  // Ore gia' presenti nei mesi che verrebbero bloccati?
+  var oreBloccate=0;var mesiConOre=[];
+  for(var m=0;m<nm;m++){var hv=svc.hours[m]||0;if(hv>0){oreBloccate+=hv;mesiConOre.push(MESI_IT[m]+" ("+f2(hv)+"h)")}}
+  if(oreBloccate>0){
+    var msg="ATTENZIONE: i mesi precedenti a "+MESI_IT[nm]+" contengono gi\u00e0 delle ore:\n\n"+mesiConOre.join("\n")+"\n\nTotale: "+f2(oreBloccate)+" ore\n\nSe procedi, queste ore RESTANO nei calcoli ma le celle diventano non modificabili.\nPer eliminarle o spostarle, fallo PRIMA di impostare il mese di inizio.\n\nProcedo comunque?";
+    if(!confirm(msg)){render();return}
+  }
+  svc.startM=nm;
+  markD();render();
+}
+function toggleLock(i,yr,s){
+  var svc=A.d[i].years[yr].services[s];
+  // Stato effettivo: se non definito, il servizio e' considerato BLOCCATO.
+  var isLocked=(svc.locked!==false);
+  svc.locked=!isLocked;
+  markD();render();
+}
 function delSvc(i,yr,s){
   var op=A.d[i];var svcs=op.years[yr].services;if(s<0||s>=svcs.length)return;
   var svc=svcs[s];var hTot=0;for(var m=0;m<12;m++){hTot+=(svc.hours[m]||0)}
