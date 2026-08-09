@@ -620,6 +620,7 @@ function exportByDate(from,to){
 function render(){
   var el=document.getElementById('app');
   if(A.v==="cover")el.innerHTML=rCov();
+  else if(A.v==="anagList")el.innerHTML=rAnagList();
   else el.innerHTML=rSh();
   if(A.modal==="newop")el.innerHTML+=rMNO();
   if(A.modal==="newyr")el.innerHTML+=rMNY();
@@ -653,6 +654,62 @@ function rPicker(){
   h+='</div></div></div>';
   return h;
 }
+function rAnagList(){
+  // Campi chiave in colonna; tutti i 27 nell'export Excel
+  var cols=[["cognome","Cognome"],["nome","Nome"],["cf","Codice fiscale"],["dataNascita","Nascita"],["email","Email"],["qualifica","Qualifica"],["struttura","Struttura"],["dataAvvio","Avvio"],["dataConclusione","Conclusione"],["monteOreTot","Monte ore"],["importoOC","Importo \u20ac"],["cadenzamento","Cadenz."]];
+  var h='<div class="sheet-header"><div><h2>\ud83d\udcc7 Riepilogo anagrafiche</h2><span style="font-size:10px;opacity:0.8">'+A.d.length+' operatori</span></div><div class="acts">';
+  h+='<button class="btn btn-xls btn-sm" onclick="exportAnagExcel()">\u2B07 Excel anagrafiche</button> ';
+  h+='<button class="btn-nav" onclick="A.v=\'cover\';render()">\u2190 Torna alla lista</button>';
+  h+='</div></div>';
+  h+='<div style="padding:10px 14px;overflow-x:auto">';
+  h+='<table style="border-collapse:collapse;font-size:10px;width:100%"><thead><tr style="background:#37474f;color:#fff">';
+  h+='<th style="padding:4px 6px;text-align:left;position:sticky;left:0;background:#37474f">Operatore</th><th style="padding:4px">Campi</th>';
+  for(var c=0;c<cols.length;c++)h+='<th style="padding:4px 6px;text-align:left">'+cols[c][1]+'</th>';
+  h+='</tr></thead><tbody>';
+  var ordine=[];for(var i=0;i<A.d.length;i++)ordine.push(i);
+  ordine.sort(function(a,b){var na=(A.d[a].name||"").toLowerCase();var nb=(A.d[b].name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
+  for(var q=0;q<ordine.length;q++){
+    var i2=ordine[q];var op=A.d[i2];var an=op.anag||{};
+    var filled=0;for(var f=0;f<ANAG_FIELDS.length;f++){if(an[ANAG_FIELDS[f][0]])filled++}
+    var compl=filled>=ANAG_FIELDS.length-2;
+    h+='<tr style="border-bottom:1px solid #e0e0e0;background:'+(q%2?'#fafafa':'#fff')+'">';
+    h+='<td style="padding:3px 6px;font-weight:700;white-space:nowrap;position:sticky;left:0;background:inherit;cursor:pointer;color:#1565c0" onclick="openS('+i2+');A.anagOpen=true;render()" title="Apri la scheda con anagrafica aperta">'+escHTML(op.name)+'</td>';
+    h+='<td style="padding:3px;text-align:center;font-weight:900;color:'+(filled===0?'#c62828':(compl?'#1b5e20':'#e65100'))+'">'+filled+'/'+ANAG_FIELDS.length+'</td>';
+    for(var c2=0;c2<cols.length;c2++){
+      var v=an[cols[c2][0]]||"";
+      if(v)h+='<td style="padding:3px 6px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis" title="'+escHTML(v)+'">'+escHTML(String(v).length>26?String(v).substring(0,25)+"\u2026":v)+'</td>';
+      else h+='<td style="padding:3px 6px;background:#fdecea;color:#c62828;text-align:center">\u2013</td>';
+    }
+    h+='</tr>';
+  }
+  h+='</tbody></table></div>';
+  return h;
+}
+function exportAnagExcel(){
+  if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return}
+  try{
+    var rows=[["RIEPILOGO ANAGRAFICHE OPERATORI OCCASIONALI"],["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],["Operatore","Campi compilati"]];
+    for(var f=0;f<ANAG_FIELDS.length;f++)rows[3].push(ANAG_FIELDS[f][1]);
+    var ordine=[];for(var i=0;i<A.d.length;i++)ordine.push(i);
+    ordine.sort(function(a,b){var na=(A.d[a].name||"").toLowerCase();var nb=(A.d[b].name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
+    for(var q=0;q<ordine.length;q++){
+      var op=A.d[ordine[q]];var an=op.anag||{};
+      var filled=0;for(var f2=0;f2<ANAG_FIELDS.length;f2++){if(an[ANAG_FIELDS[f2][0]])filled++}
+      var r=[op.name,filled+"/"+ANAG_FIELDS.length];
+      for(var f3=0;f3<ANAG_FIELDS.length;f3++)r.push(an[ANAG_FIELDS[f3][0]]||"");
+      rows.push(r);
+    }
+    var wb=XLSX.utils.book_new();
+    var ws=XLSX.utils.aoa_to_sheet(rows);
+    var wcols=[{wch:32},{wch:9}];
+    for(var f4=0;f4<ANAG_FIELDS.length;f4++)wcols.push({wch:18});
+    ws['!cols']=wcols;
+    XLSX.utils.book_append_sheet(wb,ws,"Anagrafiche");
+    var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
+    XLSX.writeFile(wb,"Spazio Ireos Riepilogo anagrafiche "+p2(dt.getDate())+p2(dt.getMonth()+1)+dt.getFullYear()+".xlsx");
+    toast("Riepilogo anagrafiche scaricato","#2e7d32");
+  }catch(e){toast("Errore export: "+e.message,"#c62828")}
+}
 function rCov(){
   var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede</p></div><div class="cover-body">';
   var kpis={},allYrs={};
@@ -669,6 +726,9 @@ function rCov(){
   var aYrs=Object.keys(allYrs).sort();for(var y=0;y<aYrs.length;y++)h+='<button class="btn btn-xls" onclick="exportYear(\''+aYrs[y]+'\')">\u2B07 Excel '+aYrs[y]+'</button>';
   h+='<button class="btn" style="background:#6a1b9a;color:#fff" onclick="A.modal=\'report\';render()">Report per data</button>';
   h+='<button class="btn" style="background:#00695c;color:#fff" onclick="exportCreditoProgetto()" title="Quanto si deve ancora agli operatori, diviso per progetto, senza compensare positivi e negativi">\u2B07 Credito per progetto</button>';
+  h+='<button class="btn" style="background:#37474f;color:#fff" onclick="document.getElementById(\'anagFile\').click()" title="Carica l\'Elenco lavoratori: compila le anagrafiche degli operatori corrispondenti (solo campi vuoti, non sovrascrive)">\ud83d\udcc7 Importa anagrafiche</button>';
+  h+='<input type="file" id="anagFile" accept=".xlsx,.xls" style="display:none" onchange="importAnagFile(this)">';
+  h+='<button class="btn" style="background:#546e7a;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo anagrafiche</button>';
   h+='<button class="btn" style="background:#1565c0;color:#fff" onclick="expJSON()">⬇ Backup JSON</button>';
   h+='<button class="btn" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()">⬆ Ripristina backup</button>';
   if(A.dirty)h+='<button class="btn btn-save" onclick="sv()">\u2714 Salva</button>';
@@ -718,6 +778,8 @@ function rSh(){
   ddOrder.sort(function(a,b){var na=(a.name||"").toLowerCase();var nb=(b.name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
   for(var oi=0;oi<ddOrder.length;oi++){h+='<option value="'+ddOrder[oi].idx+'"'+(ddOrder[oi].idx===A.sel?' selected':'')+'>'+escHTML(ddOrder[oi].name)+'</option>';}
   h+='</select></div></div>';
+  h+=rAnag(A.sel);
+  h+=rAnagAlerts(A.sel);
   h+='<div class="sheet-body">';
   for(var y=0;y<yrs.length;y++){
     if(y>0)h+='<div class="year-sep"></div>';
@@ -973,6 +1035,209 @@ function doReport(){
 // ACTIONS
 function addSvc(idx,yr){var yd=A.d[idx].years[yr];if(!yd.services)yd.services=[];yd.services.push(eSvc(yd.default_rate||18));markD();render()}
 var MESI_IT=["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
+// ===== ANAGRAFICA =====
+var QUALIFICHE=["INSEGNANTE","INSEGNANTE/ISTRUTTORE","TECNICO ESPERTO E/O ISTRUTTORE PER LABORATORI","ASSISTENTE IN AREA SOCIO-EDUCATIVA","ASSISTENTE IN AREA SOCIO-EDUCATIVA / RICREATIVA","ASSISTENTE EDUCATIVO/LUDICO-EDUCATIVO","ASSISTENTE EDUCATIVO E/O ALLA COMUNICAZIONE","EDUCATORE","ADDETTO ALLE PULIZIE","ADDETTO ALLA CUSTODIA E/O ALLA VIGILANZA","ADDETTO AD ATTIVITA' SEGRETARIALI E/O DI CUSTODIA E VIGILANZA"];
+var CORPO_OPTS=["ORARIO","A CORPO/FORFAIT"];
+var CADENZ_OPTS=["SC","BI","ME","ENTRO IL GIORNO 20 DEL MESE SUCCESSIVO A QUELLO LAVORATO"];
+var ANAG_FIELDS=[
+ ["cognome","Cognome"],["nome","Nome"],["luogoNascita","Luogo nascita"],["dataNascita","Data nascita"],
+ ["cf","Codice fiscale"],["email","Email"],
+ ["indRes","Indirizzo residenza"],["capRes","CAP res."],["luogoRes","Luogo residenza"],
+ ["indDom","Indirizzo domicilio"],["capDom","CAP dom."],["luogoDom","Luogo domicilio"],
+ ["qualifica","Qualifica"],["struttura","Struttura e/o localit\u00e0"],
+ ["dataContratto","Data contratto"],["dataAvvio","Data avvio"],["dataConclusione","Data conclusione"],
+ ["monteOreSett","Monte ore sett."],["monteOreTot","Monte ore totale"],
+ ["importoOC","Importo orario o corpo"],["corpoOrario","Corpo o orario"],
+ ["cadenzamento","Cadenzamento pagamento"],["ridIndirette","Riduz. importo indirette"],
+ ["ridOverMax","Riduz. over massimale"],["ggPreavviso","Giorni preavviso"],
+ ["importoPenale","Importo penale"],["note","Note"]];
+function ensureAnag(i){if(!A.d[i].anag)A.d[i].anag={};return A.d[i].anag}
+function normName(s){
+  s=String(s||"").toUpperCase();
+  var map={"\u00c0":"A","\u00c1":"A","\u00c8":"E","\u00c9":"E","\u00cc":"I","\u00cd":"I","\u00d2":"O","\u00d3":"O","\u00d9":"U","\u00da":"U"};
+  var out="";for(var i=0;i<s.length;i++){var c=s.charAt(i);if(map[c])c=map[c];if((c>="A"&&c<="Z")||c===" ")out+=c}
+  return out.replace(/\s+/g," ").replace(/^\s+|\s+$/g,"");
+}
+window._anagAltro={};
+function anagSet(i,f,v){ensureAnag(i)[f]=v;markD()}
+function anagSelChange(i,f,el){
+  var key=i+"_"+f;
+  if(el.value==="__ALTRO__"){window._anagAltro[key]=true;ensureAnag(i)[f]=ensureAnag(i)[f]||"";markD();render()}
+  else{delete window._anagAltro[key];ensureAnag(i)[f]=el.value;markD();render()}
+}
+function anagSelHTML(i,f,opts){
+  var v=(A.d[i].anag&&A.d[i].anag[f])||"";var key=i+"_"+f;
+  var inList=false;for(var o=0;o<opts.length;o++){if(opts[o]===v)inList=true}
+  var altro=window._anagAltro[key]||(v!==""&&!inList);
+  var h='<select onchange="anagSelChange('+i+',\''+f+'\',this)" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;max-width:290px;padding:2px">';
+  h+='<option value=""'+(v===""&&!altro?" selected":"")+'>\u2014 scegli \u2014</option>';
+  for(var o=0;o<opts.length;o++)h+='<option value="'+escHTML(opts[o])+'"'+(v===opts[o]?" selected":"")+'>'+escHTML(opts[o])+'</option>';
+  h+='<option value="__ALTRO__"'+(altro?" selected":"")+'>ALTRO\u2026</option></select>';
+  if(altro)h+='<br><input type="text" value="'+escHTML(v)+'" placeholder="specificare..." style="font-size:11px;margin-top:2px;width:280px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:2px 4px" onchange="anagSet('+i+',\''+f+'\',this.value)">';
+  return h;
+}
+function toggleAnag(){A.anagOpen=!A.anagOpen;render()}
+function parseGMA(s){
+  if(!s)return null;
+  var m=String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m)return null;
+  var d=parseInt(m[1],10),mo=parseInt(m[2],10),y=parseInt(m[3],10);
+  if(mo<1||mo>12||d<1||d>31)return null;
+  return{d:d,m:mo,y:y};
+}
+function numIT(v){if(v===null||v===undefined||v==="")return 0;return parseFloat(String(v).replace(/\./g,"").replace(",","."))||parseFloat(String(v).replace(",","."))||0}
+// Avvisi informativi anagrafica <-> ore. SOLO segnalazioni: nessun effetto sui calcoli.
+function rAnagAlerts(i){
+  var op=A.d[i];var an=op.anag;if(!an)return"";
+  var h="";
+  var avv=parseGMA(an.dataAvvio),conc=parseGMA(an.dataConclusione);
+  // ore lavorate per (anno, mese)
+  var yrs=gY(op);
+  function oreMese(yr,m){
+    var yd=op.years[yr];if(!yd)return 0;var t=0;var svcs=yd.services||[];
+    for(var s=0;s<svcs.length;s++)t+=(svcs[s].hours[m]||0);
+    return t;
+  }
+  // 1. MONTE ORE CONTRATTUALE
+  var mot=numIT(an.monteOreTot);
+  if(mot>0){
+    var tot=0;
+    for(var y=0;y<yrs.length;y++){
+      var yn=parseInt(yrs[y],10);
+      for(var m=0;m<12;m++){
+        if(avv&&(yn<avv.y||(yn===avv.y&&m<avv.m-1)))continue;
+        if(conc&&(yn>conc.y||(yn===conc.y&&m>conc.m-1)))continue;
+        tot+=oreMese(yrs[y],m);
+      }
+    }
+    tot=rM(tot);
+    if(tot>mot){
+      var per=(avv||conc)?(" nel periodo "+(avv?an.dataAvvio:"inizio")+" \u2192 "+(conc?an.dataConclusione:"oggi")):"";
+      h+='<div style="background:#ef6c00;color:#fff;padding:7px 12px;font-weight:900;font-size:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+      h+='<span style="font-size:15px">\u26a0</span><span>MONTE ORE CONTRATTUALE SUPERATO</span>';
+      h+='<span style="font-weight:400;font-size:11px">Effettuate '+f2(tot)+' ore su '+f2(mot)+' contrattualizzate'+per+' (+'+f2(rM(tot-mot))+')</span></div>';
+    }
+  }
+  // 2. ORE OLTRE LA DATA DI CONCLUSIONE
+  if(conc){
+    var oltre=[];var totO=0;
+    for(var y2=0;y2<yrs.length;y2++){
+      var yn2=parseInt(yrs[y2],10);
+      for(var m2=0;m2<12;m2++){
+        if(yn2>conc.y||(yn2===conc.y&&m2>conc.m-1)){
+          var hv=oreMese(yrs[y2],m2);
+          if(hv>0){oltre.push(MESI_IT[m2]+" "+yrs[y2]+" ("+f2(hv)+"h)");totO+=hv}
+        }
+      }
+    }
+    if(oltre.length>0){
+      h+='<div style="background:#ef6c00;color:#fff;padding:7px 12px;font-weight:900;font-size:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+      h+='<span style="font-size:15px">\u26a0</span><span>ORE OLTRE LA DATA DI CONCLUSIONE ('+escHTML(an.dataConclusione)+')</span>';
+      h+='<span style="font-weight:400;font-size:11px">'+f2(rM(totO))+' ore: '+escHTML(oltre.slice(0,8).join(", "))+(oltre.length>8?" \u2026e altri "+(oltre.length-8)+" mesi":"")+'</span></div>';
+    }
+  }
+  return h;
+}
+function rAnag(i){
+  var op=A.d[i];var an=op.anag||{};
+  var filled=0;for(var q=0;q<ANAG_FIELDS.length;q++){if(an[ANAG_FIELDS[q][0]])filled++}
+  var h='<div style="background:#fff;border-bottom:1px solid #ccc">';
+  h+='<div onclick="toggleAnag()" style="cursor:pointer;padding:6px 14px;background:#37474f;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;gap:8px">';
+  h+='<span>'+(A.anagOpen?"\u25bc":"\u25b6")+'</span><span>\ud83d\udcc7 ANAGRAFICA</span>';
+  h+='<span style="font-weight:400;font-size:10px;opacity:0.85">('+filled+'/'+ANAG_FIELDS.length+' campi compilati)</span></div>';
+  if(A.anagOpen){
+    var fld=function(f,lbl,w,ph){
+      var v=an[f]||"";
+      return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="'+(ph||"")+'" style="width:'+(w||150)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="anagSet('+i+',\''+f+'\',this.value)"'+(f.indexOf("data")===0?' onblur="blurDT(this);anagSet('+i+',\''+f+'\',this.value)"':'')+'></div>';
+    };
+    h+='<div style="padding:10px 14px">';
+    h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin-bottom:5px">DATI PERSONALI</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
+    h+=fld("cognome","Cognome",140)+fld("nome","Nome",140)+fld("luogoNascita","Luogo nascita",160)+fld("dataNascita","Data nascita",90,"gg/mm/aaaa")+fld("cf","Codice fiscale",150)+fld("email","Email",190);
+    h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">';
+    h+=fld("indRes","Indirizzo residenza",210)+fld("capRes","CAP",60)+fld("luogoRes","Luogo residenza",140);
+    h+=fld("indDom","Indirizzo domicilio",210)+fld("capDom","CAP",60)+fld("luogoDom","Luogo domicilio",140);
+    h+='</div>';
+    h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin-bottom:5px">DATI INCARICO</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
+    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Qualifica</label>'+anagSelHTML(i,"qualifica",QUALIFICHE)+'</div>';
+    h+=fld("struttura","Struttura e/o localit\u00e0",230);
+    h+=fld("dataContratto","Data contratto",90,"gg/mm/aaaa")+fld("dataAvvio","Data avvio",90,"gg/mm/aaaa")+fld("dataConclusione","Data conclusione",90,"gg/mm/aaaa");
+    h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">';
+    h+=fld("monteOreSett","Monte ore sett.",80)+fld("monteOreTot","Monte ore tot.",80)+fld("importoOC","Importo \u20ac",80);
+    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Corpo o orario</label>'+anagSelHTML(i,"corpoOrario",CORPO_OPTS)+'</div>';
+    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Cadenzamento pagamento</label>'+anagSelHTML(i,"cadenzamento",CADENZ_OPTS)+'</div>';
+    h+=fld("ridIndirette","Rid. indirette",80)+fld("ridOverMax","Rid. over mass.",80)+fld("ggPreavviso","GG preavviso",70)+fld("importoPenale","Penale \u20ac",70)+fld("note","Note",280);
+    h+='</div></div>';
+  }
+  h+='</div>';
+  return h;
+}
+function xlDate(v){
+  if(v===null||v===undefined||v==="")return"";
+  if(Object.prototype.toString.call(v)==="[object Date]"){
+    var p=function(n){return n<10?"0"+n:""+n};
+    return p(v.getDate())+"/"+p(v.getMonth()+1)+"/"+v.getFullYear();
+  }
+  return String(v);
+}
+function importAnagFile(inp){
+  var f=inp.files[0];if(!f)return;inp.value="";
+  if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return}
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    try{
+      var wbk=XLSX.read(ev.target.result,{type:"array",cellDates:true});
+      var ws=wbk.Sheets[wbk.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+      applyAnagRows(rows);
+    }catch(e){alert("Errore lettura Excel: "+e.message)}
+  };
+  rd.readAsArrayBuffer(f);
+}
+function applyAnagRows(rows){
+  if(!rows||rows.length<2){alert("Excel vuoto o senza intestazioni.");return}
+  var hd=rows[0];var col={};
+  var want={"COGNOME":"cognome","NOME":"nome","LUOGO NASCITA":"luogoNascita","DATA NASCITA":"dataNascita","CODICE FISCALE":"cf","INDIRIZZO RESIDENZA":"indRes","CAP RESIDENZA":"capRes","LUOGO RESIDENZA":"luogoRes","INDIRIZZO DOMICILIO":"indDom","CAP DOMICILIO":"capDom","LUOGO DOMICILIO":"luogoDom","QUALIFICA":"qualifica","STRUTTURA E/O LOCALITA' E/O INDIRIZZO":"struttura","DATA CONTRATTO":"dataContratto","DATA AVVIO":"dataAvvio","DATA CONCLUSIONE":"dataConclusione","MONTE ORE SETTIMANALE":"monteOreSett","MONTE ORE TOTALE":"monteOreTot","IMPORTO ORARIO O CORPO":"importoOC","CORPO O ORARIO?":"corpoOrario","CADENZAMENTO PAGAMENTO":"cadenzamento","RIDUZIONE IMPORTO INDIRETTE":"ridIndirette","RIDUZIONE IMPORTO OVER MASSIMALE":"ridOverMax","GIORNI DI PREAVVISO":"ggPreavviso","IMPORTO PENALE":"importoPenale","INDIRIZZO EMAIL":"email","NOTE":"note"};
+  for(var c=0;c<hd.length;c++){
+    var hh=String(hd[c]||"").replace(/\s+/g," ").replace(/^\s+|\s+$/g,"").toUpperCase();
+    if(want[hh])col[want[hh]]=c;
+  }
+  if(col.cognome===undefined||col.nome===undefined){alert("Colonne COGNOME/NOME non trovate: \u00e8 il file giusto?");return}
+  var xl={};
+  for(var r=1;r<rows.length;r++){
+    var cg=rows[r][col.cognome];var nm=rows[r][col.nome];
+    if(!cg||!nm)continue;
+    var key=normName(String(cg)+" "+String(nm));
+    if(key&&!xl[key])xl[key]=r;
+  }
+  var matched=0,filled=0,notFound=[];
+  var dateF={dataNascita:1,dataContratto:1,dataAvvio:1,dataConclusione:1};
+  for(var i=0;i<A.d.length;i++){
+    var k=normName(A.d[i].name);var ri=null;
+    if(xl[k]!==undefined)ri=xl[k];
+    else{
+      var w=k.split(" ");
+      for(var cut=1;cut<w.length;cut++){
+        var alt=w.slice(cut).concat(w.slice(0,cut)).join(" ");
+        if(xl[alt]!==undefined){ri=xl[alt];break}
+      }
+    }
+    if(ri===null){notFound.push(A.d[i].name);continue}
+    matched++;
+    var an=ensureAnag(i);var row=rows[ri];
+    for(var fk in col){
+      if(an[fk])continue; // mai sovrascrivere valori esistenti
+      var v=row[col[fk]];
+      if(v===null||v===undefined||v==="")continue;
+      an[fk]=dateF[fk]?xlDate(v):String(v).replace(/^\s+|\s+$/g,"");
+      filled++;
+    }
+  }
+  markD();render();
+  var msg="Import anagrafiche completato.\n\nOperatori trovati nell'Excel: "+matched+" su "+A.d.length+"\nCampi compilati: "+filled+"\n\nNon trovati ("+notFound.length+"): "+(notFound.length>0?"\n"+notFound.slice(0,15).join("\n")+(notFound.length>15?"\n\u2026e altri "+(notFound.length-15):""):"nessuno")+"\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitivo l'import.";
+  alert(msg);
+}
 function setStartM(i,yr,s,val){
   var svc=A.d[i].years[yr].services[s];
   var nm=parseInt(val)||0;
@@ -1022,7 +1287,7 @@ function confAY(ny){
   op.years[String(ny)]={default_rate:rt,services:newSvcs,payments:[]};
   A.modal=null;markD();render();toast("Anno "+ny+" aggiunto con servizi duplicati","#ef6c00");
 }
-function openS(i){A.sel=i;A.v="sheet";render();window.scrollTo(0,0)}
+function openS(i){A.sel=i;A.v="sheet";A.anagOpen=false;window._anagAltro={};render();window.scrollTo(0,0)}
 function goBack(){if(A.dirty&&!confirm("Modifiche non salvate. Uscire?"))return;A.v="cover";render()}
 function delOp(i){if(confirm("Eliminare "+A.d[i].sheet+"?")){A.d.splice(i,1);markD();A.v="cover";render()}}
 function creaOp(){
