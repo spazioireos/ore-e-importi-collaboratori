@@ -239,11 +239,22 @@ function sv(){try{
 }catch(e){toast("Errore salvataggio: "+e.message,"#c62828")}}
 
 // BACKUP: export all data to JSON file
+// Involucro del backup: contiene dati e modello. Legge anche i backup vecchi (solo elenco).
+function pacchetto(){
+  var t=tplGet();
+  return{formato:"opoc-2",versione:2,creato:new Date().toISOString(),operatori:A.d,modello:t?t:null};
+}
+function scarta(data){
+  // Ritorna {operatori:[...], modello:{...}|null} accettando entrambi i formati
+  if(Array.isArray(data))return{operatori:data,modello:null};
+  if(data&&Array.isArray(data.operatori))return{operatori:data.operatori,modello:data.modello||null};
+  return null;
+}
 function expJSON(){try{
   var d=new Date();
   var p=function(n){return n<10?"0"+n:""+n};
   var stamp=d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"-"+p(d.getHours())+p(d.getMinutes());
-  var blob=new Blob([JSON.stringify(A.d,null,2)],{type:"application/json"});
+  var blob=new Blob([JSON.stringify(pacchetto(),null,2)],{type:"application/json"});
   var url=URL.createObjectURL(blob);
   var a=document.createElement("a");
   a.href=url;a.download="Backup_OperatoriOccasionali_"+stamp+"_Spazio_Ireos.json";
@@ -262,12 +273,16 @@ function impJSON(){
     var r=new FileReader();
     r.onload=function(ev){
       try{
-        var data=JSON.parse(ev.target.result);
-        if(!Array.isArray(data))throw new Error("Formato non valido");
-        A.d=data;
-        localStorage.setItem(LSK,JSON.stringify(data));
+        var pk=scarta(JSON.parse(ev.target.result));
+        if(!pk)throw new Error("Formato non valido");
+        A.d=pk.operatori;
+        localStorage.setItem(LSK,JSON.stringify(pk.operatori));
+        var msgM="";
+        if(pk.modello&&pk.modello.b64){
+          if(tplSet(pk.modello.nome||"modello.docx",pk.modello.b64))msgM=" + modello contratto";
+        }
         A.dirty=false;A.v="cover";A.modal=null;render();
-        toast("Backup ripristinato! ("+data.length+" operatori)","#1565c0");
+        toast("Backup ripristinato! ("+pk.operatori.length+" operatori"+msgM+")","#1565c0");
       }catch(err){alert("Errore: "+err.message);}
     };
     r.readAsText(f);
@@ -280,6 +295,7 @@ var A={d:ld(),v:"cover",sel:null,q:"",fr:"",modal:null,dirty:false};
 // Tavolozza 12 pastelli tenui
 var PALETTE=["#c8e6c9","#bbdefb","#f8bbd0","#fff9c4","#e1bee7","#ffe0b2","#b2dfdb","#b3e5fc","#d1c4e9","#f0e4d0","#dcedc8","#eceff1"];
 var CKEY="spazioireos_opoc_colors";
+var TKEY="spazioireos_opoc_modello";
 var colorMap=loadColors();
 function loadColors(){var s=localStorage.getItem(CKEY);if(s){try{return JSON.parse(s)}catch(e){}}return{}}
 function saveColors(){try{localStorage.setItem(CKEY,JSON.stringify(colorMap))}catch(e){}}
@@ -1063,11 +1079,11 @@ var ATTO_FIELDS=[
  ["tipoAtto","Tipo atto"],["qualifica","Qualifica"],
  ["tipoAmbito","Tipo ambito"],["struttura","Struttura"],["comuneIndirizzo","Comune e indirizzo"],
  ["dataContratto","Data contratto"],["dataAvvio","Data avvio"],["dataConclusione","Data conclusione"],
- ["monteOreSett","Monte ore sett."],["monteOreTot","Monte ore totale"],
+ ["monteOreTot","Monte ore totale"],
  ["importoOC","Importo orario o corpo"],["corpoOrario","Corpo o orario"],
- ["cadenzamento","Cadenzamento pagamento"],["ridIndirette","Riduz. importo indirette"],
- ["ridOverMax","Riduz. over massimale"],["ggPreavviso","Giorni preavviso"],
+ ["cadenzamento","Cadenzamento pagamento"],["ggPreavviso","Giorni preavviso"],
  ["importoPenale","Importo penale"],["note","Note"]];
+var AMBITO_OPTS=["ISTITUTO/I SCOLASTICO/I","CENTRO/I DI AGGREGAZIONE","SEDE SOCIETARIA","DOMICILIO PROPRIO","STRUTTURE VARIE SUL TERRITORIO"];
 var ANAG_FIELDS=PERS_FIELDS.concat(ATTO_FIELDS);
 var TIPO_ATTO_OPTS=["INCARICO INIZIALE","VARIAZIONE","PROROGA","RINNOVO"];
 // Migrazione trasparente: la vecchia anagrafica a valore singolo diventa il primo atto.
@@ -1128,6 +1144,44 @@ function attoDel(i,idx){
   atti.splice(idx,1);
   if(A.attoOpen>=atti.length)A.attoOpen=atti.length-1;
   markD();render();
+}
+// ===== MODELLO CONTRATTO MEMORIZZATO =====
+// Salvato a parte (chiave TKEY) per non appesantire ogni scrittura dei dati.
+function tplGet(){
+  try{
+    var s=localStorage.getItem(TKEY);
+    if(!s)return null;
+    var o=JSON.parse(s);
+    if(!o||!o.b64)return null;
+    return o;
+  }catch(e){return null}
+}
+function tplSet(nome,b64){
+  try{
+    var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
+    var quando=p2(dt.getDate())+"/"+p2(dt.getMonth()+1)+"/"+dt.getFullYear()+" "+p2(dt.getHours())+"."+p2(dt.getMinutes());
+    localStorage.setItem(TKEY,JSON.stringify({nome:nome,quando:quando,b64:b64}));
+    return true;
+  }catch(e){alert("Non riesco a memorizzare il modello: "+e.message);return false}
+}
+function tplDel(){
+  var t=tplGet();
+  if(!t){alert("Nessun modello memorizzato.");return}
+  if(!confirm("Vuoi rimuovere il modello memorizzato?\n\n"+t.nome+"\ncaricato il "+t.quando+"\n\nDovrai riselezionarlo alla prossima lettera."))return;
+  localStorage.removeItem(TKEY);render();
+  toast("Modello rimosso","#e65100");
+}
+function ab2b64(buf){
+  var bytes=new Uint8Array(buf);var bin="";var chunk=8192;
+  for(var i=0;i<bytes.length;i+=chunk){
+    bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
+  }
+  return btoa(bin);
+}
+function b642ab(b64){
+  var bin=atob(b64);var len=bin.length;var bytes=new Uint8Array(len);
+  for(var i=0;i<len;i++)bytes[i]=bin.charCodeAt(i);
+  return bytes.buffer;
 }
 var MESI_EST=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
 // Data gg/mm/aaaa -> "06 luglio 2026" (come nel modello)
@@ -1190,7 +1244,11 @@ function mergeMancanti(m){
 function genContratto(i,idx){
   if(typeof JSZip==="undefined"){alert("Libreria per i documenti Word in caricamento, riprova tra qualche secondo.");return}
   window._genFor={op:i,atto:idx};
-  // Creo l'input al volo: il pulsante vive nella scheda, non nella home
+  var t=tplGet();
+  if(t){ mergeDocx(b642ab(t.b64),i,idx); return; }
+  chiediModello();
+}
+function chiediModello(){
   var inp=document.getElementById("tplFileDyn");
   if(inp&&inp.parentNode)inp.parentNode.removeChild(inp);
   inp=document.createElement("input");
@@ -1199,53 +1257,65 @@ function genContratto(i,idx){
   document.body.appendChild(inp);
   inp.click();
 }
+function sostituisciModello(){
+  window._genFor=null;
+  chiediModello();
+}
 function onTplFile(inp){
   var f=inp.files[0];if(!f)return;inp.value="";
-  var ctx=window._genFor;if(!ctx)return;
-  var i=ctx.op,idx=ctx.atto;
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    var buf=ev.target.result;
+    // memorizzo il modello per le volte successive
+    var ok=tplSet(f.name,ab2b64(buf));
+    var ctx=window._genFor;
+    if(!ctx){
+      render();
+      if(ok)alert("Modello memorizzato:\n\n"+f.name+"\n\nDa ora le lettere si generano senza richiederlo.");
+      return;
+    }
+    mergeDocx(buf,ctx.op,ctx.atto);
+  };
+  rd.readAsArrayBuffer(f);
+}
+function mergeDocx(buf,i,idx){
   var m=mergeMap(i,idx);
   var manc=mergeMancanti(m);
   if(manc.length>0){
     if(!confirm("Alcuni dati non sono compilati e resteranno vuoti nel documento:\n\n"+manc.join(", ")+"\n\nGenero lo stesso?"))return;
   }
-  var rd=new FileReader();
-  rd.onload=function(ev){
-    JSZip.loadAsync(ev.target.result).then(function(zip){
-      var fx=zip.file("word/document.xml");
-      if(!fx){alert("Il file scelto non sembra un documento Word valido.");return}
-      return fx.async("string").then(function(xml){
-        var trovati=0,nonTrovati=[];
-        for(var k in m){
-          if(!Object.prototype.hasOwnProperty.call(m,k))continue;
-          var tag="{{"+k+"}}";
-          if(xml.indexOf(tag)>=0){
-            trovati++;
-            xml=xml.split(tag).join(escXML(m[k]));
-          }else nonTrovati.push(k);
-        }
-        if(trovati===0){
-          alert("Nel modello non ho trovato nessun segnaposto {{...}}.\nControlla di aver scelto il modello con i segnaposto.");
-          return;
-        }
-        zip.file("word/document.xml",xml);
-        return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}).then(function(blob){
-          var op=A.d[i];var at=(op.anag.atti||[])[idx]||{};
-          var nome=(m.COGNOME+" "+m.NOME).replace(/^\s+|\s+$/g,"");
-          var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
-          var MS=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
-          var fn="Lettera incarico "+nome+" "+p2(dt.getDate())+MS[dt.getMonth()]+String(dt.getFullYear()).substr(2)+".docx";
-          var url=URL.createObjectURL(blob);
-          var a=document.createElement("a");a.href=url;a.download=fn;document.body.appendChild(a);a.click();
-          document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},1500);
-          var msg="Lettera generata: "+fn+"\n\nCampi compilati: "+trovati;
-          if(nonTrovati.length>0)msg+="\nSegnaposto non presenti nel modello: "+nonTrovati.join(", ");
-          toast("Lettera di incarico scaricata","#2e7d32");
-          alert(msg);
-        });
+  JSZip.loadAsync(buf).then(function(zip){
+    var fx=zip.file("word/document.xml");
+    if(!fx){alert("Il file scelto non sembra un documento Word valido.");return}
+    return fx.async("string").then(function(xml){
+      var trovati=0,nonTrovati=[];
+      for(var k in m){
+        if(!Object.prototype.hasOwnProperty.call(m,k))continue;
+        var tag="{{"+k+"}}";
+        if(xml.indexOf(tag)>=0){trovati++;xml=xml.split(tag).join(escXML(m[k]))}
+        else nonTrovati.push(k);
+      }
+      if(trovati===0){
+        alert("Nel modello non ho trovato nessun segnaposto {{...}}.\nControlla di aver scelto il modello con i segnaposto.");
+        return;
+      }
+      zip.file("word/document.xml",xml);
+      return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}).then(function(blob){
+        var nome=(m.COGNOME+" "+m.NOME).replace(/^\s+|\s+$/g,"");
+        var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
+        var MS=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+        var fn="Lettera incarico "+nome+" "+p2(dt.getDate())+MS[dt.getMonth()]+String(dt.getFullYear()).substr(2)+".docx";
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement("a");a.href=url;a.download=fn;document.body.appendChild(a);a.click();
+        document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},1500);
+        render();
+        var msg="Lettera generata: "+fn+"\n\nCampi compilati: "+trovati;
+        if(nonTrovati.length>0)msg+="\nSegnaposto non presenti nel modello: "+nonTrovati.join(", ");
+        toast("Lettera di incarico scaricata","#2e7d32");
+        alert(msg);
       });
-    })["catch"](function(e){alert("Errore nella generazione: "+e.message)});
-  };
-  rd.readAsArrayBuffer(f);
+    });
+  })["catch"](function(e){alert("Errore nella generazione: "+e.message)});
 }
 function attoToggle(idx){A.attoOpen=(A.attoOpen===idx?-1:idx);render()}
 // Due atti sono uguali se coincidono su tutti i campi (serve all'import per non duplicare)
@@ -1368,9 +1438,17 @@ function rAnag(i){
     h+=fld("indDom","Indirizzo domicilio",210)+fld("capDom","CAP",60)+fld("luogoDom","Luogo domicilio",140);
     h+='</div>';
     // ===== ATTI =====
-    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
+    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">';
     h+='<span style="font-size:11px;font-weight:900;color:#37474f">ATTI CONTRATTUALI</span>';
     h+='<button class="btn btn-sm" style="background:#2e7d32;color:#fff" onclick="attoAdd('+i+')">+ Nuovo atto</button>';
+    var tpl=tplGet();
+    if(tpl){
+      h+='<span style="font-size:10px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:2px 8px;font-weight:700" title="Modello usato per generare le lettere">\ud83d\udcc4 '+escHTML(tpl.nome)+' \u2022 '+escHTML(tpl.quando)+'</span>';
+      h+='<button class="btn btn-sm" style="background:#546e7a;color:#fff" onclick="sostituisciModello()" title="Carica un modello aggiornato al posto di quello memorizzato">Sostituisci modello</button>';
+      h+='<button class="btn btn-sm" style="background:#eceff1;color:#c62828" onclick="tplDel()" title="Rimuove il modello memorizzato">\u00d7</button>';
+    }else{
+      h+='<span style="font-size:10px;color:#e65100;background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:2px 8px;font-weight:700">Nessun modello memorizzato: te lo chieder\u00f2 alla prima lettera</span>';
+    }
     h+='</div>';
     if(atti.length===0){
       h+='<div style="padding:10px;background:#fff8e1;border:1px dashed #ffb300;border-radius:5px;font-size:11px;color:#795548">Nessun atto registrato. Premi <strong>+ Nuovo atto</strong> per inserire l\'incarico iniziale, oppure usa <strong>\ud83d\udcc7 Importa anagrafiche</strong> dalla home.</div>';
@@ -1402,14 +1480,15 @@ function rAnag(i){
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Tipo atto</label>'+attoSelHTML(i,a,"tipoAtto",TIPO_ATTO_OPTS)+'</div>';
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Qualifica</label>'+attoSelHTML(i,a,"qualifica",QUALIFICHE)+'</div>';
         h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
-        h+=af("tipoAmbito","Tipo ambito",210,"es. ISTITUTO/I SCOLASTICO/I")+af("struttura","Struttura",210,"es. SCUOLA DELL\'INFANZIA")+af("comuneIndirizzo","Comune e indirizzo",230,"es. COLZATE / BG V. ROMA");
+        h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Tipo ambito</label>'+attoSelHTML(i,a,"tipoAmbito",AMBITO_OPTS)+'</div>';
+        h+=af("struttura","Struttura (facoltativa)",210,"es. SCUOLA DELL\'INFANZIA")+af("comuneIndirizzo","Comune e indirizzo",230,"es. COLZATE / BG V. ROMA");
         h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
         h+=af("dataContratto","Data contratto",90,"gg/mm/aaaa")+af("dataAvvio","Data avvio",90,"gg/mm/aaaa")+af("dataConclusione","Data conclusione",90,"gg/mm/aaaa");
-        h+=af("monteOreSett","Monte ore sett.",80)+af("monteOreTot","Monte ore tot.",80)+af("importoOC","Importo \u20ac",80);
+        h+=af("monteOreTot","Monte ore tot.",80)+af("importoOC","Importo \u20ac",80);
         h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">';
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Corpo o orario</label>'+attoSelHTML(i,a,"corpoOrario",CORPO_OPTS)+'</div>';
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Cadenzamento pagamento</label>'+attoSelHTML(i,a,"cadenzamento",CADENZ_OPTS)+'</div>';
-        h+=af("ridIndirette","Rid. indirette",80)+af("ridOverMax","Rid. over mass.",80)+af("ggPreavviso","GG preavviso",70)+af("importoPenale","Penale \u20ac",70)+af("note","Note",280);
+        h+=af("ggPreavviso","GG preavviso",70)+af("importoPenale","Penale \u20ac",70)+af("note","Note",300);
         h+='</div></div>';
       }
       h+='</div>';
@@ -1461,7 +1540,7 @@ function importAnagFile(inp){
 function applyAnagRows(rows){
   if(!rows||rows.length<2){alert("Excel vuoto o senza intestazioni.");return}
   var hd=rows[0];var col={};
-  var want={"COGNOME":"cognome","NOME":"nome","LUOGO NASCITA":"luogoNascita","DATA NASCITA":"dataNascita","CODICE FISCALE":"cf","INDIRIZZO RESIDENZA":"indRes","CAP RESIDENZA":"capRes","LUOGO RESIDENZA":"luogoRes","INDIRIZZO DOMICILIO":"indDom","CAP DOMICILIO":"capDom","LUOGO DOMICILIO":"luogoDom","QUALIFICA":"qualifica","STRUTTURA E/O LOCALITA' E/O INDIRIZZO":"struttura","DATA CONTRATTO":"dataContratto","DATA AVVIO":"dataAvvio","DATA CONCLUSIONE":"dataConclusione","MONTE ORE SETTIMANALE":"monteOreSett","MONTE ORE TOTALE":"monteOreTot","IMPORTO ORARIO O CORPO":"importoOC","CORPO O ORARIO?":"corpoOrario","CADENZAMENTO PAGAMENTO":"cadenzamento","RIDUZIONE IMPORTO INDIRETTE":"ridIndirette","RIDUZIONE IMPORTO OVER MASSIMALE":"ridOverMax","GIORNI DI PREAVVISO":"ggPreavviso","IMPORTO PENALE":"importoPenale","INDIRIZZO EMAIL":"email","NOTE":"note"};
+  var want={"COGNOME":"cognome","NOME":"nome","LUOGO NASCITA":"luogoNascita","DATA NASCITA":"dataNascita","CODICE FISCALE":"cf","INDIRIZZO RESIDENZA":"indRes","CAP RESIDENZA":"capRes","LUOGO RESIDENZA":"luogoRes","INDIRIZZO DOMICILIO":"indDom","CAP DOMICILIO":"capDom","LUOGO DOMICILIO":"luogoDom","QUALIFICA":"qualifica","STRUTTURA E/O LOCALITA' E/O INDIRIZZO":"struttura","DATA CONTRATTO":"dataContratto","DATA AVVIO":"dataAvvio","DATA CONCLUSIONE":"dataConclusione","MONTE ORE TOTALE":"monteOreTot","IMPORTO ORARIO O CORPO":"importoOC","CORPO O ORARIO?":"corpoOrario","CADENZAMENTO PAGAMENTO":"cadenzamento","GIORNI DI PREAVVISO":"ggPreavviso","IMPORTO PENALE":"importoPenale","INDIRIZZO EMAIL":"email","NOTE":"note"};
   for(var c=0;c<hd.length;c++){
     var hh=String(hd[c]||"").replace(/\s+/g," ").replace(/^\s+|\s+$/g,"").toUpperCase();
     if(want[hh])col[want[hh]]=c;
@@ -1701,7 +1780,7 @@ function driveSave(){
   if(!driveToken)return;
   try{
   driveStatus="sync";updateDriveUI();
-  var jsonData=JSON.stringify(A.d);
+  var jsonData=JSON.stringify(pacchetto());
   
   var doSave=function(fileId){
     if(fileId){
@@ -1756,7 +1835,10 @@ function driveLoad(){
       if(!r.ok)throw new Error("HTTP "+r.status);
       return r.json();
     }).then(function(data){
-      if(Array.isArray(data)&&data.length>0){
+      var pkD=scarta(data);
+      if(pkD&&pkD.operatori&&pkD.operatori.length>0){
+        data=pkD.operatori;
+        if(pkD.modello&&pkD.modello.b64&&!tplGet())tplSet(pkD.modello.nome||"modello.docx",pkD.modello.b64);
         // Compare: use Drive data if it has more operators or is different
         var localStr=JSON.stringify(A.d);
         var driveStr=JSON.stringify(data);
@@ -1800,13 +1882,17 @@ function doRecoveryRestore(){
     var r=new FileReader();
     r.onload=function(ev){
       try{
-        var data=JSON.parse(ev.target.result);
-        if(!Array.isArray(data))throw new Error("Formato non valido");
-        A.d=data;
-        localStorage.setItem(LSK,JSON.stringify(data));
+        var pk=scarta(JSON.parse(ev.target.result));
+        if(!pk)throw new Error("Formato non valido");
+        A.d=pk.operatori;
+        localStorage.setItem(LSK,JSON.stringify(pk.operatori));
+        var msgM="";
+        if(pk.modello&&pk.modello.b64){
+          if(tplSet(pk.modello.nome||"modello.docx",pk.modello.b64))msgM=" + modello contratto";
+        }
         window._needsRecovery=false;
         A.dirty=false;A.v="cover";A.modal=null;render();updateDriveUI();
-        toast("Dati recuperati! ("+data.length+" operatori)","#2e7d32");
+        toast("Dati recuperati! ("+pk.operatori.length+" operatori"+msgM+")","#2e7d32");
       }catch(err){alert("Errore: "+err.message)}
     };
     r.readAsText(f);
