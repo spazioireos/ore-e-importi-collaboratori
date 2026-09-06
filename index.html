@@ -8,6 +8,7 @@
 <meta name="description" content="Gestione Operatori Occasionali - Spazio Ireos Societa Cooperativa Sociale ETS - Autore: Christian Canonica">
 <title>Operatori Occasionali - Spazio Ireos</title>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
@@ -663,20 +664,24 @@ function rAnagList(){
   h+='</div></div>';
   h+='<div style="padding:10px 14px;overflow-x:auto">';
   h+='<table style="border-collapse:collapse;font-size:10px;width:100%"><thead><tr style="background:#37474f;color:#fff">';
-  h+='<th style="padding:4px 6px;text-align:left;position:sticky;left:0;background:#37474f">Operatore</th><th style="padding:4px">Campi</th>';
+  h+='<th style="padding:4px 6px;text-align:left;position:sticky;left:0;background:#37474f">Operatore</th><th style="padding:4px">Campi</th><th style="padding:4px" title="Numero di atti contrattuali registrati">Atti</th>';
   for(var c=0;c<cols.length;c++)h+='<th style="padding:4px 6px;text-align:left">'+cols[c][1]+'</th>';
   h+='</tr></thead><tbody>';
   var ordine=[];for(var i=0;i<A.d.length;i++)ordine.push(i);
   ordine.sort(function(a,b){var na=(A.d[a].name||"").toLowerCase();var nb=(A.d[b].name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
   for(var q=0;q<ordine.length;q++){
     var i2=ordine[q];var op=A.d[i2];var an=op.anag||{};
-    var filled=0;for(var f=0;f<ANAG_FIELDS.length;f++){if(an[ANAG_FIELDS[f][0]])filled++}
+    var ac=(an.atti&&an.atti.length)?attoCorrente(i2):null;
+    var vv=function(k){if(an[k])return an[k];if(ac&&ac[k])return ac[k];return""};
+    var filled=0;for(var f=0;f<ANAG_FIELDS.length;f++){if(vv(ANAG_FIELDS[f][0]))filled++}
     var compl=filled>=ANAG_FIELDS.length-2;
+    var nAtti=(an.atti?an.atti.length:0);
     h+='<tr style="border-bottom:1px solid #e0e0e0;background:'+(q%2?'#fafafa':'#fff')+'">';
     h+='<td style="padding:3px 6px;font-weight:700;white-space:nowrap;position:sticky;left:0;background:inherit;cursor:pointer;color:#1565c0" onclick="openS('+i2+');A.anagOpen=true;render()" title="Apri la scheda con anagrafica aperta">'+escHTML(op.name)+'</td>';
     h+='<td style="padding:3px;text-align:center;font-weight:900;color:'+(filled===0?'#c62828':(compl?'#1b5e20':'#e65100'))+'">'+filled+'/'+ANAG_FIELDS.length+'</td>';
+    h+='<td style="padding:3px;text-align:center;font-weight:700;color:'+(nAtti?'#37474f':'#c62828')+'">'+nAtti+'</td>';
     for(var c2=0;c2<cols.length;c2++){
-      var v=an[cols[c2][0]]||"";
+      var v=vv(cols[c2][0]);
       if(v)h+='<td style="padding:3px 6px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis" title="'+escHTML(v)+'">'+escHTML(String(v).length>26?String(v).substring(0,25)+"\u2026":v)+'</td>';
       else h+='<td style="padding:3px 6px;background:#fdecea;color:#c62828;text-align:center">\u2013</td>';
     }
@@ -688,25 +693,33 @@ function rAnagList(){
 function exportAnagExcel(){
   if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return}
   try{
-    var rows=[["RIEPILOGO ANAGRAFICHE OPERATORI OCCASIONALI"],["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],["Operatore","Campi compilati"]];
-    for(var f=0;f<ANAG_FIELDS.length;f++)rows[3].push(ANAG_FIELDS[f][1]);
+    var head=["Operatore","N. atto","Tipo atto"];
+    for(var p=0;p<PERS_FIELDS.length;p++)head.push(PERS_FIELDS[p][1]);
+    for(var q=1;q<ATTO_FIELDS.length;q++)head.push(ATTO_FIELDS[q][1]);
+    var rows=[["RIEPILOGO ANAGRAFICHE E ATTI CONTRATTUALI"],
+      ["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],
+      ["Una riga per ogni atto contrattuale"],[],head];
     var ordine=[];for(var i=0;i<A.d.length;i++)ordine.push(i);
     ordine.sort(function(a,b){var na=(A.d[a].name||"").toLowerCase();var nb=(A.d[b].name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
-    for(var q=0;q<ordine.length;q++){
-      var op=A.d[ordine[q]];var an=op.anag||{};
-      var filled=0;for(var f2=0;f2<ANAG_FIELDS.length;f2++){if(an[ANAG_FIELDS[f2][0]])filled++}
-      var r=[op.name,filled+"/"+ANAG_FIELDS.length];
-      for(var f3=0;f3<ANAG_FIELDS.length;f3++)r.push(an[ANAG_FIELDS[f3][0]]||"");
-      rows.push(r);
+    for(var z=0;z<ordine.length;z++){
+      var idx=ordine[z];var op=A.d[idx];var an=op.anag||{};
+      var atti=(an.atti&&an.atti.length)?an.atti:[null];
+      for(var a=0;a<atti.length;a++){
+        var at=atti[a]||{};
+        var r=[op.name,(atti[a]?(a+1):""),at.tipoAtto||""];
+        for(var p2=0;p2<PERS_FIELDS.length;p2++)r.push(an[PERS_FIELDS[p2][0]]||"");
+        for(var q2=1;q2<ATTO_FIELDS.length;q2++)r.push(at[ATTO_FIELDS[q2][0]]||"");
+        rows.push(r);
+      }
     }
     var wb=XLSX.utils.book_new();
     var ws=XLSX.utils.aoa_to_sheet(rows);
-    var wcols=[{wch:32},{wch:9}];
-    for(var f4=0;f4<ANAG_FIELDS.length;f4++)wcols.push({wch:18});
+    var wcols=[{wch:32},{wch:7},{wch:18}];
+    for(var w=0;w<PERS_FIELDS.length+ATTO_FIELDS.length-1;w++)wcols.push({wch:18});
     ws['!cols']=wcols;
-    XLSX.utils.book_append_sheet(wb,ws,"Anagrafiche");
-    var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
-    XLSX.writeFile(wb,"Spazio Ireos Riepilogo anagrafiche "+p2(dt.getDate())+p2(dt.getMonth()+1)+dt.getFullYear()+".xlsx");
+    XLSX.utils.book_append_sheet(wb,ws,"Anagrafiche e atti");
+    var dt=new Date();var p3=function(n){return n<10?"0"+n:""+n};
+    XLSX.writeFile(wb,"Spazio Ireos Riepilogo anagrafiche "+p3(dt.getDate())+p3(dt.getMonth()+1)+dt.getFullYear()+".xlsx");
     toast("Riepilogo anagrafiche scaricato","#2e7d32");
   }catch(e){toast("Errore export: "+e.message,"#c62828")}
 }
@@ -728,6 +741,7 @@ function rCov(){
   h+='<button class="btn" style="background:#00695c;color:#fff" onclick="exportCreditoProgetto()" title="Quanto si deve ancora agli operatori, diviso per progetto, senza compensare positivi e negativi">\u2B07 Credito per progetto</button>';
   h+='<button class="btn" style="background:#37474f;color:#fff" onclick="document.getElementById(\'anagFile\').click()" title="Carica l\'Elenco lavoratori: compila le anagrafiche degli operatori corrispondenti (solo campi vuoti, non sovrascrive)">\ud83d\udcc7 Importa anagrafiche</button>';
   h+='<input type="file" id="anagFile" accept=".xlsx,.xls" style="display:none" onchange="importAnagFile(this)">';
+  h+='<input type="file" id="tplFile" accept=".docx" style="display:none" onchange="onTplFile(this)">';
   h+='<button class="btn" style="background:#546e7a;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo anagrafiche</button>';
   h+='<button class="btn" style="background:#1565c0;color:#fff" onclick="expJSON()">⬇ Backup JSON</button>';
   h+='<button class="btn" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()">⬆ Ripristina backup</button>';
@@ -758,7 +772,8 @@ function rCov(){
   h+='</div></div>';return h;
 }
 function rSh(){
-  var op=A.d[A.sel];var yrs=gY(op);
+  var op=A.d[A.sel];
+  if(!op){A.v="cover";return rCov()}var yrs=gY(op);
   var h='<div class="sheet-header"><div><h2>'+escHTML(op.name)+'</h2><span style="font-size:10px;opacity:0.8"> '+escHTML(op.sheet)+'</span>';
   if(A.dirty)h+='<span id="ubadge" class="unsaved">NON SALVATO</span>';
   h+='</div><div class="acts">';
@@ -1038,20 +1053,212 @@ var MESI_IT=["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","
 // ===== ANAGRAFICA =====
 var QUALIFICHE=["INSEGNANTE","INSEGNANTE/ISTRUTTORE","TECNICO ESPERTO E/O ISTRUTTORE PER LABORATORI","ASSISTENTE IN AREA SOCIO-EDUCATIVA","ASSISTENTE IN AREA SOCIO-EDUCATIVA / RICREATIVA","ASSISTENTE EDUCATIVO/LUDICO-EDUCATIVO","ASSISTENTE EDUCATIVO E/O ALLA COMUNICAZIONE","EDUCATORE","ADDETTO ALLE PULIZIE","ADDETTO ALLA CUSTODIA E/O ALLA VIGILANZA","ADDETTO AD ATTIVITA' SEGRETARIALI E/O DI CUSTODIA E VIGILANZA"];
 var CORPO_OPTS=["ORARIO","A CORPO/FORFAIT"];
-var CADENZ_OPTS=["SC","BI","ME","ENTRO IL GIORNO 20 DEL MESE SUCCESSIVO A QUELLO LAVORATO"];
-var ANAG_FIELDS=[
+var CADENZ_OPTS=["IN UNICA SOLUZIONE: ENTRO 30 GG DA TERMINE CONTRATTUALE","IN DUE SOLUZIONI: ENTRO IL 1 FEBBRAIO ED ENTRO IL 1 LUGLIO SUCCESSIVI ALLA DATA DI AVVIO DEL SERVIZIO","ENTRO IL GIORNO 20 DEL MESE SUCCESSIVO A QUELLO LAVORATO"];
+var PERS_FIELDS=[
  ["cognome","Cognome"],["nome","Nome"],["luogoNascita","Luogo nascita"],["dataNascita","Data nascita"],
  ["cf","Codice fiscale"],["email","Email"],
  ["indRes","Indirizzo residenza"],["capRes","CAP res."],["luogoRes","Luogo residenza"],
- ["indDom","Indirizzo domicilio"],["capDom","CAP dom."],["luogoDom","Luogo domicilio"],
- ["qualifica","Qualifica"],["struttura","Struttura e/o localit\u00e0"],
+ ["indDom","Indirizzo domicilio"],["capDom","CAP dom."],["luogoDom","Luogo domicilio"]];
+var ATTO_FIELDS=[
+ ["tipoAtto","Tipo atto"],["qualifica","Qualifica"],
+ ["tipoAmbito","Tipo ambito"],["struttura","Struttura"],["comuneIndirizzo","Comune e indirizzo"],
  ["dataContratto","Data contratto"],["dataAvvio","Data avvio"],["dataConclusione","Data conclusione"],
  ["monteOreSett","Monte ore sett."],["monteOreTot","Monte ore totale"],
  ["importoOC","Importo orario o corpo"],["corpoOrario","Corpo o orario"],
  ["cadenzamento","Cadenzamento pagamento"],["ridIndirette","Riduz. importo indirette"],
  ["ridOverMax","Riduz. over massimale"],["ggPreavviso","Giorni preavviso"],
  ["importoPenale","Importo penale"],["note","Note"]];
-function ensureAnag(i){if(!A.d[i].anag)A.d[i].anag={};return A.d[i].anag}
+var ANAG_FIELDS=PERS_FIELDS.concat(ATTO_FIELDS);
+var TIPO_ATTO_OPTS=["INCARICO INIZIALE","VARIAZIONE","PROROGA","RINNOVO"];
+// Migrazione trasparente: la vecchia anagrafica a valore singolo diventa il primo atto.
+function ensureAnag(i){
+  var op=A.d[i];
+  if(!op.anag)op.anag={};
+  var an=op.anag;
+  if(!an.atti){
+    an.atti=[];
+    var vecchio=null;
+    for(var f=0;f<ATTO_FIELDS.length;f++){
+      var k=ATTO_FIELDS[f][0];
+      if(an[k]!==undefined&&an[k]!==""&&an[k]!==null){
+        if(!vecchio)vecchio={};
+        vecchio[k]=an[k];
+      }
+    }
+    if(vecchio){
+      if(!vecchio.tipoAtto)vecchio.tipoAtto="INCARICO INIZIALE";
+      an.atti.push(vecchio);
+    }
+    // i vecchi campi restano nell'oggetto ma non sono piu' letti: nessun dato perso
+  }
+  return an;
+}
+function getAtti(i){return ensureAnag(i).atti}
+// Atto corrente = quello con data avvio piu' recente (a parita', l'ultimo inserito)
+function attoCorrente(i){
+  var atti=getAtti(i);if(atti.length===0)return null;
+  var best=atti[0],bestT=-1;
+  for(var a=0;a<atti.length;a++){
+    var p=parseGMA(atti[a].dataAvvio);
+    var t=p?(p.y*10000+p.m*100+p.d):-1;
+    if(t>=bestT){bestT=t;best=atti[a]}
+  }
+  return best;
+}
+function attoSet(i,idx,f,v){var atti=getAtti(i);if(!atti[idx])return;atti[idx][f]=v;markD()}
+function attoAdd(i){
+  var atti=getAtti(i);
+  atti.push({tipoAtto:atti.length===0?"INCARICO INIZIALE":"VARIAZIONE"});
+  A.attoOpen=atti.length-1;
+  markD();render();
+}
+function attoDup(i,idx){
+  var atti=getAtti(i);var src=atti[idx];if(!src)return;
+  var copia={};
+  for(var k in src){if(Object.prototype.hasOwnProperty.call(src,k))copia[k]=src[k]}
+  copia.tipoAtto="VARIAZIONE";
+  atti.push(copia);
+  A.attoOpen=atti.length-1;
+  markD();render();
+}
+function attoDel(i,idx){
+  var atti=getAtti(i);var a=atti[idx];if(!a)return;
+  var desc=(a.tipoAtto||"atto")+(a.dataAvvio?" del "+a.dataAvvio:"")+(a.importoOC?" - \u20ac "+a.importoOC:"");
+  if(!confirm("Eliminare questo atto?\n\n"+desc+"\n\nL'operazione non si pu\u00f2 annullare."))return;
+  atti.splice(idx,1);
+  if(A.attoOpen>=atti.length)A.attoOpen=atti.length-1;
+  markD();render();
+}
+var MESI_EST=["gennaio","febbraio","marzo","aprile","maggio","giugno","luglio","agosto","settembre","ottobre","novembre","dicembre"];
+// Data gg/mm/aaaa -> "06 luglio 2026" (come nel modello)
+function dataEstesa(s){
+  var p=parseGMA(s);
+  if(!p)return s||"";
+  var d=p.d<10?"0"+p.d:""+p.d;
+  return d+" "+MESI_EST[p.m-1]+" "+p.y;
+}
+// Formato italiano senza toLocaleString: 1.234,56
+function numEuro(v){
+  if(v===null||v===undefined||v==="")return "";
+  var n=numIT(v);
+  if(!n)return String(v);
+  return n.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+}
+function escXML(s){
+  return String(s===null||s===undefined?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+// Costruisce la mappa segnaposto -> valore per un dato atto
+function mergeMap(i,idx){
+  var op=A.d[i];var an=op.anag||{};var atti=(an.atti||[]);var at=atti[idx]||{};
+  var m={};
+  m.NOME=an.nome||"";
+  m.COGNOME=an.cognome||"";
+  if(!m.NOME&&!m.COGNOME){
+    // fallback: uso il nominativo della scheda
+    var parts=String(op.name||"").split(" ");
+    m.COGNOME=parts.shift()||"";m.NOME=parts.join(" ");
+  }
+  m.LUOGO_NASCITA=an.luogoNascita||"";
+  m.DATA_NASCITA=dataEstesa(an.dataNascita);
+  m.IND_RESIDENZA=an.indRes||"";
+  m.LUOGO_RESIDENZA=an.luogoRes||"";
+  m.CODICE_FISCALE=an.cf||"";
+  m.EMAIL=an.email||"";
+  m.QUALIFICA=at.qualifica||"";
+  m.TIPO_AMBITO=at.tipoAmbito||"";
+  m.STRUTTURA=at.struttura||"";
+  m.COMUNE_INDIRIZZO=at.comuneIndirizzo||"";
+  m.DATA_AVVIO=dataEstesa(at.dataAvvio);
+  m.DATA_CONCLUSIONE=dataEstesa(at.dataConclusione);
+  m.DATA_CONTRATTO=dataEstesa(at.dataContratto);
+  m.IMPORTO=numEuro(at.importoOC);
+  var corpo=String(at.corpoOrario||"").toUpperCase();
+  m.TIPO_COMPENSO=(corpo.indexOf("CORPO")>=0||corpo.indexOf("FORFAIT")>=0)?"complessivi per l'intera prestazione":"orari";
+  var mo=numIT(at.monteOreTot);
+  m.MONTE_ORE=(mo>0)?(String(mo).replace(".",",")+" ore"):"NON DETERMINATO PREVENTIVAMENTE";
+  m.CADENZAMENTO=at.cadenzamento||"";
+  m.PREAVVISO=(at.ggPreavviso||"")===""?"":String(at.ggPreavviso);
+  m.PENALE=numEuro(at.importoPenale);
+  return m;
+}
+// Elenco segnaposto non compilati (per avvisare prima di generare)
+function mergeMancanti(m){
+  var out=[];
+  for(var k in m){if(Object.prototype.hasOwnProperty.call(m,k)&&String(m[k]).replace(/^\s+|\s+$/g,"")==="")out.push(k)}
+  return out;
+}
+function genContratto(i,idx){
+  if(typeof JSZip==="undefined"){alert("Libreria per i documenti Word in caricamento, riprova tra qualche secondo.");return}
+  window._genFor={op:i,atto:idx};
+  // Creo l'input al volo: il pulsante vive nella scheda, non nella home
+  var inp=document.getElementById("tplFileDyn");
+  if(inp&&inp.parentNode)inp.parentNode.removeChild(inp);
+  inp=document.createElement("input");
+  inp.type="file";inp.id="tplFileDyn";inp.accept=".docx";inp.style.display="none";
+  inp.onchange=function(){onTplFile(inp)};
+  document.body.appendChild(inp);
+  inp.click();
+}
+function onTplFile(inp){
+  var f=inp.files[0];if(!f)return;inp.value="";
+  var ctx=window._genFor;if(!ctx)return;
+  var i=ctx.op,idx=ctx.atto;
+  var m=mergeMap(i,idx);
+  var manc=mergeMancanti(m);
+  if(manc.length>0){
+    if(!confirm("Alcuni dati non sono compilati e resteranno vuoti nel documento:\n\n"+manc.join(", ")+"\n\nGenero lo stesso?"))return;
+  }
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    JSZip.loadAsync(ev.target.result).then(function(zip){
+      var fx=zip.file("word/document.xml");
+      if(!fx){alert("Il file scelto non sembra un documento Word valido.");return}
+      return fx.async("string").then(function(xml){
+        var trovati=0,nonTrovati=[];
+        for(var k in m){
+          if(!Object.prototype.hasOwnProperty.call(m,k))continue;
+          var tag="{{"+k+"}}";
+          if(xml.indexOf(tag)>=0){
+            trovati++;
+            xml=xml.split(tag).join(escXML(m[k]));
+          }else nonTrovati.push(k);
+        }
+        if(trovati===0){
+          alert("Nel modello non ho trovato nessun segnaposto {{...}}.\nControlla di aver scelto il modello con i segnaposto.");
+          return;
+        }
+        zip.file("word/document.xml",xml);
+        return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}).then(function(blob){
+          var op=A.d[i];var at=(op.anag.atti||[])[idx]||{};
+          var nome=(m.COGNOME+" "+m.NOME).replace(/^\s+|\s+$/g,"");
+          var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
+          var MS=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+          var fn="Lettera incarico "+nome+" "+p2(dt.getDate())+MS[dt.getMonth()]+String(dt.getFullYear()).substr(2)+".docx";
+          var url=URL.createObjectURL(blob);
+          var a=document.createElement("a");a.href=url;a.download=fn;document.body.appendChild(a);a.click();
+          document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},1500);
+          var msg="Lettera generata: "+fn+"\n\nCampi compilati: "+trovati;
+          if(nonTrovati.length>0)msg+="\nSegnaposto non presenti nel modello: "+nonTrovati.join(", ");
+          toast("Lettera di incarico scaricata","#2e7d32");
+          alert(msg);
+        });
+      });
+    })["catch"](function(e){alert("Errore nella generazione: "+e.message)});
+  };
+  rd.readAsArrayBuffer(f);
+}
+function attoToggle(idx){A.attoOpen=(A.attoOpen===idx?-1:idx);render()}
+// Due atti sono uguali se coincidono su tutti i campi (serve all'import per non duplicare)
+function attoUguale(a,b){
+  for(var f=0;f<ATTO_FIELDS.length;f++){
+    var k=ATTO_FIELDS[f][0];
+    if(k==="tipoAtto")continue;
+    var va=(a[k]===undefined||a[k]===null)?"":String(a[k]);
+    var vb=(b[k]===undefined||b[k]===null)?"":String(b[k]);
+    if(va!==vb)return false;
+  }
+  return true;
+}
 function normName(s){
   s=String(s||"").toUpperCase();
   var map={"\u00c0":"A","\u00c1":"A","\u00c8":"E","\u00c9":"E","\u00cc":"I","\u00cd":"I","\u00d2":"O","\u00d3":"O","\u00d9":"U","\u00da":"U"};
@@ -1090,7 +1297,8 @@ function numIT(v){if(v===null||v===undefined||v==="")return 0;return parseFloat(
 function rAnagAlerts(i){
   var op=A.d[i];var an=op.anag;if(!an)return"";
   var h="";
-  var avv=parseGMA(an.dataAvvio),conc=parseGMA(an.dataConclusione);
+  var ac=attoCorrente(i);if(!ac)return"";
+  var avv=parseGMA(ac.dataAvvio),conc=parseGMA(ac.dataConclusione);
   // ore lavorate per (anno, mese)
   var yrs=gY(op);
   function oreMese(yr,m){
@@ -1099,7 +1307,7 @@ function rAnagAlerts(i){
     return t;
   }
   // 1. MONTE ORE CONTRATTUALE
-  var mot=numIT(an.monteOreTot);
+  var mot=numIT(ac.monteOreTot);
   if(mot>0){
     var tot=0;
     for(var y=0;y<yrs.length;y++){
@@ -1112,7 +1320,7 @@ function rAnagAlerts(i){
     }
     tot=rM(tot);
     if(tot>mot){
-      var per=(avv||conc)?(" nel periodo "+(avv?an.dataAvvio:"inizio")+" \u2192 "+(conc?an.dataConclusione:"oggi")):"";
+      var per=(avv||conc)?(" nel periodo "+(avv?ac.dataAvvio:"inizio")+" \u2192 "+(conc?ac.dataConclusione:"oggi")):"";
       h+='<div style="background:#ef6c00;color:#fff;padding:7px 12px;font-weight:900;font-size:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
       h+='<span style="font-size:15px">\u26a0</span><span>MONTE ORE CONTRATTUALE SUPERATO</span>';
       h+='<span style="font-weight:400;font-size:11px">Effettuate '+f2(tot)+' ore su '+f2(mot)+' contrattualizzate'+per+' (+'+f2(rM(tot-mot))+')</span></div>';
@@ -1132,7 +1340,7 @@ function rAnagAlerts(i){
     }
     if(oltre.length>0){
       h+='<div style="background:#ef6c00;color:#fff;padding:7px 12px;font-weight:900;font-size:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
-      h+='<span style="font-size:15px">\u26a0</span><span>ORE OLTRE LA DATA DI CONCLUSIONE ('+escHTML(an.dataConclusione)+')</span>';
+      h+='<span style="font-size:15px">\u26a0</span><span>ORE OLTRE LA DATA DI CONCLUSIONE ('+escHTML(ac.dataConclusione)+')</span>';
       h+='<span style="font-weight:400;font-size:11px">'+f2(rM(totO))+' ore: '+escHTML(oltre.slice(0,8).join(", "))+(oltre.length>8?" \u2026e altri "+(oltre.length-8)+" mesi":"")+'</span></div>';
     }
   }
@@ -1140,37 +1348,92 @@ function rAnagAlerts(i){
 }
 function rAnag(i){
   var op=A.d[i];var an=op.anag||{};
-  var filled=0;for(var q=0;q<ANAG_FIELDS.length;q++){if(an[ANAG_FIELDS[q][0]])filled++}
+  var atti=(an.atti)?an.atti:[];
+  var pf=0;for(var q=0;q<PERS_FIELDS.length;q++){if(an[PERS_FIELDS[q][0]])pf++}
   var h='<div style="background:#fff;border-bottom:1px solid #ccc">';
   h+='<div onclick="toggleAnag()" style="cursor:pointer;padding:6px 14px;background:#37474f;color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;gap:8px">';
   h+='<span>'+(A.anagOpen?"\u25bc":"\u25b6")+'</span><span>\ud83d\udcc7 ANAGRAFICA</span>';
-  h+='<span style="font-weight:400;font-size:10px;opacity:0.85">('+filled+'/'+ANAG_FIELDS.length+' campi compilati)</span></div>';
+  h+='<span style="font-weight:400;font-size:10px;opacity:0.85">(dati personali '+pf+'/'+PERS_FIELDS.length+' \u2022 '+atti.length+' '+(atti.length===1?"atto":"atti")+')</span></div>';
   if(A.anagOpen){
     var fld=function(f,lbl,w,ph){
       var v=an[f]||"";
-      return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="'+(ph||"")+'" style="width:'+(w||150)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="anagSet('+i+',\''+f+'\',this.value)"'+(f.indexOf("data")===0?' onblur="blurDT(this);anagSet('+i+',\''+f+'\',this.value)"':'')+'></div>';
+      return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="'+(ph||"")+'" style="width:'+(w||150)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="anagSet('+i+',\''+f+'\',this.value)"></div>';
     };
     h+='<div style="padding:10px 14px">';
     h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin-bottom:5px">DATI PERSONALI</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
     h+=fld("cognome","Cognome",140)+fld("nome","Nome",140)+fld("luogoNascita","Luogo nascita",160)+fld("dataNascita","Data nascita",90,"gg/mm/aaaa")+fld("cf","Codice fiscale",150)+fld("email","Email",190);
-    h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">';
+    h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">';
     h+=fld("indRes","Indirizzo residenza",210)+fld("capRes","CAP",60)+fld("luogoRes","Luogo residenza",140);
     h+=fld("indDom","Indirizzo domicilio",210)+fld("capDom","CAP",60)+fld("luogoDom","Luogo domicilio",140);
     h+='</div>';
-    h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin-bottom:5px">DATI INCARICO</div>';
-    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
-    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Qualifica</label>'+anagSelHTML(i,"qualifica",QUALIFICHE)+'</div>';
-    h+=fld("struttura","Struttura e/o localit\u00e0",230);
-    h+=fld("dataContratto","Data contratto",90,"gg/mm/aaaa")+fld("dataAvvio","Data avvio",90,"gg/mm/aaaa")+fld("dataConclusione","Data conclusione",90,"gg/mm/aaaa");
-    h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">';
-    h+=fld("monteOreSett","Monte ore sett.",80)+fld("monteOreTot","Monte ore tot.",80)+fld("importoOC","Importo \u20ac",80);
-    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Corpo o orario</label>'+anagSelHTML(i,"corpoOrario",CORPO_OPTS)+'</div>';
-    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Cadenzamento pagamento</label>'+anagSelHTML(i,"cadenzamento",CADENZ_OPTS)+'</div>';
-    h+=fld("ridIndirette","Rid. indirette",80)+fld("ridOverMax","Rid. over mass.",80)+fld("ggPreavviso","GG preavviso",70)+fld("importoPenale","Penale \u20ac",70)+fld("note","Note",280);
-    h+='</div></div>';
+    // ===== ATTI =====
+    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
+    h+='<span style="font-size:11px;font-weight:900;color:#37474f">ATTI CONTRATTUALI</span>';
+    h+='<button class="btn btn-sm" style="background:#2e7d32;color:#fff" onclick="attoAdd('+i+')">+ Nuovo atto</button>';
+    h+='</div>';
+    if(atti.length===0){
+      h+='<div style="padding:10px;background:#fff8e1;border:1px dashed #ffb300;border-radius:5px;font-size:11px;color:#795548">Nessun atto registrato. Premi <strong>+ Nuovo atto</strong> per inserire l\'incarico iniziale, oppure usa <strong>\ud83d\udcc7 Importa anagrafiche</strong> dalla home.</div>';
+    }
+    var corr=attoCorrente(i);
+    for(var a=0;a<atti.length;a++){
+      var at=atti[a];var aperto=(A.attoOpen===a);
+      var isCorr=(corr===at);
+      h+='<div style="border:1px solid '+(isCorr?"#2e7d32":"#ccc")+';border-radius:5px;margin-bottom:5px;overflow:hidden">';
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:'+(isCorr?"#e8f5e9":"#f5f5f5")+';font-size:11px">';
+      h+='<span onclick="attoToggle('+a+')" style="cursor:pointer;font-weight:900">'+(aperto?"\u25bc":"\u25b6")+'</span>';
+      h+='<span onclick="attoToggle('+a+')" style="cursor:pointer;font-weight:900;color:#37474f;min-width:120px">'+escHTML(at.tipoAtto||"ATTO "+(a+1))+'</span>';
+      h+='<span style="color:#666">dal '+escHTML(at.dataAvvio||"\u2013")+(at.dataConclusione?" al "+escHTML(at.dataConclusione):"")+'</span>';
+      if(at.importoOC)h+='<span style="font-weight:700;color:#1b5e20">\u20ac '+escHTML(at.importoOC)+'</span>';
+      if(at.monteOreTot)h+='<span style="color:#666">'+escHTML(at.monteOreTot)+' h</span>';
+      if(isCorr)h+='<span style="background:#2e7d32;color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:900">CORRENTE</span>';
+      h+='<span style="margin-left:auto;display:flex;gap:4px">';
+      h+='<button class="btn btn-sm" style="background:#6a1b9a;color:#fff" onclick="genContratto('+i+','+a+')" title="Genera la lettera di incarico compilata con questo atto: ti verr\u00e0 chiesto il modello Word con i segnaposto">\ud83d\udcc4 Lettera</button>';
+      h+='<button class="btn btn-sm" style="background:#0277bd;color:#fff" onclick="attoDup('+i+','+a+')" title="Duplica questo atto: la copia si aggiunge in fondo, poi modifichi ci\u00f2 che cambia">\u29c9 Duplica</button>';
+      h+='<button class="btn-del-row" onclick="attoDel('+i+','+a+')" title="Elimina questo atto">\u00d7</button>';
+      h+='</span></div>';
+      if(aperto){
+        var af=function(f,lbl,w,ph){
+          var v=at[f]||"";
+          return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="'+(ph||"")+'" style="width:'+(w||150)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="attoSet('+i+','+a+',\''+f+'\',this.value)"></div>';
+        };
+        h+='<div style="padding:8px 10px;background:#fff">';
+        h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
+        h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Tipo atto</label>'+attoSelHTML(i,a,"tipoAtto",TIPO_ATTO_OPTS)+'</div>';
+        h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Qualifica</label>'+attoSelHTML(i,a,"qualifica",QUALIFICHE)+'</div>';
+        h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
+        h+=af("tipoAmbito","Tipo ambito",210,"es. ISTITUTO/I SCOLASTICO/I")+af("struttura","Struttura",210,"es. SCUOLA DELL\'INFANZIA")+af("comuneIndirizzo","Comune e indirizzo",230,"es. COLZATE / BG V. ROMA");
+        h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
+        h+=af("dataContratto","Data contratto",90,"gg/mm/aaaa")+af("dataAvvio","Data avvio",90,"gg/mm/aaaa")+af("dataConclusione","Data conclusione",90,"gg/mm/aaaa");
+        h+=af("monteOreSett","Monte ore sett.",80)+af("monteOreTot","Monte ore tot.",80)+af("importoOC","Importo \u20ac",80);
+        h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">';
+        h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Corpo o orario</label>'+attoSelHTML(i,a,"corpoOrario",CORPO_OPTS)+'</div>';
+        h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Cadenzamento pagamento</label>'+attoSelHTML(i,a,"cadenzamento",CADENZ_OPTS)+'</div>';
+        h+=af("ridIndirette","Rid. indirette",80)+af("ridOverMax","Rid. over mass.",80)+af("ggPreavviso","GG preavviso",70)+af("importoPenale","Penale \u20ac",70)+af("note","Note",280);
+        h+='</div></div>';
+      }
+      h+='</div>';
+    }
+    h+='</div>';
   }
   h+='</div>';
+  return h;
+}
+function attoSelChange(i,idx,f,el){
+  var key=i+"_"+idx+"_"+f;
+  if(el.value==="__ALTRO__"){window._anagAltro[key]=true;var atti=getAtti(i);if(atti[idx]&&!atti[idx][f])atti[idx][f]="";markD();render()}
+  else{delete window._anagAltro[key];attoSet(i,idx,f,el.value);render()}
+}
+function attoSelHTML(i,idx,f,opts){
+  var atti=getAtti(i);var at=atti[idx]||{};
+  var v=at[f]||"";var key=i+"_"+idx+"_"+f;
+  var inList=false;for(var o=0;o<opts.length;o++){if(opts[o]===v)inList=true}
+  var altro=window._anagAltro[key]||(v!==""&&!inList);
+  var h='<select onchange="attoSelChange('+i+','+idx+',\''+f+'\',this)" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;max-width:290px;padding:2px">';
+  h+='<option value=""'+(v===""&&!altro?" selected":"")+'>\u2014 scegli \u2014</option>';
+  for(var o2=0;o2<opts.length;o2++)h+='<option value="'+escHTML(opts[o2])+'"'+(v===opts[o2]?" selected":"")+'>'+escHTML(opts[o2])+'</option>';
+  h+='<option value="__ALTRO__"'+(altro?" selected":"")+'>ALTRO\u2026</option></select>';
+  if(altro)h+='<br><input type="text" value="'+escHTML(v)+'" placeholder="specificare..." style="font-size:11px;margin-top:2px;width:280px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:2px 4px" onchange="attoSet('+i+','+idx+',\''+f+'\',this.value)">';
   return h;
 }
 function xlDate(v){
@@ -1204,6 +1467,10 @@ function applyAnagRows(rows){
     if(want[hh])col[want[hh]]=c;
   }
   if(col.cognome===undefined||col.nome===undefined){alert("Colonne COGNOME/NOME non trovate: \u00e8 il file giusto?");return}
+  var dateF={dataNascita:1,dataContratto:1,dataAvvio:1,dataConclusione:1};
+  var persK={};for(var p=0;p<PERS_FIELDS.length;p++)persK[PERS_FIELDS[p][0]]=1;
+  var attoK={};for(var q=0;q<ATTO_FIELDS.length;q++)attoK[ATTO_FIELDS[q][0]]=1;
+  // Indice righe Excel per nominativo
   var xl={};
   for(var r=1;r<rows.length;r++){
     var cg=rows[r][col.cognome];var nm=rows[r][col.nome];
@@ -1211,31 +1478,91 @@ function applyAnagRows(rows){
     var key=normName(String(cg)+" "+String(nm));
     if(key&&!xl[key])xl[key]=r;
   }
-  var matched=0,filled=0,notFound=[];
-  var dateF={dataNascita:1,dataContratto:1,dataAvvio:1,dataConclusione:1};
-  for(var i=0;i<A.d.length;i++){
-    var k=normName(A.d[i].name);var ri=null;
-    if(xl[k]!==undefined)ri=xl[k];
-    else{
+  // Indice operatori in app
+  function trovaOp(key){
+    for(var i=0;i<A.d.length;i++){
+      var k=normName(A.d[i].name);
+      if(k===key)return i;
       var w=k.split(" ");
       for(var cut=1;cut<w.length;cut++){
-        var alt=w.slice(cut).concat(w.slice(0,cut)).join(" ");
+        if(w.slice(cut).concat(w.slice(0,cut)).join(" ")===key)return i;
+      }
+    }
+    return -1;
+  }
+  // 1. Chi c'e' nell'Excel ma NON in app: proposta di creazione
+  var daCreare=[];
+  for(var k2 in xl){
+    if(!Object.prototype.hasOwnProperty.call(xl,k2))continue;
+    if(trovaOp(k2)===-1){
+      var rr=rows[xl[k2]];
+      daCreare.push({key:k2,row:xl[k2],nome:String(rr[col.cognome]).toUpperCase()+" "+String(rr[col.nome]).toUpperCase()});
+    }
+  }
+  var creati=0;
+  if(daCreare.length>0){
+    var elenco=[];for(var d2=0;d2<Math.min(daCreare.length,20);d2++)elenco.push(daCreare[d2].nome);
+    var msgC="Nell'Excel ci sono "+daCreare.length+" nominativi non presenti in questo programma.\n\nVuoi CREARE le loro schede?\n(Attenzione: l'elenco pu\u00f2 contenere dipendenti o P.IVA che non sono operatori occasionali)\n\n"+elenco.join("\n")+(daCreare.length>20?"\n\u2026e altri "+(daCreare.length-20):"")+"\n\nOK = crea    Annulla = ignora";
+    if(confirm(msgC)){
+      for(var d3=0;d3<daCreare.length;d3++){
+        A.d.push({sheet:"",name:daCreare[d3].nome,years:{},anag:{atti:[]}});
+        creati++;
+      }
+    }
+  }
+  // 2. Compila personali - solo vuoti - e aggiunge l'atto se diverso dall'ultimo
+  var matched=0,filled=0,attiAgg=0,attiUguali=0,notFound=[];
+  for(var i2=0;i2<A.d.length;i2++){
+    var k3=normName(A.d[i2].name);var ri=null;
+    if(xl[k3]!==undefined)ri=xl[k3];
+    else{
+      var w2=k3.split(" ");
+      for(var cut2=1;cut2<w2.length;cut2++){
+        var alt=w2.slice(cut2).concat(w2.slice(0,cut2)).join(" ");
         if(xl[alt]!==undefined){ri=xl[alt];break}
       }
     }
-    if(ri===null){notFound.push(A.d[i].name);continue}
+    if(ri===null){notFound.push(A.d[i2].name);continue}
     matched++;
-    var an=ensureAnag(i);var row=rows[ri];
+    var an=ensureAnag(i2);var row=rows[ri];
+    // personali: mai sovrascrivere
     for(var fk in col){
-      if(an[fk])continue; // mai sovrascrivere valori esistenti
+      if(!Object.prototype.hasOwnProperty.call(col,fk))continue;
+      if(!persK[fk])continue;
+      if(an[fk])continue;
       var v=row[col[fk]];
       if(v===null||v===undefined||v==="")continue;
       an[fk]=dateF[fk]?xlDate(v):String(v).replace(/^\s+|\s+$/g,"");
       filled++;
     }
+    // atto dall'Excel
+    var nuovo={};var haDati=false;
+    for(var fk2 in col){
+      if(!Object.prototype.hasOwnProperty.call(col,fk2))continue;
+      if(!attoK[fk2])continue;
+      var v2=row[col[fk2]];
+      if(v2===null||v2===undefined||v2==="")continue;
+      nuovo[fk2]=dateF[fk2]?xlDate(v2):String(v2).replace(/^\s+|\s+$/g,"");
+      haDati=true;
+    }
+    if(!haDati)continue;
+    // anti-duplicato: se identico a uno gia' presente, non aggiungere
+    var gia=false;
+    for(var z=0;z<an.atti.length;z++){if(attoUguale(an.atti[z],nuovo)){gia=true;break}}
+    if(gia){attiUguali++;continue}
+    nuovo.tipoAtto=(an.atti.length===0)?"INCARICO INIZIALE":"VARIAZIONE";
+    an.atti.push(nuovo);
+    attiAgg++;
   }
+  // L'elenco puo' essere cambiato: riallinea la selezione o torna in home
+  if(A.v==="sheet"&&!A.d[A.sel]){A.v="cover";A.sel=0}
   markD();render();
-  var msg="Import anagrafiche completato.\n\nOperatori trovati nell'Excel: "+matched+" su "+A.d.length+"\nCampi compilati: "+filled+"\n\nNon trovati ("+notFound.length+"): "+(notFound.length>0?"\n"+notFound.slice(0,15).join("\n")+(notFound.length>15?"\n\u2026e altri "+(notFound.length-15):""):"nessuno")+"\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitivo l'import.";
+  var msg="Import anagrafiche completato.\n\n";
+  if(creati>0)msg+="Schede create: "+creati+"\n";
+  msg+="Operatori trovati nell'Excel: "+matched+" su "+A.d.length+"\nCampi personali compilati: "+filled+"\nAtti contrattuali aggiunti: "+attiAgg+"\n";
+  if(attiUguali>0)msg+="Atti gi\u00e0 presenti (non duplicati): "+attiUguali+"\n";
+  msg+="\nNon trovati ("+notFound.length+"): "+(notFound.length>0?"\n"+notFound.slice(0,15).join("\n")+(notFound.length>15?"\n\u2026e altri "+(notFound.length-15):""):"nessuno");
+  msg+="\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitivo l'import.";
   alert(msg);
 }
 function setStartM(i,yr,s,val){
@@ -1287,7 +1614,7 @@ function confAY(ny){
   op.years[String(ny)]={default_rate:rt,services:newSvcs,payments:[]};
   A.modal=null;markD();render();toast("Anno "+ny+" aggiunto con servizi duplicati","#ef6c00");
 }
-function openS(i){A.sel=i;A.v="sheet";A.anagOpen=false;window._anagAltro={};render();window.scrollTo(0,0)}
+function openS(i){A.sel=i;A.v="sheet";A.anagOpen=false;A.attoOpen=-1;window._anagAltro={};render();window.scrollTo(0,0)}
 function goBack(){if(A.dirty&&!confirm("Modifiche non salvate. Uscire?"))return;A.v="cover";render()}
 function delOp(i){if(confirm("Eliminare "+A.d[i].sheet+"?")){A.d.splice(i,1);markD();A.v="cover";render()}}
 function creaOp(){
