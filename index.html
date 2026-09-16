@@ -1278,6 +1278,17 @@ function onTplFile(inp){
   };
   rd.readAsArrayBuffer(f);
 }
+// Word puo' spezzare un segnaposto su piu' blocchi interni: qui lo ricompone.
+// Agisce solo se il contenuto fra le graffe e' un nome valido, e mai a cavallo di paragrafi o tabelle.
+function normalizzaSegnaposto(xml){
+  var re=/\{\{((?:[^<>{}]|<[^>]*>)*?)\}\}/g;
+  return xml.replace(re,function(tutto,dentro){
+    if(dentro.indexOf("</w:p>")>=0||dentro.indexOf("<w:p ")>=0||dentro.indexOf("<w:tbl")>=0)return tutto;
+    var pulito=dentro.replace(/<[^>]*>/g,"");
+    if(pulito.length>0&&/^[A-Z0-9_]+$/.test(pulito))return "{{"+pulito+"}}";
+    return tutto;
+  });
+}
 function mergeDocx(buf,i,idx){
   var m=mergeMap(i,idx);
   var manc=mergeMancanti(m);
@@ -1288,6 +1299,7 @@ function mergeDocx(buf,i,idx){
     var fx=zip.file("word/document.xml");
     if(!fx){alert("Il file scelto non sembra un documento Word valido.");return}
     return fx.async("string").then(function(xml){
+      xml=normalizzaSegnaposto(xml);
       var trovati=0,nonTrovati=[];
       for(var k in m){
         if(!Object.prototype.hasOwnProperty.call(m,k))continue;
@@ -1298,6 +1310,11 @@ function mergeDocx(buf,i,idx){
       if(trovati===0){
         alert("Nel modello non ho trovato nessun segnaposto {{...}}.\nControlla di aver scelto il modello con i segnaposto.");
         return;
+      }
+      var residui=[];
+      var rr=xml.match(/\{\{[A-Z0-9_]+\}\}/g);
+      if(rr){
+        for(var z=0;z<rr.length;z++){if(residui.indexOf(rr[z])<0)residui.push(rr[z])}
       }
       zip.file("word/document.xml",xml);
       return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}).then(function(blob){
@@ -1311,6 +1328,9 @@ function mergeDocx(buf,i,idx){
         render();
         var msg="Lettera generata: "+fn+"\n\nCampi compilati: "+trovati;
         if(nonTrovati.length>0)msg+="\nSegnaposto non presenti nel modello: "+nonTrovati.join(", ");
+        if(residui&&residui.length>0){
+          msg+="\n\n\u26a0 ATTENZIONE: nel documento sono rimasti dei segnaposto non compilati:\n"+residui.join(", ")+"\n\nControlla il modello: quei nomi non corrispondono a nessun campo dell'anagrafica.";
+        }
         toast("Lettera di incarico scaricata","#2e7d32");
         alert(msg);
       });
