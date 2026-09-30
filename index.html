@@ -642,6 +642,7 @@ function render(){
   if(A.modal==="newop")el.innerHTML+=rMNO();
   if(A.modal==="newyr")el.innerHTML+=rMNY();
   if(A.modal==="report")el.innerHTML+=rMReport();
+  if(A.modal==="bulk"&&A.bulk)el.innerHTML+=rMBulk();
   if(pickerFor)el.innerHTML+=rPicker();
 }
 function rPicker(){
@@ -759,6 +760,7 @@ function rCov(){
   h+='<input type="file" id="anagFile" accept=".xlsx,.xls" style="display:none" onchange="importAnagFile(this)">';
   h+='<input type="file" id="tplFile" accept=".docx" style="display:none" onchange="onTplFile(this)">';
   h+='<button class="btn" style="background:#546e7a;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo anagrafiche</button>';
+  h+='<button class="btn" style="background:#ad1457;color:#fff" onclick="bulkOpen()" title="Crea lo stesso atto contrattuale su pi\u00f9 operatori in una volta, con importo ritoccabile per ciascuno">\ud83d\udcda Atto in blocco</button>';
   h+='<button class="btn" style="background:#1565c0;color:#fff" onclick="expJSON()">⬇ Backup JSON</button>';
   h+='<button class="btn" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()">⬆ Ripristina backup</button>';
   if(A.dirty)h+='<button class="btn btn-save" onclick="sv()">\u2714 Salva</button>';
@@ -1036,6 +1038,145 @@ function rMNY(){
   h+='<button class="btn btn-new" onclick="confAY('+ny+')">Aggiungi '+ny+'</button></div></div></div>';return h;
 }
 
+// ===== ATTO IN BLOCCO =====
+function bulkOpen(){
+  A.bulk={campi:{tipoAtto:"INCARICO INIZIALE"},sel:{},imp:{}};
+  A.modal="bulk";render();
+}
+function bulkClose(){A.bulk=null;A.modal=null;render()}
+function bulkSetCampo(f,v){
+  if(!A.bulk)return;
+  A.bulk.campi[f]=v;
+  // l'importo comune ripopola solo le righe non ritoccate a mano
+  if(f==="importoOC"){
+    for(var i=0;i<A.d.length;i++){
+      if(A.bulk.sel[i]&&!(A.bulk.manuale&&A.bulk.manuale[i]))A.bulk.imp[i]=v;
+    }
+  }
+  render();
+}
+function bulkSelChange(f,el){bulkSetCampo(f,el.value)}
+function bulkTutti(v){
+  if(!A.bulk)return;
+  for(var i=0;i<A.d.length;i++){
+    A.bulk.sel[i]=v;
+    if(v&&A.bulk.imp[i]===undefined)A.bulk.imp[i]=A.bulk.campi.importoOC||"";
+  }
+  render();
+}
+function bulkToggle(i){
+  if(!A.bulk)return;
+  A.bulk.sel[i]=!A.bulk.sel[i];
+  if(A.bulk.sel[i]&&A.bulk.imp[i]===undefined)A.bulk.imp[i]=A.bulk.campi.importoOC||"";
+  render();
+}
+function bulkImp(i,v){
+  if(!A.bulk)return;
+  if(!A.bulk.manuale)A.bulk.manuale={};
+  A.bulk.manuale[i]=true;
+  A.bulk.imp[i]=v;
+}
+function bulkConta(){
+  var n=0;if(!A.bulk)return 0;
+  for(var i=0;i<A.d.length;i++){if(A.bulk.sel[i])n++}
+  return n;
+}
+function bulkCrea(){
+  if(!A.bulk)return;
+  var scelti=[];
+  for(var i=0;i<A.d.length;i++){if(A.bulk.sel[i])scelti.push(i)}
+  if(scelti.length===0){alert("Non hai selezionato nessun operatore.");return}
+  var c=A.bulk.campi;
+  if(!c.dataAvvio&&!c.dataContratto){
+    if(!confirm("Non hai indicato n\u00e9 data contratto n\u00e9 data avvio.\n\nProcedo lo stesso?"))return;
+  }
+  var righe=[];
+  for(var s=0;s<scelti.length;s++){
+    var op=A.d[scelti[s]];
+    var im=A.bulk.imp[scelti[s]];
+    righe.push("  \u2022 "+op.name+(im?"   \u20ac "+im:""));
+  }
+  var testo="Creo un nuovo atto su "+scelti.length+" operatori:\n\n"+righe.slice(0,25).join("\n");
+  if(righe.length>25)testo+="\n  \u2026e altri "+(righe.length-25);
+  testo+="\n\nL'atto si AGGIUNGE a quelli gi\u00e0 presenti: nulla viene sovrascritto.\n\nProcedo?";
+  if(!confirm(testo))return;
+  var fatti=0;
+  for(var s2=0;s2<scelti.length;s2++){
+    var idx=scelti[s2];
+    var an=ensureAnag(idx);
+    var nuovo={};
+    for(var k in c){
+      if(!Object.prototype.hasOwnProperty.call(c,k))continue;
+      if(c[k]!==""&&c[k]!==null&&c[k]!==undefined)nuovo[k]=c[k];
+    }
+    var imp=A.bulk.imp[idx];
+    if(imp!==""&&imp!==null&&imp!==undefined)nuovo.importoOC=imp;
+    if(!nuovo.tipoAtto)nuovo.tipoAtto=(an.atti.length===0)?"INCARICO INIZIALE":"VARIAZIONE";
+    an.atti.push(nuovo);
+    fatti++;
+  }
+  A.bulk=null;A.modal=null;
+  markD();render();
+  alert("Atto creato su "+fatti+" operatori.\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitiva l'operazione.");
+}
+function rMBulk(){
+  var c=A.bulk.campi;
+  var inp=function(f,lbl,w,ph){
+    return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(c[f]||"")+'" placeholder="'+(ph||"")+'" style="width:'+(w||130)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="bulkSetCampo(\''+f+'\',this.value)"></div>';
+  };
+  var sel=function(f,lbl,opts){
+    var v=c[f]||"";
+    var h2='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label>';
+    h2+='<select onchange="bulkSelChange(\''+f+'\',this)" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;max-width:280px;padding:2px">';
+    h2+='<option value="">\u2014 scegli \u2014</option>';
+    for(var o=0;o<opts.length;o++)h2+='<option value="'+escHTML(opts[o])+'"'+(v===opts[o]?" selected":"")+'>'+escHTML(opts[o])+'</option>';
+    return h2+'</select></div>';
+  };
+  var h='<div class="modal-overlay"><div class="modal" style="width:920px;max-width:97vw;max-height:92vh;overflow-y:auto">';
+  h+='<h3>\ud83d\udccb Nuovo atto su pi\u00f9 operatori</h3>';
+  h+='<div style="font-size:11px;color:#666;margin-bottom:10px">Compila le condizioni una volta sola, scegli a chi applicarle e ritocca solo gli importi diversi.</div>';
+  h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin:6px 0 4px">1. CONDIZIONI DELL\'ATTO</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
+  h+=sel("tipoAtto","Tipo atto",TIPO_ATTO_OPTS)+sel("qualifica","Qualifica",QUALIFICHE)+sel("tipoAmbito","Tipo ambito",AMBITO_OPTS);
+  h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
+  h+=inp("struttura","Struttura (facoltativa)",190,"es. CASA DI QUARTIERE")+inp("comuneIndirizzo","Comune e indirizzo",210,"es. MILANO MUNICIPIO 1");
+  h+=inp("dataContratto","Data contratto",95,"gg/mm/aaaa")+inp("dataAvvio","Data avvio",95,"gg/mm/aaaa")+inp("dataConclusione","Data conclusione",95,"gg/mm/aaaa");
+  h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:10px">';
+  h+=inp("importoOC","Importo \u20ac (comune)",95)+sel("corpoOrario","Corpo o orario",CORPO_OPTS)+inp("monteOreTot","Monte ore tot.",85);
+  h+=sel("cadenzamento","Cadenzamento",CADENZ_OPTS)+inp("ggPreavviso","GG preavviso",75)+inp("importoPenale","Penale \u20ac",75);
+  h+='</div>';
+  h+='<div style="display:flex;align-items:center;gap:10px;margin:10px 0 4px">';
+  h+='<span style="font-size:11px;font-weight:900;color:#37474f">2. A CHI APPLICARLO</span>';
+  h+='<button class="btn btn-sm" style="background:#546e7a;color:#fff" onclick="bulkTutti(true)">tutti</button>';
+  h+='<button class="btn btn-sm" style="background:#eceff1;color:#333" onclick="bulkTutti(false)">nessuno</button>';
+  h+='<span style="font-size:12px;font-weight:900;color:#1565c0;margin-left:auto">selezionati: '+bulkConta()+'</span>';
+  h+='</div>';
+  h+='<div style="max-height:320px;overflow-y:auto;border:1px solid #ddd;border-radius:5px">';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  h+='<thead><tr style="background:#37474f;color:#fff"><th style="padding:4px 6px;width:30px"></th><th style="padding:4px 6px;text-align:left">Operatore</th><th style="padding:4px;width:60px">Campi</th><th style="padding:4px;width:90px">Importo \u20ac</th></tr></thead><tbody>';
+  var ordine=[];for(var i=0;i<A.d.length;i++)ordine.push(i);
+  ordine.sort(function(a,b){var na=(A.d[a].name||"").toLowerCase();var nb=(A.d[b].name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
+  for(var q=0;q<ordine.length;q++){
+    var oi=ordine[q];var op=A.d[oi];var an=op.anag||{};
+    var ac=(an.atti&&an.atti.length)?attoCorrente(oi):null;
+    var vv=function(k){if(an[k])return an[k];if(ac&&ac[k])return ac[k];return""};
+    var filled=0;for(var f2=0;f2<ANAG_FIELDS.length;f2++){if(vv(ANAG_FIELDS[f2][0]))filled++}
+    var scelto=!!A.bulk.sel[oi];
+    h+='<tr style="background:'+(scelto?'#e8f5e9':(q%2?'#fafafa':'#fff'))+';border-bottom:1px solid #eee">';
+    h+='<td style="padding:2px 6px;text-align:center"><input type="checkbox"'+(scelto?' checked':'')+' onchange="bulkToggle('+oi+')" style="cursor:pointer"></td>';
+    h+='<td style="padding:2px 6px;font-weight:700;cursor:pointer" onclick="bulkToggle('+oi+')">'+escHTML(op.name)+'</td>';
+    h+='<td style="padding:2px;text-align:center;font-weight:900;color:'+(filled===0?'#c62828':(filled>=ANAG_FIELDS.length-2?'#1b5e20':'#e65100'))+'">'+filled+'/'+ANAG_FIELDS.length+'</td>';
+    h+='<td style="padding:2px 4px;text-align:center">';
+    if(scelto)h+='<input type="text" value="'+escHTML(A.bulk.imp[oi]===undefined?(c.importoOC||""):A.bulk.imp[oi])+'" style="width:72px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:2px" onchange="bulkImp('+oi+',this.value)">';
+    else h+='<span style="color:#ccc">\u2013</span>';
+    h+='</td></tr>';
+  }
+  h+='</tbody></table></div>';
+  h+='<div class="ma"><button class="btn" style="background:#eceff1" onclick="bulkClose()">Annulla</button>';
+  h+='<button class="btn btn-new" onclick="bulkCrea()">Crea l\'atto sui '+bulkConta()+' selezionati</button></div>';
+  h+='</div></div>';
+  return h;
+}
 function rMReport(){
   var h='<div class="modal-overlay" onclick="if(event.target===this){A.modal=null;render()}" onkeydown="if(event.key===\'Escape\'){A.modal=null;render()}">';
   h+='<div class="modal" role="dialog" aria-modal="true"><h3>Report Liquidazioni per Data</h3>';
