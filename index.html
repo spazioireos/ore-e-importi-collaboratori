@@ -296,6 +296,7 @@ var A={d:ld(),v:"cover",sel:null,q:"",fr:"",modal:null,dirty:false};
 var PALETTE=["#c8e6c9","#bbdefb","#f8bbd0","#fff9c4","#e1bee7","#ffe0b2","#b2dfdb","#b3e5fc","#d1c4e9","#f0e4d0","#dcedc8","#eceff1"];
 var CKEY="spazioireos_opoc_colors";
 var TKEY="spazioireos_opoc_modello";
+var BKEY="spazioireos_opoc_belfiore";
 var colorMap=loadColors();
 function loadColors(){var s=localStorage.getItem(CKEY);if(s){try{return JSON.parse(s)}catch(e){}}return{}}
 function saveColors(){try{localStorage.setItem(CKEY,JSON.stringify(colorMap))}catch(e){}}
@@ -644,6 +645,7 @@ function render(){
   if(A.modal==="report")el.innerHTML+=rMReport();
   if(A.modal==="bulk"&&A.bulk)el.innerHTML+=rMBulk();
   if(A.modal==="modello")el.innerHTML+=rMModello();
+  if(A.modal==="nomi"&&A.nomi)el.innerHTML+=rMNomi();
   if(pickerFor)el.innerHTML+=rPicker();
 }
 function rPicker(){
@@ -764,6 +766,7 @@ function rCov(){
   h+='<button class="btn" style="background:#ad1457;color:#fff" onclick="bulkOpen()" title="Crea lo stesso atto contrattuale su pi\u00f9 operatori in una volta, con importo ritoccabile per ciascuno">\ud83d\udcda Atto in blocco</button>';
   h+='<button class="btn" style="background:#4527a0;color:#fff" onclick="lettereBlocco()" title="Genera in un solo file zip una lettera di incarico per ogni operatore che ha un atto registrato">\ud83d\udcc4 Lettere in blocco (zip)</button>';
   h+='<button class="btn" style="background:#00838f;color:#fff" onclick="A.modal=\'modello\';render()" title="Carica o sostituisci il modello Word usato per tutte le lettere di incarico">\ud83d\udcc4 Modello contratto</button>';
+  h+='<button class="btn" style="background:#5d4037;color:#fff" onclick="nomiOpen()" title="Allinea il nominativo delle schede a cognome e nome dell\'anagrafica">\u270e Allinea nominativi</button>';
   h+='<button class="btn" style="background:#1565c0;color:#fff" onclick="expJSON()">⬇ Backup JSON</button>';
   h+='<button class="btn" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()">⬆ Ripristina backup</button>';
   if(A.dirty)h+='<button class="btn btn-save" onclick="sv()">\u2714 Salva</button>';
@@ -796,6 +799,8 @@ function rSh(){
   var op=A.d[A.sel];
   if(!op){A.v="cover";return rCov()}var yrs=gY(op);
   var h='<div class="sheet-header"><div><h2 style="font-size:26px;font-weight:900;letter-spacing:0.3px">'+escHTML(op.name)+'</h2><span style="font-size:10px;opacity:0.8"> '+escHTML(op.sheet)+'</span>';
+  var propN=nomeAnag(A.sel);
+  if(propN&&propN!==(op.name||"").toUpperCase())h+='<button class="btn btn-sm" style="background:#ef6c00;color:#fff;margin-left:8px" onclick="nomeAllinea('+A.sel+')" title="In anagrafica il nominativo \u00e8 '+escHTML(propN)+'">\u270e Allinea a: '+escHTML(propN)+'</button>';
   if(A.dirty)h+='<span id="ubadge" class="unsaved">NON SALVATO</span>';
   h+='</div><div class="acts">';
   h+='<button class="btn btn-save btn-sm" onclick="sv()">\u2714 Salva</button> ';
@@ -1123,6 +1128,186 @@ function bulkCrea(){
   alert("Atto creato su "+fatti+" operatori.\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitiva l'operazione.");
 }
 // ===== GENERAZIONE LETTERE IN BLOCCO (uno zip) =====
+// ===== ALLINEAMENTO NOMINATIVI (scheda <-> anagrafica) =====
+// ===== CODICE FISCALE =====
+var BELFIORE={"AGRIGENTO":"A089","ALESSANDRIA":"A182","ALZANO LOMBARDO":"A246","ANCONA":"A271","AOSTA":"A326","AREZZO":"A390","ASTI":"A479","BARI":"A662","BERGAMO":"A794","BOLLATE":"A940","BOLOGNA":"A944","BOLZANO":"A952","BRENO":"B149","BRESCIA":"B157","BUSTO ARSIZIO":"B300","CAGLIARI":"B354","CALTANISSETTA":"B429","CAMPOBASSO":"B519","CARATE BRIANZA":"B729","CASALMAGGIORE":"B898","CASTRONUOVO DI S ANDREA":"C345","CASTROVILLARI":"C349","CATANIA":"C351","CATANZARO":"C352","CERVINARA":"C557","CINISELLO BALSAMO":"C707","CLUSONE":"C800","CODOGNO":"C816","COMO":"C933","COSENZA":"D086","CREMONA":"D150","CROTONE":"D122","CUNEO":"D205","DESIO":"D286","ENNA":"C342","FERRARA":"D548","FIRENZE":"D612","FOGGIA":"D643","FROSINONE":"D810","GALLARATE":"D869","GAZZANIGA":"D952","GENOVA":"D969","GODIASCO":"E072","LA SPEZIA":"E463","LATINA":"E472","LECCE":"E506","LECCO":"E507","LEGNANO":"E514","LIVORNO":"E625","LODI":"E648","MAGENTA":"E801","MANTOVA":"E897","MASSAFRA":"F027","MATERA":"F052","MESSINA":"F158","MILANO":"F205","MODENA":"F257","MONDOVI'":"F351","MONZA":"F704","MORBEGNO":"F712","NAPOLI":"F839","NOVARA":"F952","NUORO":"F979","ORISTANO":"G113","PADOVA":"G224","PALERMO":"G273","PARMA":"G337","PAVIA":"G388","PERUGIA":"G478","PESARO":"G479","PESCARA":"G482","PIACENZA":"G535","PISA":"G702","POTENZA":"G942","PRATO":"G999","RAGUSA":"H163","RAVENNA":"H199","REGGIO CALABRIA":"H224","REPUBBLICA ARGENTINA":"Z600","REPUBBLICA DEL PERU'":"Z611","REPUBBLICA DELL' HONDURAS":"Z511","REPUBBLICA DELLA MACEDONIA DEL NORD":"Z148","REPUBBLICA DI ROMANIA":"Z129","RHO":"H264","RIMINI":"H294","RIVA RIVA DEL GARDA":"H330","ROMA":"H501","S AGATA MILITELLO":"I199","S GIORGIO A CREMANO":"H892","S PAOLO DI CIVITATE":"I072","SALERNO":"H703","SARONNO":"I441","SASSARI":"I452","SAVONA":"I480","SEGRATE":"I577","SEREGNO":"I625","SESTO S GIOVANNI":"I690","SESTO SAN GIOVANNI":"I690","SIENA":"I726","SIRACUSA":"I754","SONDRIO":"I829","SOVERIA MANNELLI":"I874","STATO DEL GIAPPONE":"Z219","TARANTO":"L049","TERNI":"L117","TORINO":"L219","TORTONA":"L304","TRADATE":"L319","TRAPANI":"L331","TRENTO":"L378","TRIESTE":"L424","VAPRIO D' ADDA":"L667","VARESE":"L682","VENEZIA":"L736","VERONA":"L781","VIMERCATE":"M052","VOGHERA":"M109"};
+function cfPulisci(s){
+  s=String(s===null||s===undefined?"":s).toUpperCase();
+  var map={"\u00C0":"A","\u00C1":"A","\u00C8":"E","\u00C9":"E","\u00CC":"I","\u00CD":"I","\u00D2":"O","\u00D3":"O","\u00D9":"U","\u00DA":"U"};
+  var out="";
+  for(var i=0;i<s.length;i++){var c=s.charAt(i);if(map[c])c=map[c];if(c>="A"&&c<="Z")out+=c}
+  return out;
+}
+function cfCons(s){return s.replace(/[AEIOU]/g,"")}
+function cfVoc(s){return s.replace(/[^AEIOU]/g,"")}
+function cfCognome(s){var c=cfPulisci(s);return (cfCons(c)+cfVoc(c)+"XXX").substr(0,3)}
+function cfNome(s){
+  var c=cfPulisci(s);var k=cfCons(c);
+  if(k.length>=4)return k.charAt(0)+k.charAt(2)+k.charAt(3);
+  return (k+cfVoc(c)+"XXX").substr(0,3);
+}
+var CF_MESI=["A","B","C","D","E","H","L","M","P","R","S","T"];
+function cfData(dob,sesso){
+  var m=String(dob).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m)return null;
+  var gg=parseInt(m[1],10),mm=parseInt(m[2],10),aa=m[3];
+  if(mm<1||mm>12||gg<1||gg>31)return null;
+  if(String(sesso).toUpperCase()==="F")gg+=40;
+  return aa.substr(2)+CF_MESI[mm-1]+(gg<10?"0"+gg:""+gg);
+}
+var CF_PARI={"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"A":0,"B":1,"C":2,"D":3,"E":4,"F":5,"G":6,"H":7,"I":8,"J":9,"K":10,"L":11,"M":12,"N":13,"O":14,"P":15,"Q":16,"R":17,"S":18,"T":19,"U":20,"V":21,"W":22,"X":23,"Y":24,"Z":25};
+var CF_DISP={"0":1,"1":0,"2":5,"3":7,"4":9,"5":13,"6":15,"7":17,"8":19,"9":21,"A":1,"B":0,"C":5,"D":7,"E":9,"F":13,"G":15,"H":17,"I":19,"J":21,"K":2,"L":4,"M":18,"N":20,"O":11,"P":3,"Q":6,"R":8,"S":12,"T":14,"U":16,"V":10,"W":22,"X":25,"Y":24,"Z":23};
+var CF_RESTO="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function cfControllo(p15){
+  if(!p15||p15.length!==15)return "";
+  var t=0;
+  for(var i=0;i<15;i++){
+    var ch=p15.charAt(i);
+    t+=((i+1)%2===1)?CF_DISP[ch]:CF_PARI[ch];
+  }
+  return CF_RESTO.charAt(t%26);
+}
+function cfValido(cf){
+  cf=String(cf===null||cf===undefined?"":cf).toUpperCase().replace(/\s/g,"");
+  if(!/^[A-Z0-9]{16}$/.test(cf))return false;
+  return cfControllo(cf.substr(0,15))===cf.charAt(15);
+}
+function cfNormComune(s){
+  var c=String(s===null||s===undefined?"":s).toUpperCase();
+  c=c.split("/")[0];
+  c=c.replace(/[^A-Z' ]/g," ").replace(/\s+/g," ");
+  return c.replace(/^\s+|\s+$/g,"");
+}
+function cfCalcola(cognome,nome,dob,sesso,bel){
+  var a=cfCognome(cognome),b=cfNome(nome),d=cfData(dob,sesso);
+  if(!a||!b||!d||!bel)return null;
+  var p=a+b+d+String(bel).toUpperCase();
+  if(p.length!==15)return null;
+  return p+cfControllo(p);
+}
+
+// Codici catastali aggiunti a mano dall'utente (comuni non in tabella)
+function belExtra(){
+  try{var s=localStorage.getItem(BKEY);return s?JSON.parse(s):{}}catch(e){return {}}
+}
+function belSalva(k,v){
+  try{var o=belExtra();o[k]=v;localStorage.setItem(BKEY,JSON.stringify(o));return true}catch(e){return false}
+}
+function belTrova(luogo){
+  var k=cfNormComune(luogo);
+  if(!k)return null;
+  if(BELFIORE[k])return BELFIORE[k];
+  var ex=belExtra();
+  if(ex[k])return ex[k];
+  return null;
+}
+function cfCalcolaOp(i){
+  var an=ensureAnag(i);
+  var manca=[];
+  if(!an.cognome)manca.push("Cognome");
+  if(!an.nome)manca.push("Nome");
+  if(!an.dataNascita)manca.push("Data di nascita");
+  if(!an.sesso)manca.push("Sesso");
+  if(!an.luogoNascita)manca.push("Luogo di nascita");
+  if(manca.length>0){alert("Per calcolare il codice fiscale mancano:\n\n"+manca.join("\n"));return}
+  var bel=belTrova(an.luogoNascita);
+  if(!bel){
+    var k=cfNormComune(an.luogoNascita);
+    var r=prompt("Non conosco il codice catastale (Belfiore) di:\n\n"+k+"\n\nScrivilo qui (4 caratteri, es. F205 per Milano).\nLo ricorder\u00f2 per le prossime volte.","");
+    if(!r)return;
+    r=String(r).toUpperCase().replace(/[^A-Z0-9]/g,"");
+    if(!/^[A-Z][0-9]{3}$/.test(r)){alert("Il codice catastale deve essere una lettera seguita da tre cifre (es. F205).");return}
+    belSalva(k,r);bel=r;
+  }
+  var cf=cfCalcola(an.cognome,an.nome,an.dataNascita,an.sesso,bel);
+  if(!cf){alert("Non riesco a calcolare il codice fiscale: controlla che la data di nascita sia nel formato gg/mm/aaaa.");return}
+  if(an.cf&&an.cf.toUpperCase()!==cf){
+    if(!confirm("In scheda c'\u00e8 gi\u00e0 un codice fiscale diverso:\n\nattuale:    "+an.cf+"\ncalcolato:  "+cf+"\n\nLo sostituisco?\n\n(In caso di omocodia il codice reale pu\u00f2 differire: verifica sulla tessera sanitaria.)"))return;
+  }
+  an.cf=cf;markD();render();
+  toast("Codice fiscale calcolato","#2e7d32");
+}
+function nomeAnag(i){
+  var an=A.d[i].anag;if(!an)return "";
+  var cg=(an.cognome||"").replace(/^\s+|\s+$/g,"");
+  var nm=(an.nome||"").replace(/^\s+|\s+$/g,"");
+  if(!cg&&!nm)return "";
+  return (cg+" "+nm).replace(/\s+/g," ").replace(/^\s+|\s+$/g,"").toUpperCase();
+}
+function nomiDiscordanti(){
+  var out=[];
+  for(var i=0;i<A.d.length;i++){
+    var prop=nomeAnag(i);
+    if(!prop)continue;
+    var att=(A.d[i].name||"").replace(/\s+/g," ").replace(/^\s+|\s+$/g,"");
+    if(prop!==att.toUpperCase())out.push({i:i,attuale:att,proposto:prop});
+  }
+  return out;
+}
+function nomiOpen(){
+  var l=nomiDiscordanti();
+  if(l.length===0){alert("Tutti i nominativi delle schede coincidono gi\u00e0 con cognome e nome dell'anagrafica.\n\nNulla da allineare.");return}
+  A.nomi={sel:{}};
+  for(var k=0;k<l.length;k++)A.nomi.sel[l[k].i]=true;
+  A.modal="nomi";render();
+}
+function nomiToggle(i){if(!A.nomi)return;A.nomi.sel[i]=!A.nomi.sel[i];render()}
+function nomiTutti(v){
+  if(!A.nomi)return;
+  var l=nomiDiscordanti();
+  for(var k=0;k<l.length;k++)A.nomi.sel[l[k].i]=v;
+  render();
+}
+function nomiApplica(){
+  if(!A.nomi)return;
+  var l=nomiDiscordanti();var scelti=[];
+  for(var k=0;k<l.length;k++){if(A.nomi.sel[l[k].i])scelti.push(l[k])}
+  if(scelti.length===0){alert("Non hai selezionato nessun nominativo.");return}
+  var righe=[];
+  for(var s=0;s<scelti.length;s++)righe.push("  "+scelti[s].attuale+"  \u2192  "+scelti[s].proposto);
+  var msg="Aggiorno "+scelti.length+" nominativi:\n\n"+righe.slice(0,20).join("\n");
+  if(righe.length>20)msg+="\n  \u2026e altri "+(righe.length-20);
+  msg+="\n\nOre, liquidazioni e atti non vengono toccati.\n\nProcedo?";
+  if(!confirm(msg))return;
+  for(var s2=0;s2<scelti.length;s2++)A.d[scelti[s2].i].name=scelti[s2].proposto;
+  A.nomi=null;A.modal=null;
+  markD();render();
+  alert("Aggiornati "+scelti.length+" nominativi.\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitiva l'operazione.");
+}
+function nomeAllinea(i){
+  var prop=nomeAnag(i);
+  if(!prop){alert("Compila prima Cognome e Nome nell'anagrafica.");return}
+  if(prop===(A.d[i].name||"").toUpperCase()){alert("Il nominativo della scheda coincide gi\u00e0 con l'anagrafica.");return}
+  if(!confirm("Aggiorno il nominativo della scheda?\n\n"+A.d[i].name+"\n\u2192  "+prop+"\n\nOre, liquidazioni e atti non vengono toccati."))return;
+  A.d[i].name=prop;markD();render();
+}
+function rMNomi(){
+  var l=nomiDiscordanti();
+  var n=0;for(var k=0;k<l.length;k++){if(A.nomi.sel[l[k].i])n++}
+  var h='<div class="modal-overlay"><div class="modal" style="width:760px;max-width:97vw;max-height:90vh;overflow-y:auto">';
+  h+='<h3>\u270e Allinea i nominativi</h3>';
+  h+='<div style="font-size:12px;color:#666;margin-bottom:10px">Il nominativo della scheda arriva dal foglio ore; cognome e nome dell\'anagrafica arrivano dall\'Excel. Qui allinei il primo al secondo.</div>';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+  h+='<button class="btn btn-sm" style="background:#546e7a;color:#fff" onclick="nomiTutti(true)">tutti</button>';
+  h+='<button class="btn btn-sm" style="background:#eceff1;color:#333" onclick="nomiTutti(false)">nessuno</button>';
+  h+='<span style="font-size:12px;font-weight:900;color:#1565c0;margin-left:auto">selezionati: '+n+' su '+l.length+'</span></div>';
+  h+='<div style="max-height:420px;overflow-y:auto;border:1px solid #ddd;border-radius:5px">';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h+='<thead><tr style="background:#37474f;color:#fff"><th style="padding:4px;width:30px"></th><th style="padding:4px 6px;text-align:left">Nominativo attuale</th><th style="padding:4px;width:24px"></th><th style="padding:4px 6px;text-align:left">Da anagrafica</th></tr></thead><tbody>';
+  for(var k2=0;k2<l.length;k2++){
+    var r=l[k2];var sc=!!A.nomi.sel[r.i];
+    h+='<tr style="background:'+(sc?'#e8f5e9':(k2%2?'#fafafa':'#fff'))+';border-bottom:1px solid #eee">';
+    h+='<td style="padding:2px;text-align:center"><input type="checkbox"'+(sc?' checked':'')+' onchange="nomiToggle('+r.i+')" style="cursor:pointer"></td>';
+    h+='<td style="padding:3px 6px;color:#888;cursor:pointer" onclick="nomiToggle('+r.i+')">'+escHTML(r.attuale)+'</td>';
+    h+='<td style="padding:3px;text-align:center;color:#2e7d32;font-weight:900">\u2192</td>';
+    h+='<td style="padding:3px 6px;font-weight:700;cursor:pointer" onclick="nomiToggle('+r.i+')">'+escHTML(r.proposto)+'</td></tr>';
+  }
+  h+='</tbody></table></div>';
+  h+='<div class="ma"><button class="btn" style="background:#eceff1" onclick="A.nomi=null;A.modal=null;render()">Annulla</button>';
+  h+='<button class="btn btn-new" onclick="nomiApplica()">Aggiorna i '+n+' selezionati</button></div>';
+  h+='</div></div>';
+  return h;
+}
 function rMModello(){
   var t=tplGet();
   var h='<div class="modal-overlay"><div class="modal" style="width:560px">';
@@ -1318,7 +1503,7 @@ var CORPO_OPTS=["ORARIO","A CORPO/FORFAIT"];
 var CADENZ_OPTS=["IN UNICA SOLUZIONE: ENTRO 30 GG DA TERMINE CONTRATTUALE","IN DUE SOLUZIONI: ENTRO IL 1 FEBBRAIO ED ENTRO IL 1 LUGLIO SUCCESSIVI ALLA DATA DI AVVIO DEL SERVIZIO","ENTRO IL GIORNO 20 DEL MESE SUCCESSIVO A QUELLO LAVORATO"];
 var PERS_FIELDS=[
  ["cognome","Cognome"],["nome","Nome"],["luogoNascita","Luogo nascita"],["dataNascita","Data nascita"],
- ["cf","Codice fiscale"],["email","Email"],
+ ["sesso","Sesso"],["cf","Codice fiscale"],["email","Email"],
  ["indRes","Indirizzo residenza"],["capRes","CAP res."],["luogoRes","Luogo residenza"],
  ["indDom","Indirizzo domicilio"],["capDom","CAP dom."],["luogoDom","Luogo domicilio"]];
 var ATTO_FIELDS=[
@@ -1698,7 +1883,23 @@ function rAnag(i){
     h+='<div style="padding:10px 14px">';
     h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin-bottom:5px">DATI PERSONALI</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
-    h+=fld("cognome","Cognome",140)+fld("nome","Nome",140)+fld("luogoNascita","Luogo nascita",160)+fld("dataNascita","Data nascita",90,"gg/mm/aaaa")+fld("cf","Codice fiscale",150)+fld("email","Email",190);
+    h+=fld("cognome","Cognome",140)+fld("nome","Nome",140)+fld("luogoNascita","Luogo nascita",160)+fld("dataNascita","Data nascita",90,"gg/mm/aaaa");
+    var sx=an.sesso||"";
+    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Sesso</label>';
+    h+='<select onchange="anagSet('+i+',\'sesso\',this.value);render()" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;padding:3px;width:60px">';
+    h+='<option value=""'+(sx===""?" selected":"")+'>\u2014</option><option value="M"'+(sx==="M"?" selected":"")+'>M</option><option value="F"'+(sx==="F"?" selected":"")+'>F</option></select></div>';
+    var cfv=an.cf||"";
+    var spia="";
+    if(cfv){
+      if(cfValido(cfv))spia='<span style="font-size:9px;color:#2e7d32;font-weight:700">\u2713 formalmente valido</span>';
+      else spia='<span style="font-size:9px;color:#c62828;font-weight:700">\u26a0 carattere di controllo errato</span>';
+    }
+    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Codice fiscale</label>';
+    h+='<div style="display:flex;gap:3px;align-items:center">';
+    h+='<input type="text" value="'+escHTML(cfv)+'" style="width:150px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="anagSet('+i+',\'cf\',this.value.toUpperCase());render()">';
+    h+='<button class="btn btn-sm" style="background:#00695c;color:#fff" onclick="cfCalcolaOp('+i+')" title="Calcola il codice fiscale da cognome, nome, data di nascita, sesso e comune">\ud83e\uddee Calcola</button>';
+    h+='</div>'+spia+'</div>';
+    h+=fld("email","Email",190);
     h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">';
     h+=fld("indRes","Indirizzo residenza",210)+fld("capRes","CAP",60)+fld("luogoRes","Luogo residenza",140);
     h+=fld("indDom","Indirizzo domicilio",210)+fld("capDom","CAP",60)+fld("luogoDom","Luogo domicilio",140);
