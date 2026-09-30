@@ -643,6 +643,7 @@ function render(){
   if(A.modal==="newyr")el.innerHTML+=rMNY();
   if(A.modal==="report")el.innerHTML+=rMReport();
   if(A.modal==="bulk"&&A.bulk)el.innerHTML+=rMBulk();
+  if(A.modal==="modello")el.innerHTML+=rMModello();
   if(pickerFor)el.innerHTML+=rPicker();
 }
 function rPicker(){
@@ -761,6 +762,8 @@ function rCov(){
   h+='<input type="file" id="tplFile" accept=".docx" style="display:none" onchange="onTplFile(this)">';
   h+='<button class="btn" style="background:#546e7a;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo anagrafiche</button>';
   h+='<button class="btn" style="background:#ad1457;color:#fff" onclick="bulkOpen()" title="Crea lo stesso atto contrattuale su pi\u00f9 operatori in una volta, con importo ritoccabile per ciascuno">\ud83d\udcda Atto in blocco</button>';
+  h+='<button class="btn" style="background:#4527a0;color:#fff" onclick="lettereBlocco()" title="Genera in un solo file zip una lettera di incarico per ogni operatore che ha un atto registrato">\ud83d\udcc4 Lettere in blocco (zip)</button>';
+  h+='<button class="btn" style="background:#00838f;color:#fff" onclick="A.modal=\'modello\';render()" title="Carica o sostituisci il modello Word usato per tutte le lettere di incarico">\ud83d\udcc4 Modello contratto</button>';
   h+='<button class="btn" style="background:#1565c0;color:#fff" onclick="expJSON()">⬇ Backup JSON</button>';
   h+='<button class="btn" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()">⬆ Ripristina backup</button>';
   if(A.dirty)h+='<button class="btn btn-save" onclick="sv()">\u2714 Salva</button>';
@@ -792,7 +795,7 @@ function rCov(){
 function rSh(){
   var op=A.d[A.sel];
   if(!op){A.v="cover";return rCov()}var yrs=gY(op);
-  var h='<div class="sheet-header"><div><h2>'+escHTML(op.name)+'</h2><span style="font-size:10px;opacity:0.8"> '+escHTML(op.sheet)+'</span>';
+  var h='<div class="sheet-header"><div><h2 style="font-size:26px;font-weight:900;letter-spacing:0.3px">'+escHTML(op.name)+'</h2><span style="font-size:10px;opacity:0.8"> '+escHTML(op.sheet)+'</span>';
   if(A.dirty)h+='<span id="ubadge" class="unsaved">NON SALVATO</span>';
   h+='</div><div class="acts">';
   h+='<button class="btn btn-save btn-sm" onclick="sv()">\u2714 Salva</button> ';
@@ -829,7 +832,7 @@ function rYB(idx,yr,ci){
   var cf=cfwd(op,yr);var cfH='';
   var FRAME=(parseInt(yr)%2===0)?FRAME_EVEN:FRAME_ODD;
   var h='<div class="year-block" style="border-color:'+FRAME+';border-width:4px">'+cfH;
-  h+='<div class="ytitle" style="background:#A72920;color:#fff"><span>ANNO '+yr+'</span><span>';
+  h+='<div class="ytitle" style="background:#A72920;color:#fff"><span style="font-size:22px;font-weight:900;letter-spacing:0.5px">ANNO '+yr+'</span><span>';
   h+='Imp. contratt. pred. <input class="rate-hdr" type="text" value="'+n2(defRt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.default_rate=raw(this.value);markD()"> ';
   // btn servizio spostato sotto tabella ore
   if(Object.keys(op.years).length>1)h+=' <button class="btn-del-yr" onclick="delYr('+idx+',\''+yr+'\')">Elimina '+yr+'</button>';
@@ -988,7 +991,7 @@ function rYB(idx,yr,ci){
   var comp=bkResid(op,yr);
   if(comp.length>0){
     h+='<div style="margin-top:8px;padding:8px 10px;background:#fbfbfb;border:1px solid #e0e0e0;border-radius:6px">';
-    h+='<div style="font-weight:700;font-size:12px;color:#555;margin-bottom:4px">Il credito viene da:</div>';
+    h+='<div style="font-weight:700;font-size:12px;color:#555;margin-bottom:4px">Il credito <span style="font-size:15px;font-weight:900;color:#A72920">'+yr+'</span> viene da:</div>';
     for(var q=0;q<comp.length;q++){
       var cb=comp[q];var cnm=cb.name||'(senza nome)';var ccol=valColor(cb.name);
       var neg=cb.hours<0;
@@ -1118,6 +1121,108 @@ function bulkCrea(){
   A.bulk=null;A.modal=null;
   markD();render();
   alert("Atto creato su "+fatti+" operatori.\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitiva l'operazione.");
+}
+// ===== GENERAZIONE LETTERE IN BLOCCO (uno zip) =====
+function rMModello(){
+  var t=tplGet();
+  var h='<div class="modal-overlay"><div class="modal" style="width:560px">';
+  h+='<h3>\ud83d\udcc4 Modello del contratto</h3>';
+  h+='<div style="font-size:12px;color:#666;margin-bottom:12px">Il modello vale per tutti gli operatori: viene usato sia dal pulsante Lettera sulla singola scheda, sia dalle Lettere in blocco.</div>';
+  if(t){
+    h+='<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 12px;margin-bottom:12px">';
+    h+='<div style="font-size:10px;font-weight:700;color:#2e7d32;text-transform:uppercase">Modello memorizzato</div>';
+    h+='<div style="font-size:13px;font-weight:700;color:#1b5e20;margin-top:3px;word-break:break-all">'+escHTML(t.nome)+'</div>';
+    h+='<div style="font-size:11px;color:#555;margin-top:2px">caricato il '+escHTML(t.quando)+'</div>';
+    h+='</div>';
+  }else{
+    h+='<div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:6px;padding:10px 12px;margin-bottom:12px">';
+    h+='<div style="font-size:12px;font-weight:700;color:#e65100">Nessun modello memorizzato</div>';
+    h+='<div style="font-size:11px;color:#795548;margin-top:3px">Carica il file Word con i segnaposto {{...}}: resta memorizzato e non ti verr\u00e0 pi\u00f9 richiesto.</div>';
+    h+='</div>';
+  }
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<button class="btn btn-new" onclick="sostituisciModello()">'+(t?'Sostituisci modello':'Carica modello')+'</button>';
+  if(t)h+='<button class="btn btn-del" onclick="tplDel()">Rimuovi</button>';
+  h+='</div>';
+  h+='<div class="ma"><button class="btn" style="background:#eceff1" onclick="A.modal=null;render()">Chiudi</button></div>';
+  h+='</div></div>';
+  return h;
+}
+function lettereBlocco(){
+  if(typeof JSZip==="undefined"){alert("Libreria per i documenti Word in caricamento, riprova tra qualche secondo.");return}
+  var t=tplGet();
+  if(!t){alert("Prima devi caricare il modello di contratto.\n\nApri un operatore, sezione ANAGRAFICA, e genera una lettera: ti verr\u00e0 chiesto il modello, che resta poi memorizzato.");return}
+  // raccolgo chi ha almeno un atto: si usa l'atto corrente
+  var lista=[];
+  for(var i=0;i<A.d.length;i++){
+    var an=A.d[i].anag;
+    if(!an||!an.atti||an.atti.length===0)continue;
+    var ac=attoCorrente(i);var idx=-1;
+    for(var a=0;a<an.atti.length;a++){if(an.atti[a]===ac)idx=a}
+    if(idx<0)idx=an.atti.length-1;
+    lista.push({op:i,atto:idx});
+  }
+  if(lista.length===0){alert("Nessun operatore ha un atto contrattuale registrato.");return}
+  // conteggio dei dati mancanti
+  var conBuchi=[];
+  for(var k=0;k<lista.length;k++){
+    var mm=mergeMap(lista[k].op,lista[k].atto);
+    var mc=mergeMancanti(mm);
+    if(mc.length>0)conBuchi.push(A.d[lista[k].op].name+" ("+mc.length+")");
+  }
+  var msg="Genero una lettera per ciascuno dei "+lista.length+" operatori con un atto registrato.\nViene usato l'atto pi\u00f9 recente di ognuno.\n\nRiceverai un unico file zip con dentro i documenti separati.";
+  if(conBuchi.length>0){
+    msg+="\n\n\u26a0 Con dati incompleti ("+conBuchi.length+"), i campi mancanti resteranno vuoti:\n"+conBuchi.slice(0,12).join("\n");
+    if(conBuchi.length>12)msg+="\n\u2026e altri "+(conBuchi.length-12);
+  }
+  msg+="\n\nProcedo?";
+  if(!confirm(msg))return;
+  toast("Generazione in corso\u2026","#1565c0");
+  var zipOut=new JSZip();
+  var buf=b642ab(t.b64);
+  var fatti=0,falliti=[];
+  var MS=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+  var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
+  var suffisso=p2(dt.getDate())+MS[dt.getMonth()]+String(dt.getFullYear()).substr(2);
+  var passo=function(k){
+    if(k>=lista.length){
+      if(fatti===0){alert("Non \u00e8 stata generata nessuna lettera.");return}
+      zipOut.generateAsync({type:"blob"}).then(function(blob){
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement("a");a.href=url;
+        a.download="Lettere incarico "+suffisso+".zip";
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        setTimeout(function(){URL.revokeObjectURL(url)},2000);
+        var fin="Generate "+fatti+" lettere nel file zip.";
+        if(falliti.length>0)fin+="\n\nNon riuscite ("+falliti.length+"):\n"+falliti.join("\n");
+        toast(fatti+" lettere generate","#2e7d32");
+        alert(fin);
+      })["catch"](function(e){alert("Errore nella creazione dello zip: "+e.message)});
+      return;
+    }
+    var voce=lista[k];
+    var m=mergeMap(voce.op,voce.atto);
+    JSZip.loadAsync(buf).then(function(zp){
+      return zp.file("word/document.xml").async("string").then(function(xml){
+        xml=normalizzaSegnaposto(xml);
+        var trov=0;
+        for(var kk in m){
+          if(!Object.prototype.hasOwnProperty.call(m,kk))continue;
+          var tag="{{"+kk+"}}";
+          if(xml.indexOf(tag)>=0){trov++;xml=xml.split(tag).join(escXML(m[kk]))}
+        }
+        if(trov===0){falliti.push(A.d[voce.op].name+": nessun segnaposto nel modello");passo(k+1);return}
+        zp.file("word/document.xml",xml);
+        return zp.generateAsync({type:"arraybuffer"}).then(function(ab){
+          var nome=(m.COGNOME+" "+m.NOME).replace(/^\s+|\s+$/g,"");
+          if(!nome)nome=A.d[voce.op].name;
+          zipOut.file("Lettera incarico "+nome+" "+suffisso+".docx",ab);
+          fatti++;passo(k+1);
+        });
+      });
+    })["catch"](function(e){falliti.push(A.d[voce.op].name+": "+e.message);passo(k+1)});
+  };
+  passo(0);
 }
 function rMBulk(){
   var c=A.bulk.campi;
