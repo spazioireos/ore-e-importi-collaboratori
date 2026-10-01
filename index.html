@@ -297,6 +297,7 @@ var PALETTE=["#c8e6c9","#bbdefb","#f8bbd0","#fff9c4","#e1bee7","#ffe0b2","#b2dfd
 var CKEY="spazioireos_opoc_colors";
 var TKEY="spazioireos_opoc_modello";
 var BKEY="spazioireos_opoc_belfiore";
+var ZKEY="spazioireos_opoc_bozza_atto";
 var colorMap=loadColors();
 function loadColors(){var s=localStorage.getItem(CKEY);if(s){try{return JSON.parse(s)}catch(e){}}return{}}
 function saveColors(){try{localStorage.setItem(CKEY,JSON.stringify(colorMap))}catch(e){}}
@@ -1047,8 +1048,37 @@ function rMNY(){
 }
 
 // ===== ATTO IN BLOCCO =====
+// La bozza e' un appunto di lavoro: vive in una chiave sua, separata dai dati degli
+// operatori, che restano a salvataggio manuale. Nessun atto viene creato finche' non lo chiedi.
+function bozzaLeggi(){
+  try{
+    var s=localStorage.getItem(ZKEY);if(!s)return null;
+    var o=JSON.parse(s);
+    if(!o||!o.campi)return null;
+    return o;
+  }catch(e){return null}
+}
+function bozzaScrivi(){
+  if(!A.bulk)return;
+  try{
+    var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
+    localStorage.setItem(ZKEY,JSON.stringify({
+      campi:A.bulk.campi,sel:A.bulk.sel,imp:A.bulk.imp,manuale:A.bulk.manuale||{},
+      quando:p2(dt.getDate())+"/"+p2(dt.getMonth()+1)+"/"+dt.getFullYear()+" "+p2(dt.getHours())+"."+p2(dt.getMinutes())
+    }));
+  }catch(e){}
+}
+function bozzaSvuota(){
+  if(!confirm("Svuoto la bozza e riparto da zero?\n\nNessun atto gi\u00e0 creato viene toccato."))return;
+  try{localStorage.removeItem(ZKEY)}catch(e){}
+  A.bulk={campi:{tipoAtto:"INCARICO INIZIALE"},sel:{},imp:{},manuale:{}};
+  render();
+  toast("Bozza svuotata","#e65100");
+}
 function bulkOpen(){
-  A.bulk={campi:{tipoAtto:"INCARICO INIZIALE"},sel:{},imp:{}};
+  var b=bozzaLeggi();
+  if(b)A.bulk={campi:b.campi||{tipoAtto:"INCARICO INIZIALE"},sel:b.sel||{},imp:b.imp||{},manuale:b.manuale||{},quando:b.quando||""};
+  else A.bulk={campi:{tipoAtto:"INCARICO INIZIALE"},sel:{},imp:{},manuale:{}};
   A.modal="bulk";render();
 }
 function bulkClose(){A.bulk=null;A.modal=null;render()}
@@ -1061,7 +1091,7 @@ function bulkSetCampo(f,v){
       if(A.bulk.sel[i]&&!(A.bulk.manuale&&A.bulk.manuale[i]))A.bulk.imp[i]=v;
     }
   }
-  render();
+  bozzaScrivi();render();
 }
 function bulkSelChange(f,el){bulkSetCampo(f,el.value)}
 function bulkTutti(v){
@@ -1070,19 +1100,20 @@ function bulkTutti(v){
     A.bulk.sel[i]=v;
     if(v&&A.bulk.imp[i]===undefined)A.bulk.imp[i]=A.bulk.campi.importoOC||"";
   }
-  render();
+  bozzaScrivi();render();
 }
 function bulkToggle(i){
   if(!A.bulk)return;
   A.bulk.sel[i]=!A.bulk.sel[i];
   if(A.bulk.sel[i]&&A.bulk.imp[i]===undefined)A.bulk.imp[i]=A.bulk.campi.importoOC||"";
-  render();
+  bozzaScrivi();render();
 }
 function bulkImp(i,v){
   if(!A.bulk)return;
   if(!A.bulk.manuale)A.bulk.manuale={};
   A.bulk.manuale[i]=true;
   A.bulk.imp[i]=v;
+  bozzaScrivi();
 }
 function bulkConta(){
   var n=0;if(!A.bulk)return 0;
@@ -1123,6 +1154,7 @@ function bulkCrea(){
     an.atti.push(nuovo);
     fatti++;
   }
+  try{localStorage.removeItem(ZKEY)}catch(e){}
   A.bulk=null;A.modal=null;
   markD();render();
   alert("Atto creato su "+fatti+" operatori.\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitiva l'operazione.");
@@ -1366,16 +1398,20 @@ function lettereBlocco(){
   var zipOut=new JSZip();
   var buf=b642ab(t.b64);
   var fatti=0,falliti=[];
-  var MS=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
-  var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
-  var suffisso=p2(dt.getDate())+MS[dt.getMonth()]+String(dt.getFullYear()).substr(2);
+  var usati={};
+  var annoZip=(new Date()).getFullYear();
+  for(var z0=0;z0<lista.length;z0++){
+    var anZ=A.d[lista[z0].op].anag;var atZ=(anZ&&anZ.atti)?anZ.atti[lista[z0].atto]:null;
+    var pZ=atZ?(parseGMA(atZ.dataAvvio)||parseGMA(atZ.dataContratto)):null;
+    if(pZ){annoZip=pZ.y;break}
+  }
   var passo=function(k){
     if(k>=lista.length){
       if(fatti===0){alert("Non \u00e8 stata generata nessuna lettera.");return}
       zipOut.generateAsync({type:"blob"}).then(function(blob){
         var url=URL.createObjectURL(blob);
         var a=document.createElement("a");a.href=url;
-        a.download="Lettere incarico "+suffisso+".zip";
+        a.download="Contratti "+annoZip+".zip";
         document.body.appendChild(a);a.click();document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(url)},2000);
         var fin="Generate "+fatti+" lettere nel file zip.";
@@ -1399,9 +1435,7 @@ function lettereBlocco(){
         if(trov===0){falliti.push(A.d[voce.op].name+": nessun segnaposto nel modello");passo(k+1);return}
         zp.file("word/document.xml",xml);
         return zp.generateAsync({type:"arraybuffer"}).then(function(ab){
-          var nome=(m.COGNOME+" "+m.NOME).replace(/^\s+|\s+$/g,"");
-          if(!nome)nome=A.d[voce.op].name;
-          zipOut.file("Lettera incarico "+nome+" "+suffisso+".docx",ab);
+          zipOut.file(nomeContratto(voce.op,voce.atto,usati),ab);
           fatti++;passo(k+1);
         });
       });
@@ -1425,6 +1459,12 @@ function rMBulk(){
   var h='<div class="modal-overlay"><div class="modal" style="width:920px;max-width:97vw;max-height:92vh;overflow-y:auto">';
   h+='<h3>\ud83d\udccb Nuovo atto su pi\u00f9 operatori</h3>';
   h+='<div style="font-size:11px;color:#666;margin-bottom:10px">Compila le condizioni una volta sola, scegli a chi applicarle e ritocca solo gli importi diversi.</div>';
+  if(A.bulk.quando){
+    h+='<div style="display:flex;align-items:center;gap:10px;background:#fff8e1;border:1px solid #ffb300;border-radius:5px;padding:5px 10px;margin-bottom:10px;flex-wrap:wrap">';
+    h+='<span style="font-size:11px;color:#795548">\u270e Bozza ripresa da <strong>'+escHTML(A.bulk.quando)+'</strong> \u2014 nessun atto \u00e8 stato creato</span>';
+    h+='<button class="btn btn-sm" style="background:#eceff1;color:#c62828;margin-left:auto" onclick="bozzaSvuota()">Svuota bozza</button>';
+    h+='</div>';
+  }
   h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin:6px 0 4px">1. CONDIZIONI DELL\'ATTO</div>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
   h+=sel("tipoAtto","Tipo atto",TIPO_ATTO_OPTS)+sel("qualifica","Qualifica",QUALIFICHE)+sel("tipoAmbito","Tipo ambito",AMBITO_OPTS);
@@ -1720,6 +1760,26 @@ function normalizzaSegnaposto(xml){
     return tutto;
   });
 }
+// Nome del contratto: "Contratto COGNOME ANNO"; col nome se c'e' omonimia
+function nomeContratto(i,idx,usati){
+  var an=A.d[i].anag||{};var atti=an.atti||[];var at=atti[idx]||{};
+  var cg=(an.cognome||"").replace(/^\s+|\s+$/g,"").toUpperCase();
+  var nm=(an.nome||"").replace(/^\s+|\s+$/g,"").toUpperCase();
+  if(!cg){
+    var p=String(A.d[i].name||"").toUpperCase().split(" ");
+    cg=p.shift()||"SENZA NOME";nm=p.join(" ");
+  }
+  var p1=parseGMA(at.dataAvvio)||parseGMA(at.dataContratto);
+  var anno=p1?p1.y:(new Date()).getFullYear();
+  var base="Contratto "+cg+" "+anno;
+  if(usati&&usati[base]&&nm)base="Contratto "+cg+" "+nm+" "+anno;
+  if(usati){
+    var f=base;var k=2;
+    while(usati[f]){f=base+" ("+k+")";k++}
+    usati[f]=true;base=f;
+  }
+  return base+".docx";
+}
 function mergeDocx(buf,i,idx){
   var m=mergeMap(i,idx);
   var manc=mergeMancanti(m);
@@ -1749,10 +1809,7 @@ function mergeDocx(buf,i,idx){
       }
       zip.file("word/document.xml",xml);
       return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}).then(function(blob){
-        var nome=(m.COGNOME+" "+m.NOME).replace(/^\s+|\s+$/g,"");
-        var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
-        var MS=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
-        var fn="Lettera incarico "+nome+" "+p2(dt.getDate())+MS[dt.getMonth()]+String(dt.getFullYear()).substr(2)+".docx";
+        var fn=nomeContratto(i,idx,null);
         var url=URL.createObjectURL(blob);
         var a=document.createElement("a");a.href=url;a.download=fn;document.body.appendChild(a);a.click();
         document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},1500);
