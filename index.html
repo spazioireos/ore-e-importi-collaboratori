@@ -225,6 +225,7 @@ function sv(){try{
   saveColors();
   A.d.sort(function(a,b){var na=(a.name||"").toLowerCase();var nb=(b.name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
   localStorage.setItem(LSK,JSON.stringify(A.d));
+  try{localStorage.removeItem(ZKEY)}catch(e){}
   A.dirty=false;render();
   // Auto-backup: scarica JSON nei Download
   try{
@@ -700,7 +701,7 @@ function rPicker(){
 }
 function rAnagList(){
   // Campi chiave in colonna; tutti i 27 nell'export Excel
-  var cols=[["cognome","Cognome"],["nome","Nome"],["cf","Codice fiscale"],["dataNascita","Nascita"],["email","Email"],["qualifica","Qualifica"],["struttura","Struttura"],["dataAvvio","Avvio"],["dataConclusione","Conclusione"],["monteOreTot","Monte ore"],["importoOC","Importo \u20ac"],["cadenzamento","Cadenz."]];
+  var cols=[["cognome","Cognome"],["nome","Nome"],["cf","Codice fiscale"],["dataNascita","Nascita"],["email","Email"],["qualifica","Qualifica"],["struttura","Struttura"],["dataAvvio","Avvio"],["dataConclusione","Conclusione"],["importoOC","Importo \u20ac"],["monteOreTot","Monte ore"],["cadenzamento","Cadenz."]];
   var h='<div class="sheet-header"><div><h2>\ud83d\udcc7 Riepilogo anagrafiche</h2><span style="font-size:10px;opacity:0.8">'+A.d.length+' operatori</span></div><div class="acts">';
   h+='<button class="btn btn-xls btn-sm" onclick="exportAnagExcel()">\u2B07 Excel anagrafiche</button> ';
   h+='<button class="btn-nav" onclick="A.v=\'cover\';render()">\u2190 Torna alla lista</button>';
@@ -725,7 +726,8 @@ function rAnagList(){
     h+='<td style="padding:3px;text-align:center;font-weight:700;color:'+(nAtti?'#37474f':'#c62828')+'">'+nAtti+'</td>';
     for(var c2=0;c2<cols.length;c2++){
       var v=vv(cols[c2][0]);
-      if(v)h+='<td style="padding:3px 6px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis" title="'+escHTML(v)+'">'+escHTML(String(v).length>26?String(v).substring(0,25)+"\u2026":v)+'</td>';
+      var isImp=(cols[c2][0]==="importoOC");
+      if(v)h+='<td style="padding:3px 6px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis'+(isImp?';font-weight:900;color:#1b5e20;text-align:right':'')+'" title="'+escHTML(v)+'">'+escHTML(String(v).length>26?String(v).substring(0,25)+"\u2026":v)+'</td>';
       else h+='<td style="padding:3px 6px;background:#fdecea;color:#c62828;text-align:center">\u2013</td>';
     }
     h+='</tr>';
@@ -853,7 +855,8 @@ function rSh(){
   if(propN&&propN!==(op.name||"").toUpperCase())h+='<button class="btn btn-sm" style="background:#ef6c00;color:#fff;margin-left:8px" onclick="nomeAllinea('+A.sel+')" title="In anagrafica il nominativo \u00e8 '+escHTML(propN)+'">\u270e Allinea a: '+escHTML(propN)+'</button>';
   if(A.dirty)h+='<span id="ubadge" class="unsaved">NON SALVATO</span>';
   h+='</div><div class="acts">';
-  h+='<button class="btn btn-save btn-sm" onclick="sv()">\u2714 Salva</button> ';
+  if(A.dirty)h+='<button class="btn btn-save btn-sm" onclick="sv()">\u2714 Salva</button> ';
+  else h+='<button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.55)" disabled title="Nessuna modifica da salvare">\u2714 Salvato</button> ';
   h+='<button class="btn btn-add-yr" onclick="prepAY()">+ Anno '+nY(op)+'</button> ';
   var aY=Object.keys(op.years).sort();for(var y=0;y<aY.length;y++)h+='<button class="btn btn-xls btn-sm" onclick="exportYear(\''+aY[y]+'\')">\u2B07 '+aY[y]+'</button> ';
   h+='<button class="btn btn-del btn-sm" onclick="delOp('+A.sel+')">Elimina</button>';
@@ -1233,7 +1236,7 @@ function svcCrea(){
   }
   A.svcb=null;A.modal=null;
   markD();render();
-  alert("Riga servizio aggiunta a "+fatti+" operatori.\n\nOra resta da inserire le ore mensili.\n\nRICORDA: premi \ud83d\udcbe Salva.");
+  alert("Riga servizio aggiunta a "+fatti+" operatori.\n\nOra resta da inserire le ore mensili.\n\nRICORDA: premi \u2714 Salva.");
 }
 function rMSvcBlocco(){
   var l=listLeggi();
@@ -1436,10 +1439,10 @@ function bulkCrea(){
     an.atti.push(nuovo);
     fatti++;
   }
-  try{localStorage.removeItem(ZKEY)}catch(e){}
+  // La bozza resta finche' non salvi: se chiudi senza salvare, la ritrovi.
   A.bulk=null;A.modal=null;
   markD();render();
-  alert("Atto creato su "+fatti+" operatori.\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitiva l'operazione.");
+  alert("Atto creato su "+fatti+" operatori.\n\nRICORDA: premi \u2714 Salva per rendere definitiva l'operazione.");
 }
 // ===== GENERAZIONE LETTERE IN BLOCCO (uno zip) =====
 // ===== ALLINEAMENTO NOMINATIVI (scheda <-> anagrafica) =====
@@ -1586,7 +1589,7 @@ function nomiApplica(){
   for(var s2=0;s2<scelti.length;s2++)A.d[scelti[s2].i].name=scelti[s2].proposto;
   A.nomi=null;A.modal=null;
   markD();render();
-  alert("Aggiornati "+scelti.length+" nominativi.\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitiva l'operazione.");
+  alert("Aggiornati "+scelti.length+" nominativi.\n\nRICORDA: premi \u2714 Salva per rendere definitiva l'operazione.");
 }
 function nomeAllinea(i){
   var prop=nomeAnag(i);
@@ -1855,8 +1858,25 @@ function rMBulk(){
     var scelto=!!A.bulk.sel[oi];
     h+='<tr style="background:'+(scelto?'#e8f5e9':(q%2?'#fafafa':'#fff'))+';border-bottom:1px solid #eee">';
     h+='<td style="padding:2px 6px;text-align:center"><input type="checkbox"'+(scelto?' checked':'')+' onchange="bulkToggle('+oi+')" style="cursor:pointer"></td>';
-    h+='<td style="padding:2px 6px;font-weight:700;cursor:pointer" onclick="bulkToggle('+oi+')">'+escHTML(op.name)+'</td>';
+    h+='<td style="padding:2px 6px;font-weight:700;cursor:pointer" onclick="bulkToggle('+oi+')">'+escHTML(op.name);
+    if(giaFatto)h+=' <span style="font-size:9px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:0 5px;font-weight:700">gi\u00e0 fatto</span>';
+    h+='</td>';
     h+='<td style="padding:2px;text-align:center;font-weight:900;color:'+(filled===0?'#c62828':(filled>=ANAG_FIELDS.length-2?'#1b5e20':'#e65100'))+'">'+filled+'/'+ANAG_FIELDS.length+'</td>';
+    // gia' presente un atto con queste stesse condizioni?
+    var giaFatto=null;
+    if(an.atti&&an.atti.length){
+      for(var gf=an.atti.length-1;gf>=0;gf--){
+        var ax=an.atti[gf];
+        var ugu=true;
+        for(var cf2 in c){
+          if(!Object.prototype.hasOwnProperty.call(c,cf2))continue;
+          if(cf2==="importoOC")continue;
+          if(c[cf2]===""||c[cf2]===null||c[cf2]===undefined)continue;
+          if(String(ax[cf2]||"")!==String(c[cf2]))ugu=false;
+        }
+        if(ugu){giaFatto=ax;break}
+      }
+    }
     h+='<td style="padding:2px 4px;text-align:center">';
     if(scelto){
       h+='<input type="text" value="'+escHTML(A.bulk.imp[oi]===undefined?(c.importoOC||""):A.bulk.imp[oi])+'" style="width:72px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:2px" onchange="bulkImp('+oi+',this.value)">';
@@ -1865,6 +1885,7 @@ function rMBulk(){
       if(man)h+='<div style="font-size:8px;color:#e65100;font-weight:700">a mano</div>';
       else if(fo)h+='<div style="font-size:8px;color:#78909c">da '+escHTML(fo)+'</div>';
     }
+    else if(giaFatto)h+='<span style="font-size:10px;color:#2e7d32;font-weight:700">'+(giaFatto.importoOC?escHTML(giaFatto.importoOC):"\u2713")+'</span>';
     else h+='<span style="color:#ccc">\u2013</span>';
     h+='</td></tr>';
   }
@@ -2534,7 +2555,7 @@ function applyAnagRows(rows){
   msg+="Operatori trovati nell'Excel: "+matched+" su "+A.d.length+"\nCampi personali compilati: "+filled+"\nAtti contrattuali aggiunti: "+attiAgg+"\n";
   if(attiUguali>0)msg+="Atti gi\u00e0 presenti (non duplicati): "+attiUguali+"\n";
   msg+="\nNon trovati ("+notFound.length+"): "+(notFound.length>0?"\n"+notFound.slice(0,15).join("\n")+(notFound.length>15?"\n\u2026e altri "+(notFound.length-15):""):"nessuno");
-  msg+="\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitivo l'import.";
+  msg+="\n\nRICORDA: premi \u2714 Salva per rendere definitivo l'import.";
   alert(msg);
 }
 // Mese dal quale un'altra riga dello stesso servizio subentra a questa (nuova tariffa).
