@@ -9,6 +9,7 @@
 <title>Operatori Occasionali - Spazio Ireos</title>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
@@ -765,7 +766,7 @@ function rCov(){
   h+='<input type="file" id="tplFile" accept=".docx" style="display:none" onchange="onTplFile(this)">';
   h+='<button class="btn" style="background:#546e7a;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo anagrafiche</button>';
   h+='<button class="btn" style="background:#ad1457;color:#fff" onclick="bulkOpen()" title="Crea lo stesso atto contrattuale su pi\u00f9 operatori in una volta, con importo ritoccabile per ciascuno">\ud83d\udcda Atto in blocco</button>';
-  h+='<button class="btn" style="background:#4527a0;color:#fff" onclick="lettereBlocco()" title="Genera in un solo file zip una lettera di incarico per ogni operatore che ha un atto registrato">\ud83d\udcc4 Lettere in blocco (zip)</button>';
+  h+='<button class="btn" style="background:#4527a0;color:#fff" onclick="lettereBlocco()" title="Genera in un solo file zip un contratto in PDF per ogni operatore con un importo valorizzato nell\u2019atto">\ud83d\udcc4 Contratti in blocco (PDF)</button>';
   h+='<button class="btn" style="background:#00838f;color:#fff" onclick="A.modal=\'modello\';render()" title="Carica o sostituisci il modello Word usato per tutte le lettere di incarico">\ud83d\udcc4 Modello contratto</button>';
   h+='<button class="btn" style="background:#5d4037;color:#fff" onclick="nomiOpen()" title="Allinea il nominativo delle schede a cognome e nome dell\'anagrafica">\u270e Allinea nominativi</button>';
   h+='<button class="btn" style="background:#1565c0;color:#fff" onclick="expJSON()">⬇ Backup JSON</button>';
@@ -889,14 +890,17 @@ function rYB(idx,yr,ci){
     h+='<span onclick="toggleLock('+idx+',\''+yr+'\','+s+')" style="cursor:pointer;font-size:12px;margin-right:2px;vertical-align:middle" title="'+(lk?'Bloccato: clicca per sbloccare e modificare':'Sbloccato: clicca per bloccare')+'">'+(lk?'\ud83d\udd12':'\ud83d\udd13')+'</span>';
     h+='<span style="color:#888;margin-right:1px">€</span>';
     var sm=svc.startM||0;
+    var msubL=meseSubentro(op,yr,s);
     if(lk){
       h+='<span style="font-weight:700;font-size:13px" title="Importo contrattuale bloccato">'+n2(srt)+'</span>';
       if(sm>0)h+='<div style="font-size:8px;color:#607d8b;font-weight:700;margin-top:1px">dal mese: '+MESI_IT[sm]+'</div>';
+      if(msubL<12)h+='<div style="font-size:8px;color:#c62828;font-weight:900;margin-top:1px">chiuso da '+MESI_IT[msubL]+'</div>';
     }else{
       h+='<input class="rate-in" style="width:44px" type="text" value="'+n2(srt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].rate=raw(this.value);markD();render()">';
       h+='<div style="margin-top:2px"><span style="font-size:8px;color:#555">dal </span><select onchange="setStartM('+idx+',\''+yr+'\','+s+',this.value)" style="font-size:9px;font-family:\'Inter\',sans-serif;border:1px solid #bbb;border-radius:3px;background:#fff">';
       for(var mm=0;mm<12;mm++)h+='<option value="'+mm+'"'+(sm===mm?' selected':'')+'>'+MESI_IT[mm]+'</option>';
       h+='</select></div>';
+      if(msubL<12)h+='<div style="font-size:8px;color:#c62828;font-weight:900;margin-top:1px">chiuso da '+MESI_IT[msubL]+'</div>';
     }
     h+='</td>';
     // Residuo: solo quello proprio del servizio. Il residuo portato dagli anni
@@ -909,8 +913,14 @@ function rYB(idx,yr,ci){
       // Cella residuo vuota: BLOCCATA con trattino e sfondo grigio
       h+='<td class="comp" style="background:#eceff1;color:#999;text-align:center" title="Cella residuo bloccata - il residuo si calcola automaticamente">\u2013</td>';
     }
+    var msub=meseSubentro(op,yr,s);
     for(var m=0;m<12;m++){
-      if(m<sm&&!(svc.hours[m]>0)){
+      if(m>=msub&&!(svc.hours[m]>0)){
+        // Da qui in poi subentra la nuova tariffa dello stesso servizio
+        h+='<td class="comp" style="background:#eceff1;color:#b0bec5;text-align:center" title="Da '+MESI_IT[msub]+' su questo servizio vale la nuova tariffa: usa l\'altra riga">\u2013</td>';
+      }else if(m>=msub&&svc.hours[m]>0){
+        h+='<td class="comp" style="background:#fff3e0;color:#e65100;font-weight:700" title="Ore inserite prima del cambio tariffa: restano nei calcoli, non modificabili">'+n2(svc.hours[m])+'</td>';
+      }else if(m<sm&&!(svc.hours[m]>0)){
         // Mese precedente all'inizio contrattuale: bloccato
         h+='<td class="comp" style="background:#eceff1;color:#b0bec5;text-align:center" title="Mese precedente all\'inizio contrattuale ('+MESI_IT[sm]+'): non compilabile">\u2013</td>';
       }else if(m<sm&&svc.hours[m]>0){
@@ -1365,21 +1375,96 @@ function rMModello(){
   h+='</div></div>';
   return h;
 }
+// ===== CONTRATTO IN PDF =====
+// Il testo arriva dal modello Word gia' compilato; qui viene ridisegnato in PDF.
+function docxParagrafi(xml){
+  var doc=new DOMParser().parseFromString(xml,"application/xml");
+  var ps=doc.getElementsByTagName("w:p");
+  var out=[];
+  for(var i=0;i<ps.length;i++){
+    var p=ps[i];
+    var ts=p.getElementsByTagName("w:t");
+    var txt="";
+    for(var k=0;k<ts.length;k++)txt+=(ts[k].textContent||"");
+    var jcs=p.getElementsByTagName("w:jc");
+    var al=jcs.length?jcs[0].getAttribute("w:val"):"left";
+    var img=p.getElementsByTagName("w:drawing").length>0;
+    out.push({t:txt.replace(/\s+$/,""),al:al,img:img});
+  }
+  return out;
+}
+function ab2dataURL(ab,mime){
+  var bytes=new Uint8Array(ab);var bin="";var ch=8192;
+  for(var i=0;i<bytes.length;i+=ch)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+ch));
+  return "data:"+mime+";base64,"+btoa(bin);
+}
+function pdfDaModello(zp,xml){
+  // ritorna una Promise con il blob del pdf
+  var jsPDFctor=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:null;
+  if(!jsPDFctor)return Promise.reject(new Error("Libreria PDF non caricata"));
+  var paras=docxParagrafi(xml);
+  var logoP=zp.file("word/media/image2.jpg")?zp.file("word/media/image2.jpg").async("arraybuffer"):Promise.resolve(null);
+  var firmaP=zp.file("word/media/image1.jpeg")?zp.file("word/media/image1.jpeg").async("arraybuffer"):Promise.resolve(null);
+  return Promise.all([logoP,firmaP]).then(function(imgs){
+    var doc=new jsPDFctor({unit:"mm",format:"a4"});
+    var ML=18,MR=18,MT=12,MB=15;
+    var W=210,LARG=W-ML-MR;
+    var y=MT;
+    if(imgs[0]){
+      try{doc.addImage(ab2dataURL(imgs[0],"image/jpeg"),"JPEG",ML,y,17,9.1)}catch(e){}
+    }
+    y=MT+14;
+    doc.setFont("helvetica","normal");
+    for(var i=0;i<paras.length;i++){
+      var p=paras[i];
+      if(p.img){
+        if(imgs[1]){
+          if(y+11>297-MB){doc.addPage();y=MT}
+          try{doc.addImage(ab2dataURL(imgs[1],"image/jpeg"),"JPEG",ML,y,26.2,11)}catch(e){}
+          y+=13;
+        }
+        continue;
+      }
+      if(!p.t){y+=2.4;continue}
+      var grassetto=(i<=2);
+      doc.setFont("helvetica",grassetto?"bold":"normal");
+      doc.setFontSize(grassetto?8.5:8);
+      var righe=doc.splitTextToSize(p.t,LARG);
+      for(var r=0;r<righe.length;r++){
+        if(y+4>297-MB){doc.addPage();y=MT}
+        var ultima=(r===righe.length-1);
+        if(p.al==="center")doc.text(righe[r],W/2,y,{align:"center"});
+        else if(p.al==="both"&&!ultima)doc.text(righe[r],ML,y,{align:"justify",maxWidth:LARG});
+        else doc.text(righe[r],ML,y);
+        y+=3.7;
+      }
+      y+=1.2;
+    }
+    return doc.output("blob");
+  });
+}
 function lettereBlocco(){
-  if(typeof JSZip==="undefined"){alert("Libreria per i documenti Word in caricamento, riprova tra qualche secondo.");return}
+  if(typeof JSZip==="undefined"){alert("Libreria per i documenti in caricamento, riprova tra qualche secondo.");return}
+  if(!(window.jspdf&&window.jspdf.jsPDF)){alert("Libreria PDF in caricamento, riprova tra qualche secondo.");return}
   var t=tplGet();
   if(!t){alert("Prima devi caricare il modello di contratto.\n\nApri un operatore, sezione ANAGRAFICA, e genera una lettera: ti verr\u00e0 chiesto il modello, che resta poi memorizzato.");return}
   // raccolgo chi ha almeno un atto: si usa l'atto corrente
-  var lista=[];
+  var lista=[];var senzaImporto=[];
   for(var i=0;i<A.d.length;i++){
     var an=A.d[i].anag;
     if(!an||!an.atti||an.atti.length===0)continue;
     var ac=attoCorrente(i);var idx=-1;
     for(var a=0;a<an.atti.length;a++){if(an.atti[a]===ac)idx=a}
     if(idx<0)idx=an.atti.length-1;
+    var impo=an.atti[idx].importoOC;
+    if(impo===""||impo===null||impo===undefined){senzaImporto.push(A.d[i].name);continue}
     lista.push({op:i,atto:idx});
   }
-  if(lista.length===0){alert("Nessun operatore ha un atto contrattuale registrato.");return}
+  if(lista.length===0){
+    var m0="Nessun contratto da generare.\n\nVengono inclusi solo gli operatori con un importo valorizzato nell'atto.";
+    if(senzaImporto.length>0)m0+="\n\nSenza importo ("+senzaImporto.length+"):\n"+senzaImporto.slice(0,15).join("\n");
+    alert(m0);return;
+  }
   // conteggio dei dati mancanti
   var conBuchi=[];
   for(var k=0;k<lista.length;k++){
@@ -1387,7 +1472,11 @@ function lettereBlocco(){
     var mc=mergeMancanti(mm);
     if(mc.length>0)conBuchi.push(A.d[lista[k].op].name+" ("+mc.length+")");
   }
-  var msg="Genero una lettera per ciascuno dei "+lista.length+" operatori con un atto registrato.\nViene usato l'atto pi\u00f9 recente di ognuno.\n\nRiceverai un unico file zip con dentro i documenti separati.";
+  var msg="Genero un contratto in PDF per ciascuno dei "+lista.length+" operatori con un importo valorizzato.\nViene usato l'atto pi\u00f9 recente di ognuno.\n\nRiceverai un unico file zip con dentro i documenti separati.";
+  if(senzaImporto.length>0){
+    msg+="\n\nEsclusi perch\u00e9 senza importo ("+senzaImporto.length+"):\n"+senzaImporto.slice(0,10).join("\n");
+    if(senzaImporto.length>10)msg+="\n\u2026e altri "+(senzaImporto.length-10);
+  }
   if(conBuchi.length>0){
     msg+="\n\n\u26a0 Con dati incompleti ("+conBuchi.length+"), i campi mancanti resteranno vuoti:\n"+conBuchi.slice(0,12).join("\n");
     if(conBuchi.length>12)msg+="\n\u2026e altri "+(conBuchi.length-12);
@@ -1414,9 +1503,9 @@ function lettereBlocco(){
         a.download="Contratti "+annoZip+".zip";
         document.body.appendChild(a);a.click();document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(url)},2000);
-        var fin="Generate "+fatti+" lettere nel file zip.";
+        var fin="Generati "+fatti+" contratti in PDF nel file zip.";
         if(falliti.length>0)fin+="\n\nNon riuscite ("+falliti.length+"):\n"+falliti.join("\n");
-        toast(fatti+" lettere generate","#2e7d32");
+        toast(fatti+" contratti generati","#2e7d32");
         alert(fin);
       })["catch"](function(e){alert("Errore nella creazione dello zip: "+e.message)});
       return;
@@ -1433,9 +1522,9 @@ function lettereBlocco(){
           if(xml.indexOf(tag)>=0){trov++;xml=xml.split(tag).join(escXML(m[kk]))}
         }
         if(trov===0){falliti.push(A.d[voce.op].name+": nessun segnaposto nel modello");passo(k+1);return}
-        zp.file("word/document.xml",xml);
-        return zp.generateAsync({type:"arraybuffer"}).then(function(ab){
-          zipOut.file(nomeContratto(voce.op,voce.atto,usati),ab);
+        return pdfDaModello(zp,xml).then(function(blob){
+          var nf=nomeContratto(voce.op,voce.atto,usati).replace(/\.docx$/,".pdf");
+          zipOut.file(nf,blob);
           fatti++;passo(k+1);
         });
       });
@@ -2064,7 +2153,7 @@ function importAnagFile(inp){
 function applyAnagRows(rows){
   if(!rows||rows.length<2){alert("Excel vuoto o senza intestazioni.");return}
   var hd=rows[0];var col={};
-  var want={"COGNOME":"cognome","NOME":"nome","LUOGO NASCITA":"luogoNascita","DATA NASCITA":"dataNascita","CODICE FISCALE":"cf","INDIRIZZO RESIDENZA":"indRes","CAP RESIDENZA":"capRes","LUOGO RESIDENZA":"luogoRes","INDIRIZZO DOMICILIO":"indDom","CAP DOMICILIO":"capDom","LUOGO DOMICILIO":"luogoDom","QUALIFICA":"qualifica","STRUTTURA E/O LOCALITA' E/O INDIRIZZO":"struttura","DATA CONTRATTO":"dataContratto","DATA AVVIO":"dataAvvio","DATA CONCLUSIONE":"dataConclusione","MONTE ORE TOTALE":"monteOreTot","IMPORTO ORARIO O CORPO":"importoOC","CORPO O ORARIO?":"corpoOrario","CADENZAMENTO PAGAMENTO":"cadenzamento","GIORNI DI PREAVVISO":"ggPreavviso","IMPORTO PENALE":"importoPenale","INDIRIZZO EMAIL":"email","NOTE":"note"};
+  var want={"COGNOME":"cognome","NOME":"nome","LUOGO NASCITA":"luogoNascita","DATA NASCITA":"dataNascita","CODICE FISCALE":"cf","INDIRIZZO RESIDENZA":"indRes","CAP RESIDENZA":"capRes","LUOGO RESIDENZA":"luogoRes","INDIRIZZO DOMICILIO":"indDom","CAP DOMICILIO":"capDom","LUOGO DOMICILIO":"luogoDom","QUALIFICA":"qualifica","STRUTTURA E/O LOCALITA' E/O INDIRIZZO":"struttura","TIPO AMBITO":"tipoAmbito","COMUNE E INDIRIZZO":"comuneIndirizzo","DATA CONTRATTO":"dataContratto","DATA AVVIO":"dataAvvio","DATA CONCLUSIONE":"dataConclusione","MONTE ORE TOTALE":"monteOreTot","IMPORTO ORARIO O CORPO":"importoOC","CORPO O ORARIO?":"corpoOrario","CADENZAMENTO PAGAMENTO":"cadenzamento","GIORNI DI PREAVVISO":"ggPreavviso","IMPORTO PENALE":"importoPenale","INDIRIZZO EMAIL":"email","NOTE":"note"};
   for(var c=0;c<hd.length;c++){
     var hh=String(hd[c]||"").replace(/\s+/g," ").replace(/^\s+|\s+$/g,"").toUpperCase();
     if(want[hh])col[want[hh]]=c;
@@ -2167,6 +2256,39 @@ function applyAnagRows(rows){
   msg+="\nNon trovati ("+notFound.length+"): "+(notFound.length>0?"\n"+notFound.slice(0,15).join("\n")+(notFound.length>15?"\n\u2026e altri "+(notFound.length-15):""):"nessuno");
   msg+="\n\nRICORDA: premi \ud83d\udcbe Salva per rendere definitivo l'import.";
   alert(msg);
+}
+// Mese dal quale un'altra riga dello stesso servizio subentra a questa (nuova tariffa).
+// Ritorna 12 se nessuna subentra. Il subentro e' lo "startM" dell'altra riga, oppure
+// il suo primo mese con ore se lo startM non e' stato impostato.
+function primoMeseConOre(svc){
+  for(var m=0;m<12;m++){if((svc.hours[m]||0)>0)return m}
+  return -1;
+}
+function meseSubentro(op,yr,s){
+  var yd=op.years[yr];if(!yd)return 12;
+  var svcs=yd.services||[];
+  var mia=svcs[s];if(!mia)return 12;
+  var nome=(mia.name||"").replace(/^\s+|\s+$/g,"").toUpperCase();
+  if(!nome)return 12;
+  // Il mio inizio: lo startM se impostato, altrimenti il primo mese in cui ho ore
+  var mioIn;
+  if(mia.startM!==undefined&&mia.startM!==null)mioIn=mia.startM;
+  else{var mioP=primoMeseConOre(mia);mioIn=(mioP>=0)?mioP:0}
+  var sub=12;
+  for(var k=0;k<svcs.length;k++){
+    if(k===s)continue;
+    var al=svcs[k];
+    if((al.name||"").replace(/^\s+|\s+$/g,"").toUpperCase()!==nome)continue;
+    if((al.rate||0)===(mia.rate||0))continue;   // stessa tariffa: non e' un subentro
+    var suoIn=al.startM;
+    if(suoIn===undefined||suoIn===null){
+      var p=primoMeseConOre(al);
+      if(p<0)continue;
+      suoIn=p;
+    }
+    if(suoIn>mioIn&&suoIn<sub)sub=suoIn;
+  }
+  return sub;
 }
 function setStartM(i,yr,s,val){
   var svc=A.d[i].years[yr].services[s];
