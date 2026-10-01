@@ -243,13 +243,30 @@ function sv(){try{
 // Involucro del backup: contiene dati e modello. Legge anche i backup vecchi (solo elenco).
 function pacchetto(){
   var t=tplGet();
-  return{formato:"opoc-2",versione:2,creato:new Date().toISOString(),operatori:A.d,modello:t?t:null};
+  var li=[];var be={};
+  try{li=listLeggi()}catch(e){}
+  try{be=belExtra()}catch(e){}
+  return{formato:"opoc-3",versione:3,creato:new Date().toISOString(),
+    operatori:A.d,modello:t?t:null,listino:li,belfiore:be};
 }
 function scarta(data){
-  // Ritorna {operatori:[...], modello:{...}|null} accettando entrambi i formati
-  if(Array.isArray(data))return{operatori:data,modello:null};
-  if(data&&Array.isArray(data.operatori))return{operatori:data.operatori,modello:data.modello||null};
+  // Accetta il formato nuovo e tutti i precedenti: un backup vecchio resta valido
+  if(Array.isArray(data))return{operatori:data,modello:null,listino:null,belfiore:null};
+  if(data&&Array.isArray(data.operatori))return{operatori:data.operatori,modello:data.modello||null,
+    listino:data.listino||null,belfiore:data.belfiore||null};
   return null;
+}
+// Rimette in funzione listino e codici catastali presi da un backup
+function ripristinaExtra(pk){
+  var msg="";
+  if(pk.listino&&pk.listino.length){
+    try{listScrivi(pk.listino);msg+=" + listino ("+pk.listino.length+")"}catch(e){}
+  }
+  if(pk.belfiore){
+    var n=0;for(var k in pk.belfiore){if(Object.prototype.hasOwnProperty.call(pk.belfiore,k))n++}
+    if(n>0){try{localStorage.setItem(BKEY,JSON.stringify(pk.belfiore));msg+=" + "+n+" codici comune"}catch(e){}}
+  }
+  return msg;
 }
 function expJSON(){try{
   var d=new Date();
@@ -282,6 +299,7 @@ function impJSON(){
         if(pk.modello&&pk.modello.b64){
           if(tplSet(pk.modello.nome||"modello.docx",pk.modello.b64))msgM=" + modello contratto";
         }
+        msgM+=ripristinaExtra(pk);
         A.dirty=false;A.v="cover";A.modal=null;render();
         toast("Backup ripristinato! ("+pk.operatori.length+" operatori"+msgM+")","#1565c0");
       }catch(err){alert("Errore: "+err.message);}
@@ -299,6 +317,7 @@ var CKEY="spazioireos_opoc_colors";
 var TKEY="spazioireos_opoc_modello";
 var BKEY="spazioireos_opoc_belfiore";
 var ZKEY="spazioireos_opoc_bozza_atto";
+var SKEY="spazioireos_opoc_listino";
 var colorMap=loadColors();
 function loadColors(){var s=localStorage.getItem(CKEY);if(s){try{return JSON.parse(s)}catch(e){}}return{}}
 function saveColors(){try{localStorage.setItem(CKEY,JSON.stringify(colorMap))}catch(e){}}
@@ -648,6 +667,8 @@ function render(){
   if(A.modal==="bulk"&&A.bulk)el.innerHTML+=rMBulk();
   if(A.modal==="modello")el.innerHTML+=rMModello();
   if(A.modal==="nomi"&&A.nomi)el.innerHTML+=rMNomi();
+  if(A.modal==="listino")el.innerHTML+=rMListino();
+  if(A.modal==="svcblocco"&&A.svcb)el.innerHTML+=rMSvcBlocco();
   if(pickerFor)el.innerHTML+=rPicker();
 }
 function rPicker(){
@@ -757,21 +778,48 @@ function rCov(){
   var rts={};for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){var svcs=A.d[i].years[yrs[y]].services||[];for(var s=0;s<svcs.length;s++)if(svcs[s].rate)rts[svcs[s].rate]=1}}
   var rk=Object.keys(rts).sort(function(a,b){return a-b});
   for(var r=0;r<rk.length;r++)h+='<option value="'+rk[r]+'"'+(A.fr===rk[r]?' selected':'')+'>\u20ac '+parseFloat(rk[r]).toFixed(2).replace(".",",")+'/h</option>';
-  h+='</select><button class="btn btn-new" onclick="A.modal=\'newop\';render()">+ Nuovo operatore</button>';
-  var aYrs=Object.keys(allYrs).sort();for(var y=0;y<aYrs.length;y++)h+='<button class="btn btn-xls" onclick="exportYear(\''+aYrs[y]+'\')">\u2B07 Excel '+aYrs[y]+'</button>';
-  h+='<button class="btn" style="background:#6a1b9a;color:#fff" onclick="A.modal=\'report\';render()">Report per data</button>';
-  h+='<button class="btn" style="background:#00695c;color:#fff" onclick="exportCreditoProgetto()" title="Quanto si deve ancora agli operatori, diviso per progetto, senza compensare positivi e negativi">\u2B07 Credito per progetto</button>';
-  h+='<button class="btn" style="background:#37474f;color:#fff" onclick="document.getElementById(\'anagFile\').click()" title="Carica l\'Elenco lavoratori: compila le anagrafiche degli operatori corrispondenti (solo campi vuoti, non sovrascrive)">\ud83d\udcc7 Importa anagrafiche</button>';
+  h+='</select>';
+  h+='</div>';
+  // ===== PULSANTIERA A GRUPPI =====
+  var grp=function(tit,bordo){return '<div style="display:flex;flex-direction:column;gap:3px;padding:5px 9px;border:1px solid '+bordo+';border-radius:6px;background:#fff"><div style="font-size:9px;font-weight:900;color:#78909c;letter-spacing:0.6px">'+tit+'</div><div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">'};
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 9px">';
+
+  // DATI
+  h+=grp('DATI','#c8e6c9');
+  h+='<button class="btn btn-new btn-sm" onclick="A.modal=\'newop\';render()">+ Nuovo operatore</button>';
+  if(A.dirty)h+='<button class="btn btn-save btn-sm" onclick="sv()">\u2714 Salva</button>';
+  else h+='<button class="btn btn-sm" style="background:#eceff1;color:#90a4ae" disabled title="Nessuna modifica da salvare">\u2714 Salvato</button>';
+  h+='<button class="btn btn-sm" style="background:#1565c0;color:#fff" onclick="expJSON()" title="Scarica un backup completo: dati e modello del contratto">\u2b07 Backup</button>';
+  h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()" title="Ripristina i dati da un file di backup">\u2b06 Ripristina</button>';
+  h+='</div></div>';
+
+  // ANAGRAFICHE
+  h+=grp('ANAGRAFICHE','#cfd8dc');
+  h+='<button class="btn btn-sm" style="background:#37474f;color:#fff" onclick="document.getElementById(\'anagFile\').click()" title="Carica l\'Elenco lavoratori: compila le anagrafiche degli operatori corrispondenti, senza sovrascrivere">\ud83d\udcc7 Importa da Excel</button>';
   h+='<input type="file" id="anagFile" accept=".xlsx,.xls" style="display:none" onchange="importAnagFile(this)">';
-  h+='<input type="file" id="tplFile" accept=".docx" style="display:none" onchange="onTplFile(this)">';
-  h+='<button class="btn" style="background:#546e7a;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo anagrafiche</button>';
-  h+='<button class="btn" style="background:#ad1457;color:#fff" onclick="bulkOpen()" title="Crea lo stesso atto contrattuale su pi\u00f9 operatori in una volta, con importo ritoccabile per ciascuno">\ud83d\udcda Atto in blocco</button>';
-  h+='<button class="btn" style="background:#4527a0;color:#fff" onclick="lettereBlocco()" title="Genera in un solo file zip un contratto in PDF per ogni operatore con un importo valorizzato nell\u2019atto">\ud83d\udcc4 Contratti in blocco (PDF)</button>';
-  h+='<button class="btn" style="background:#00838f;color:#fff" onclick="A.modal=\'modello\';render()" title="Carica o sostituisci il modello Word usato per tutte le lettere di incarico">\ud83d\udcc4 Modello contratto</button>';
-  h+='<button class="btn" style="background:#5d4037;color:#fff" onclick="nomiOpen()" title="Allinea il nominativo delle schede a cognome e nome dell\'anagrafica">\u270e Allinea nominativi</button>';
-  h+='<button class="btn" style="background:#1565c0;color:#fff" onclick="expJSON()">⬇ Backup JSON</button>';
-  h+='<button class="btn" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()">⬆ Ripristina backup</button>';
-  if(A.dirty)h+='<button class="btn btn-save" onclick="sv()">\u2714 Salva</button>';
+  h+='<button class="btn btn-sm" style="background:#546e7a;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo</button>';
+  h+='<button class="btn btn-sm" style="background:#78909c;color:#fff" onclick="nomiOpen()" title="Allinea il nominativo delle schede a cognome e nome dell\'anagrafica">\u270e Allinea nomi</button>';
+  h+='</div></div>';
+
+  // CONTRATTI
+  h+=grp('CONTRATTI','#f8bbd0');
+  h+='<button class="btn btn-sm" style="background:#880e4f;color:#fff" onclick="svcOpen()" title="Crea a pi\u00f9 operatori la stessa riga servizio nella tabella ore, gi\u00e0 con nome e importo">\u2795 Riga servizio in blocco</button>';
+  h+='<button class="btn btn-sm" style="background:#ad1457;color:#fff" onclick="bulkOpen()" title="Crea lo stesso atto contrattuale su pi\u00f9 operatori in una volta, con importo ritoccabile per ciascuno">\ud83d\udcda Atto in blocco</button>';
+  h+='<button class="btn btn-sm" style="background:#c2185b;color:#fff" onclick="lettereBlocco()" title="Genera in un solo file zip un contratto in PDF per ogni operatore con un importo valorizzato nell\u2019atto">\ud83d\udcc4 Contratti in blocco</button>';
+  h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #ad1457;color:#ad1457" onclick="A.modal=\'listino\';render()" title="Tariffe per servizio: alimentano gli atti e le righe nuove">\ud83d\udcb6 Listino</button>';
+  h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #ad1457;color:#ad1457" onclick="A.modal=\'modello\';render()" title="Carica o sostituisci il modello Word usato per tutti i contratti">\u2699 Modello</button>';
+  h+='</div></div>';
+
+  // REPORT
+  h+=grp('REPORT','#b2dfdb');
+  var aYrs=Object.keys(allYrs).sort();
+  for(var y=0;y<aYrs.length;y++)h+='<button class="btn btn-xls btn-sm" onclick="exportYear(\''+aYrs[y]+'\')">\u2b07 Excel '+aYrs[y]+'</button>';
+  h+='<button class="btn btn-sm" style="background:#00695c;color:#fff" onclick="A.modal=\'report\';render()" title="Riepilogo delle liquidazioni in un intervallo di date">\ud83d\udcca Per data</button>';
+  h+='<button class="btn btn-sm" style="background:#00838f;color:#fff" onclick="exportCreditoProgetto()" title="Quanto si deve ancora agli operatori, diviso per progetto, senza compensare positivi e negativi">\ud83d\udcb0 Credito per progetto</button>';
+  h+='</div></div>';
+  h+='</div>';
+  h+='<div style="display:none">';
+  h+='</div>';
   h+='</div><div class="op-grid">';
   // Ordina alfabeticamente per nome, mantenendo l'indice originale per openS
   var ordered=[];
@@ -894,13 +942,15 @@ function rYB(idx,yr,ci){
     if(lk){
       h+='<span style="font-weight:700;font-size:13px" title="Importo contrattuale bloccato">'+n2(srt)+'</span>';
       if(sm>0)h+='<div style="font-size:8px;color:#607d8b;font-weight:700;margin-top:1px">dal mese: '+MESI_IT[sm]+'</div>';
-      if(msubL<12)h+='<div style="font-size:8px;color:#c62828;font-weight:900;margin-top:1px">chiuso da '+MESI_IT[msubL]+'</div>';
+      if(svc.ruolo!==undefined&&svc.ruolo!==null&&String(svc.ruolo)!=="")h+='<div style="font-size:8px;color:#607d8b;font-weight:700">ruolo '+escHTML(svc.ruolo)+'</div>';
+      if(msubL<12)h+='<div style="font-size:8px;color:#c62828;font-weight:900;margin-top:1px">chiuso da '+meseAnno(msubL,yr)+'</div>';
     }else{
       h+='<input class="rate-in" style="width:44px" type="text" value="'+n2(srt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].rate=raw(this.value);markD();render()">';
       h+='<div style="margin-top:2px"><span style="font-size:8px;color:#555">dal </span><select onchange="setStartM('+idx+',\''+yr+'\','+s+',this.value)" style="font-size:9px;font-family:\'Inter\',sans-serif;border:1px solid #bbb;border-radius:3px;background:#fff">';
       for(var mm=0;mm<12;mm++)h+='<option value="'+mm+'"'+(sm===mm?' selected':'')+'>'+MESI_IT[mm]+'</option>';
       h+='</select></div>';
-      if(msubL<12)h+='<div style="font-size:8px;color:#c62828;font-weight:900;margin-top:1px">chiuso da '+MESI_IT[msubL]+'</div>';
+      h+='<div style="margin-top:2px"><span style="font-size:8px;color:#555">ruolo </span><input type="text" value="'+escHTML(svc.ruolo===undefined||svc.ruolo===null?"":svc.ruolo)+'" placeholder="1" style="width:26px;font-size:9px;text-align:center;background:#fff9c4;border:1px solid #bbb;border-radius:3px;padding:1px" title="Numera i ruoli diversi sullo stesso servizio (1, 2...): righe con ruoli diversi non vengono mai chiuse fra loro" onchange="'+P+'.services['+s+'].ruolo=this.value||null;markD();render()"></div>';
+      if(msubL<12)h+='<div style="font-size:8px;color:#c62828;font-weight:900;margin-top:1px">chiuso da '+meseAnno(msubL,yr)+'</div>';
     }
     h+='</td>';
     // Residuo: solo quello proprio del servizio. Il residuo portato dagli anni
@@ -1060,6 +1110,210 @@ function rMNY(){
 // ===== ATTO IN BLOCCO =====
 // La bozza e' un appunto di lavoro: vive in una chiave sua, separata dai dati degli
 // operatori, che restano a salvataggio manuale. Nessun atto viene creato finche' non lo chiedi.
+// ===== LISTINO: tariffe per servizio =====
+// Alimenta gli atti e le NUOVE righe servizio. Non tocca mai le righe gia' compilate.
+function listLeggi(){
+  try{var s=localStorage.getItem(SKEY);if(!s)return [];var o=JSON.parse(s);return (o&&o.length)?o:[]}catch(e){return []}
+}
+function listScrivi(l){
+  try{localStorage.setItem(SKEY,JSON.stringify(l));return true}catch(e){alert("Non riesco a salvare il listino: "+e.message);return false}
+}
+function listChiave(nome,ruolo){
+  var n=String(nome===null||nome===undefined?"":nome).replace(/\s+/g," ").replace(/^\s+|\s+$/g,"").toUpperCase();
+  var r=(ruolo===undefined||ruolo===null)?"":String(ruolo).replace(/^\s+|\s+$/g,"");
+  return n+"||"+r;
+}
+function listTrova(nome,ruolo){
+  var l=listLeggi();var k=listChiave(nome,ruolo);
+  for(var i=0;i<l.length;i++){if(listChiave(l[i].nome,l[i].ruolo)===k)return l[i]}
+  // ripiego: stesso nome, qualunque ruolo (prima voce utile)
+  var n2k=String(nome===null||nome===undefined?"":nome).replace(/\s+/g," ").replace(/^\s+|\s+$/g,"").toUpperCase();
+  for(var j=0;j<l.length;j++){
+    var nj=String(l[j].nome===null||l[j].nome===undefined?"":l[j].nome).replace(/\s+/g," ").replace(/^\s+|\s+$/g,"").toUpperCase();
+    if(nj===n2k)return l[j];
+  }
+  return null;
+}
+function listAdd(){
+  var l=listLeggi();l.push({nome:"",rate:"",ruolo:""});listScrivi(l);render();
+}
+function listSet(i,f,v){
+  var l=listLeggi();if(!l[i])return;l[i][f]=v;listScrivi(l);
+  if(f!=="rate")render();
+}
+function listDel(i){
+  var l=listLeggi();if(!l[i])return;
+  if(!confirm("Elimino dal listino:\n\n"+(l[i].nome||"(senza nome)")+(l[i].ruolo?"  ruolo "+l[i].ruolo:"")+(l[i].rate?"   \u20ac "+l[i].rate:"")+"\n\nLe righe gi\u00e0 compilate nelle schede non vengono toccate."))return;
+  l.splice(i,1);listScrivi(l);render();
+}
+// Importo gia' usato da un operatore: prima l'ultimo atto, poi la riga servizio piu' recente
+function importoOperatore(i){
+  var op=A.d[i];var an=op.anag;
+  if(an&&an.atti&&an.atti.length){
+    var ac=attoCorrente(i);
+    if(ac&&ac.importoOC!==""&&ac.importoOC!==null&&ac.importoOC!==undefined){
+      var p=parseGMA(ac.dataAvvio)||parseGMA(ac.dataContratto);
+      return{v:String(ac.importoOC),da:"atto"+(p?" "+p.y:"")};
+    }
+  }
+  var yrs=gY(op);
+  for(var y=yrs.length-1;y>=0;y--){
+    var svcs=op.years[yrs[y]].services||[];
+    for(var s=svcs.length-1;s>=0;s--){
+      if(svcs[s].rate)return{v:n2(svcs[s].rate),da:"ore "+yrs[y]};
+    }
+  }
+  return null;
+}
+// ===== RIGA SERVIZIO IN BLOCCO =====
+function svcOpen(){
+  var l=listLeggi();
+  A.svcb={servizio:(l.length?l[0].nome:""),rate:(l.length?l[0].rate:""),ruolo:(l.length?l[0].ruolo:""),anno:String((new Date()).getFullYear()),startM:0,sel:{}};
+  A.modal="svcblocco";render();
+}
+function svcSet(f,v){
+  if(!A.svcb)return;
+  A.svcb[f]=v;
+  if(f==="servizio"){
+    var ls=listTrova(v,A.svcb.ruolo||"");
+    if(ls){A.svcb.rate=ls.rate||"";A.svcb.ruolo=ls.ruolo||""}
+  }
+  render();
+}
+function svcSelChange(f,el){svcSet(f,el.value)}
+function svcToggle(i){if(!A.svcb)return;A.svcb.sel[i]=!A.svcb.sel[i];render()}
+function svcTutti(v){
+  if(!A.svcb)return;
+  for(var i=0;i<A.d.length;i++)A.svcb.sel[i]=v;
+  render();
+}
+function svcConta(){var n=0;if(!A.svcb)return 0;for(var i=0;i<A.d.length;i++){if(A.svcb.sel[i])n++}return n}
+function svcCrea(){
+  if(!A.svcb)return;
+  var nome=(A.svcb.servizio||"").replace(/^\s+|\s+$/g,"");
+  if(!nome){alert("Scegli o scrivi il nome del servizio.");return}
+  var yr=String(A.svcb.anno||"").replace(/[^0-9]/g,"");
+  if(yr.length!==4){alert("Indica l'anno in quattro cifre (es. 2026).");return}
+  var rt=numIT(A.svcb.rate);
+  var scelti=[];
+  for(var i=0;i<A.d.length;i++){if(A.svcb.sel[i])scelti.push(i)}
+  if(scelti.length===0){alert("Non hai selezionato nessun operatore.");return}
+  var gia=[],nuovi=[],senzaAnno=[];
+  for(var s=0;s<scelti.length;s++){
+    var op=A.d[scelti[s]];
+    if(!op.years[yr]){senzaAnno.push(scelti[s]);continue}
+    var svcs=op.years[yr].services||[];
+    var trovato=false;
+    for(var k=0;k<svcs.length;k++){
+      if((svcs[k].name||"").replace(/^\s+|\s+$/g,"").toUpperCase()===nome.toUpperCase()&&(svcs[k].rate||0)===rt)trovato=true;
+    }
+    if(trovato)gia.push(op.name);else nuovi.push(scelti[s]);
+  }
+  var tot=nuovi.length+senzaAnno.length;
+  if(tot===0){alert("Tutti gli operatori selezionati hanno gi\u00e0 questa riga servizio nel "+yr+".\n\nNulla da aggiungere.");return}
+  var msg="Aggiungo la riga servizio a "+tot+" operatori:\n\n  "+nome+"   \u20ac "+n2(rt)+(A.svcb.ruolo?"   ruolo "+A.svcb.ruolo:"")+"\n  anno "+yr+", dal mese "+MESI_IT[A.svcb.startM||0];
+  if(senzaAnno.length>0)msg+="\n\nPer "+senzaAnno.length+" operatori verr\u00e0 creato anche l'anno "+yr+".";
+  if(gia.length>0){
+    msg+="\n\nGi\u00e0 presente (saltati) per "+gia.length+":\n"+gia.slice(0,10).join("\n");
+    if(gia.length>10)msg+="\n\u2026e altri "+(gia.length-10);
+  }
+  msg+="\n\nLe righe esistenti non vengono toccate.\n\nProcedo?";
+  if(!confirm(msg))return;
+  var fatti=0;
+  var tutti=nuovi.concat(senzaAnno);
+  for(var t=0;t<tutti.length;t++){
+    var idx=tutti[t];var o=A.d[idx];
+    if(!o.years[yr])o.years[yr]={default_rate:rt,services:[],payments:[]};
+    if(!o.years[yr].services)o.years[yr].services=[];
+    var riga={name:nome,residual:0,hours:[0,0,0,0,0,0,0,0,0,0,0,0],rate:rt};
+    if(A.svcb.startM)riga.startM=A.svcb.startM;
+    if(A.svcb.ruolo)riga.ruolo=A.svcb.ruolo;
+    o.years[yr].services.push(riga);
+    fatti++;
+  }
+  A.svcb=null;A.modal=null;
+  markD();render();
+  alert("Riga servizio aggiunta a "+fatti+" operatori.\n\nOra resta da inserire le ore mensili.\n\nRICORDA: premi \ud83d\udcbe Salva.");
+}
+function rMSvcBlocco(){
+  var l=listLeggi();
+  var h='<div class="modal-overlay"><div class="modal" style="width:820px;max-width:97vw;max-height:92vh;overflow-y:auto">';
+  h+='<h3>\u2795 Riga servizio su pi\u00f9 operatori</h3>';
+  h+='<div style="font-size:11px;color:#666;margin-bottom:10px">Crea a ciascuno la riga nella tabella ore, gi\u00e0 con nome e importo. Restano da inserire solo le ore mensili.</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:10px">';
+  h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Servizio</label>';
+  if(l.length>0){
+    h+='<select onchange="svcSelChange(\'servizio\',this)" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;max-width:300px;padding:3px">';
+    for(var i=0;i<l.length;i++){
+      var et=(l[i].nome||"(senza nome)")+(l[i].ruolo?"  \u2022 ruolo "+l[i].ruolo:"")+(l[i].rate?"   \u20ac "+l[i].rate:"");
+      h+='<option value="'+escHTML(l[i].nome||"")+'"'+((A.svcb.servizio||"")===(l[i].nome||"")?" selected":"")+'>'+escHTML(et)+'</option>';
+    }
+    h+='</select>';
+  }else{
+    h+='<input type="text" value="'+escHTML(A.svcb.servizio||"")+'" placeholder="nome del servizio" style="width:260px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px" onchange="svcSet(\'servizio\',this.value)">';
+    h+='<div style="font-size:9px;color:#e65100">Listino vuoto: lo compili dal pulsante Listino</div>';
+  }
+  h+='</div>';
+  h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Importo \u20ac</label><input type="text" value="'+escHTML(A.svcb.rate||"")+'" style="width:80px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px" onchange="svcSet(\'rate\',this.value)"></div>';
+  h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Ruolo</label><input type="text" value="'+escHTML(A.svcb.ruolo||"")+'" style="width:50px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #bbb;border-radius:3px;padding:3px" onchange="svcSet(\'ruolo\',this.value)"></div>';
+  h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Anno</label><input type="text" value="'+escHTML(A.svcb.anno||"")+'" style="width:60px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px" onchange="svcSet(\'anno\',this.value)"></div>';
+  h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Dal mese</label><select onchange="svcSet(\'startM\',parseInt(this.value))" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;padding:3px">';
+  for(var m=0;m<12;m++)h+='<option value="'+m+'"'+((A.svcb.startM||0)===m?" selected":"")+'>'+MESI_IT[m]+'</option>';
+  h+='</select></div>';
+  h+='</div>';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">';
+  h+='<span style="font-size:11px;font-weight:900;color:#37474f">A CHI</span>';
+  h+='<button class="btn btn-sm" style="background:#546e7a;color:#fff" onclick="svcTutti(true)">tutti</button>';
+  h+='<button class="btn btn-sm" style="background:#eceff1;color:#333" onclick="svcTutti(false)">nessuno</button>';
+  h+='<span style="font-size:12px;font-weight:900;color:#1565c0;margin-left:auto">selezionati: '+svcConta()+'</span></div>';
+  h+='<div style="max-height:330px;overflow-y:auto;border:1px solid #ddd;border-radius:5px">';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:11px"><tbody>';
+  var ordine=[];for(var q=0;q<A.d.length;q++)ordine.push(q);
+  ordine.sort(function(a,b){var na=(A.d[a].name||"").toLowerCase();var nb=(A.d[b].name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
+  var nomeSel=(A.svcb.servizio||"").replace(/^\s+|\s+$/g,"").toUpperCase();
+  var rtSel=numIT(A.svcb.rate);
+  var yrSel=String(A.svcb.anno||"");
+  for(var z=0;z<ordine.length;z++){
+    var oi=ordine[z];var op=A.d[oi];var sc=!!A.svcb.sel[oi];
+    var ha=false;
+    if(op.years[yrSel]){
+      var ss=op.years[yrSel].services||[];
+      for(var k2=0;k2<ss.length;k2++){
+        if((ss[k2].name||"").replace(/^\s+|\s+$/g,"").toUpperCase()===nomeSel&&(ss[k2].rate||0)===rtSel)ha=true;
+      }
+    }
+    h+='<tr style="background:'+(sc?'#e8f5e9':(z%2?'#fafafa':'#fff'))+';border-bottom:1px solid #eee">';
+    h+='<td style="padding:2px 6px;width:30px;text-align:center"><input type="checkbox"'+(sc?' checked':'')+' onchange="svcToggle('+oi+')" style="cursor:pointer"></td>';
+    h+='<td style="padding:2px 6px;font-weight:700;cursor:pointer" onclick="svcToggle('+oi+')">'+escHTML(op.name)+'</td>';
+    h+='<td style="padding:2px 6px;text-align:right;font-size:10px;color:'+(ha?'#e65100':'#bbb')+'">'+(ha?'gi\u00e0 presente':'')+'</td></tr>';
+  }
+  h+='</tbody></table></div>';
+  h+='<div class="ma"><button class="btn" style="background:#eceff1" onclick="A.svcb=null;A.modal=null;render()">Annulla</button>';
+  h+='<button class="btn btn-new" onclick="svcCrea()">Crea la riga sui '+svcConta()+' selezionati</button></div>';
+  h+='</div></div>';
+  return h;
+}
+function rMListino(){
+  var l=listLeggi();
+  var h='<div class="modal-overlay"><div class="modal" style="width:680px;max-width:97vw;max-height:90vh;overflow-y:auto">';
+  h+='<h3>\ud83d\udcb6 Listino tariffe per servizio</h3>';
+  h+='<div style="font-size:12px;color:#666;margin-bottom:10px">Serve a non riscrivere ogni volta nome e importo. Alimenta gli atti e le righe servizio nuove: le righe gi\u00e0 compilate non vengono mai toccate.</div>';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  h+='<thead><tr style="background:#37474f;color:#fff"><th style="padding:4px 6px;text-align:left">Servizio</th><th style="padding:4px;width:90px">\u20ac/h</th><th style="padding:4px;width:60px">Ruolo</th><th style="width:28px"></th></tr></thead><tbody>';
+  if(l.length===0)h+='<tr><td colspan="4" style="padding:12px;text-align:center;color:#999">Nessun servizio in listino. Premi <strong>+ Aggiungi</strong>.</td></tr>';
+  for(var i=0;i<l.length;i++){
+    h+='<tr style="border-bottom:1px solid #eee">';
+    h+='<td style="padding:2px 4px"><input type="text" value="'+escHTML(l[i].nome||"")+'" placeholder="es. 2026 -A- CAM MUN1" style="width:100%;font-size:12px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px" onchange="listSet('+i+',\'nome\',this.value)"></td>';
+    h+='<td style="padding:2px 4px"><input type="text" value="'+escHTML(l[i].rate||"")+'" placeholder="20,00" style="width:100%;font-size:12px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px" onchange="listSet('+i+',\'rate\',this.value)"></td>';
+    h+='<td style="padding:2px 4px"><input type="text" value="'+escHTML(l[i].ruolo||"")+'" placeholder="" style="width:100%;font-size:12px;text-align:center;background:#fff9c4;border:1px solid #bbb;border-radius:3px;padding:3px" title="Solo se sullo stesso servizio ci sono pi\u00f9 ruoli" onchange="listSet('+i+',\'ruolo\',this.value)"></td>';
+    h+='<td style="padding:2px;text-align:center"><button class="btn-del-row" onclick="listDel('+i+')">\u00d7</button></td></tr>';
+  }
+  h+='</tbody></table>';
+  h+='<div style="margin-top:8px"><button class="btn btn-new btn-sm" onclick="listAdd()">+ Aggiungi servizio</button></div>';
+  h+='<div class="ma"><button class="btn" style="background:#eceff1" onclick="A.modal=null;render()">Chiudi</button></div>';
+  h+='</div></div>';
+  return h;
+}
 function bozzaLeggi(){
   try{
     var s=localStorage.getItem(ZKEY);if(!s)return null;
@@ -1108,14 +1362,32 @@ function bulkTutti(v){
   if(!A.bulk)return;
   for(var i=0;i<A.d.length;i++){
     A.bulk.sel[i]=v;
-    if(v&&A.bulk.imp[i]===undefined)A.bulk.imp[i]=A.bulk.campi.importoOC||"";
+    if(v&&A.bulk.imp[i]===undefined){
+      var dd=bulkDefault(i);
+      A.bulk.imp[i]=dd.v;
+      if(!A.bulk.fonte)A.bulk.fonte={};
+      A.bulk.fonte[i]=dd.da;
+    }
   }
   bozzaScrivi();render();
+}
+function bulkDefault(i){
+  // Ordine: importo gia' usato dall'operatore, poi listino del servizio, poi importo comune
+  var io=importoOperatore(i);
+  if(io)return{v:io.v,da:io.da};
+  var ls=listTrova(A.bulk.campi.servizio||"", A.bulk.campi.ruolo||"");
+  if(ls&&ls.rate)return{v:String(ls.rate),da:"listino"};
+  return{v:A.bulk.campi.importoOC||"",da:""};
 }
 function bulkToggle(i){
   if(!A.bulk)return;
   A.bulk.sel[i]=!A.bulk.sel[i];
-  if(A.bulk.sel[i]&&A.bulk.imp[i]===undefined)A.bulk.imp[i]=A.bulk.campi.importoOC||"";
+  if(A.bulk.sel[i]&&A.bulk.imp[i]===undefined){
+    var dd=bulkDefault(i);
+    A.bulk.imp[i]=dd.v;
+    if(!A.bulk.fonte)A.bulk.fonte={};
+    A.bulk.fonte[i]=dd.da;
+  }
   bozzaScrivi();render();
 }
 function bulkImp(i,v){
@@ -1586,7 +1858,13 @@ function rMBulk(){
     h+='<td style="padding:2px 6px;font-weight:700;cursor:pointer" onclick="bulkToggle('+oi+')">'+escHTML(op.name)+'</td>';
     h+='<td style="padding:2px;text-align:center;font-weight:900;color:'+(filled===0?'#c62828':(filled>=ANAG_FIELDS.length-2?'#1b5e20':'#e65100'))+'">'+filled+'/'+ANAG_FIELDS.length+'</td>';
     h+='<td style="padding:2px 4px;text-align:center">';
-    if(scelto)h+='<input type="text" value="'+escHTML(A.bulk.imp[oi]===undefined?(c.importoOC||""):A.bulk.imp[oi])+'" style="width:72px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:2px" onchange="bulkImp('+oi+',this.value)">';
+    if(scelto){
+      h+='<input type="text" value="'+escHTML(A.bulk.imp[oi]===undefined?(c.importoOC||""):A.bulk.imp[oi])+'" style="width:72px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:2px" onchange="bulkImp('+oi+',this.value)">';
+      var fo=(A.bulk.fonte&&A.bulk.fonte[oi])?A.bulk.fonte[oi]:"";
+      var man=(A.bulk.manuale&&A.bulk.manuale[oi]);
+      if(man)h+='<div style="font-size:8px;color:#e65100;font-weight:700">a mano</div>';
+      else if(fo)h+='<div style="font-size:8px;color:#78909c">da '+escHTML(fo)+'</div>';
+    }
     else h+='<span style="color:#ccc">\u2013</span>';
     h+='</td></tr>';
   }
@@ -1626,6 +1904,8 @@ function doReport(){
 // ACTIONS
 function addSvc(idx,yr){var yd=A.d[idx].years[yr];if(!yd.services)yd.services=[];yd.services.push(eSvc(yd.default_rate||18));markD();render()}
 var MESI_IT=["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
+var MESI_AB=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+function meseAnno(m,yr){return MESI_AB[m]+String(yr).substr(2)}
 // ===== ANAGRAFICA =====
 var QUALIFICHE=["INSEGNANTE","INSEGNANTE/ISTRUTTORE","TECNICO ESPERTO E/O ISTRUTTORE PER LABORATORI","ASSISTENTE IN AREA SOCIO-EDUCATIVA","ASSISTENTE IN AREA SOCIO-EDUCATIVA / RICREATIVA","ASSISTENTE EDUCATIVO/LUDICO-EDUCATIVO","ASSISTENTE EDUCATIVO E/O ALLA COMUNICAZIONE","EDUCATORE","ADDETTO ALLE PULIZIE","ADDETTO ALLA CUSTODIA E/O ALLA VIGILANZA","ADDETTO AD ATTIVITA' SEGRETARIALI E/O DI CUSTODIA E VIGILANZA"];
 var CORPO_OPTS=["ORARIO","A CORPO/FORFAIT"];
@@ -2280,6 +2560,10 @@ function meseSubentro(op,yr,s){
     var al=svcs[k];
     if((al.name||"").replace(/^\s+|\s+$/g,"").toUpperCase()!==nome)continue;
     if((al.rate||0)===(mia.rate||0))continue;   // stessa tariffa: non e' un subentro
+    // Ruoli diversi = incarichi distinti sullo stesso servizio: mai un subentro
+    var r1=(mia.ruolo===undefined||mia.ruolo===null)?"":String(mia.ruolo).replace(/^\s+|\s+$/g,"");
+    var r2=(al.ruolo===undefined||al.ruolo===null)?"":String(al.ruolo).replace(/^\s+|\s+$/g,"");
+    if(r1!==""&&r2!==""&&r1!==r2)continue;
     var suoIn=al.startM;
     if(suoIn===undefined||suoIn===null){
       var p=primoMeseConOre(al);
@@ -2485,6 +2769,14 @@ function driveLoad(){
       if(pkD&&pkD.operatori&&pkD.operatori.length>0){
         data=pkD.operatori;
         if(pkD.modello&&pkD.modello.b64&&!tplGet())tplSet(pkD.modello.nome||"modello.docx",pkD.modello.b64);
+        try{if(pkD.listino&&pkD.listino.length&&listLeggi().length===0)listScrivi(pkD.listino)}catch(e){}
+        try{
+          if(pkD.belfiore){
+            var ex=belExtra();var vuoto=true;
+            for(var kb in ex){if(Object.prototype.hasOwnProperty.call(ex,kb))vuoto=false}
+            if(vuoto)localStorage.setItem(BKEY,JSON.stringify(pkD.belfiore));
+          }
+        }catch(e){}
         // Compare: use Drive data if it has more operators or is different
         var localStr=JSON.stringify(A.d);
         var driveStr=JSON.stringify(data);
@@ -2536,6 +2828,7 @@ function doRecoveryRestore(){
         if(pk.modello&&pk.modello.b64){
           if(tplSet(pk.modello.nome||"modello.docx",pk.modello.b64))msgM=" + modello contratto";
         }
+        msgM+=ripristinaExtra(pk);
         window._needsRecovery=false;
         A.dirty=false;A.v="cover";A.modal=null;render();updateDriveUI();
         toast("Dati recuperati! ("+pk.operatori.length+" operatori"+msgM+")","#2e7d32");
