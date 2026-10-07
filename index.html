@@ -1203,9 +1203,11 @@ function svcOpen(){
 function svcSet(f,v){
   if(!A.svcb)return;
   A.svcb[f]=v;
+  // l'importo (€/h) si normalizza in italiano: accetta sia 18,50 sia 18.50
+  if(f==="rate")A.svcb.rate=euroFmt(v);
   if(f==="servizio"){
     var ls=listTrova(v,A.svcb.ruolo||"");
-    if(ls){A.svcb.rate=ls.rate||"";A.svcb.ruolo=ls.ruolo||""}
+    if(ls){A.svcb.rate=euroFmt(ls.rate||"");A.svcb.ruolo=ls.ruolo||""}
   }
   render();
 }
@@ -1223,7 +1225,7 @@ function svcCrea(){
   if(!nome){alert("Scegli o scrivi il nome del servizio.");return}
   var yr=String(A.svcb.anno||"").replace(/[^0-9]/g,"");
   if(yr.length!==4){alert("Indica l'anno in quattro cifre (es. 2026).");return}
-  var rt=numIT(A.svcb.rate);
+  var rt=euroIn(A.svcb.rate);if(isNaN(rt))rt=0;
   var scelti=[];
   for(var i=0;i<A.d.length;i++){if(A.svcb.sel[i])scelti.push(i)}
   if(scelti.length===0){alert("Non hai selezionato nessun operatore.");return}
@@ -1300,7 +1302,7 @@ function rMSvcBlocco(){
   var ordine=[];for(var q=0;q<A.d.length;q++)ordine.push(q);
   ordine.sort(function(a,b){var na=(A.d[a].name||"").toLowerCase();var nb=(A.d[b].name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
   var nomeSel=(A.svcb.servizio||"").replace(/^\s+|\s+$/g,"").toUpperCase();
-  var rtSel=numIT(A.svcb.rate);
+  var rtSel=euroIn(A.svcb.rate);if(isNaN(rtSel))rtSel=0;
   var yrSel=String(A.svcb.anno||"");
   for(var z=0;z<ordine.length;z++){
     var oi=ordine[z];var op=A.d[oi];var sc=!!A.svcb.sel[oi];
@@ -2174,7 +2176,7 @@ function mergeMap(i,idx){
   m.IMPORTO=numEuro(at.importoOC);
   var corpo=String(at.corpoOrario||"").toUpperCase();
   m.TIPO_COMPENSO=(corpo.indexOf("CORPO")>=0||corpo.indexOf("FORFAIT")>=0)?"complessivi per l'intera prestazione":"orari";
-  var mo=numIT(at.monteOreTot);
+  var mo=euroIn(at.monteOreTot);if(isNaN(mo))mo=0;
   m.MONTE_ORE=(mo>0)?(String(mo).replace(".",",")+" ore"):"NON DETERMINATO PREVENTIVAMENTE";
   m.CADENZAMENTO=at.cadenzamento||"";
   m.PREAVVISO=(at.ggPreavviso||"")===""?"":String(at.ggPreavviso);
@@ -2378,7 +2380,7 @@ function rAnagAlerts(i){
     return t;
   }
   // 1. MONTE ORE CONTRATTUALE
-  var mot=numIT(ac.monteOreTot);
+  var mot=euroIn(ac.monteOreTot);if(isNaN(mot))mot=0;
   if(mot>0){
     var tot=0;
     for(var y=0;y<yrs.length;y++){
