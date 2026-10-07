@@ -225,7 +225,7 @@ function sv(){try{
   saveColors();
   A.d.sort(function(a,b){var na=(a.name||"").toLowerCase();var nb=(b.name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
   localStorage.setItem(LSK,JSON.stringify(A.d));
-  try{localStorage.removeItem(ZKEY)}catch(e){}
+  // La bozza dell'atto in blocco NON si cancella qui: resta finche' non premi tu "Svuota bozza".
   A.dirty=false;render();
   // Auto-backup: scarica JSON nei Download
   try{
@@ -344,6 +344,31 @@ function closePicker(){pickerFor=null;render()}
 function f2(v){var n=parseFloat(v);if(isNaN(n))return"";if(n===0)return'<span class="zero">0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212'+s+'</span>';return s}
 function fE(v){var n=parseFloat(v);if(isNaN(n))return"";if(n===0)return'<span class="zero">\u20ac 0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212\u20ac '+s+'</span>';return"\u20ac "+s}
 function n2(v){return parseFloat(v||0).toFixed(2).replace(".",",")}
+// Lettura di un importo digitato a mano. Accetta 18,50 - 18.50 - "e 18,50" - 1.500,00 - 1.500
+// Regola: con la virgola, quella e' il decimale. Con solo un punto e 1 o 2 cifre dopo, il punto
+// e' il decimale (18.50 = 18,50). Con 3 cifre dopo o piu' punti, sono separatori di migliaia.
+function euroIn(v){
+  if(v===null||v===undefined)return NaN;
+  var s=String(v).replace(/\s/g,"").replace(/€/g,"");
+  s=s.replace(/[^0-9.,\-]/g,"");
+  if(s===""||s==="-")return NaN;
+  if(s.indexOf(",")>=0){s=s.replace(/\./g,"").replace(/,/g,".")}
+  else if(s.indexOf(".")>=0){
+    var pz=s.split(".");
+    var dec=(pz.length===2&&pz[1].length>0&&pz[1].length<3);
+    if(!dec)s=s.replace(/\./g,"");
+  }
+  var n=parseFloat(s);
+  return isNaN(n)?NaN:n;
+}
+// Normalizza in formato italiano a 2 decimali. Se non riconosce un numero, restituisce il testo originale.
+function euroFmt(v){
+  if(v===null||v===undefined||String(v).replace(/\s/g,"")==="")return "";
+  var n=euroIn(v);
+  if(isNaN(n))return String(v);
+  var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+  return (n<0?"-":"")+s;
+}
 function raw(v){var s=String(v).replace(",",".").replace(/[^0-9.\-]/g,"");var n=parseFloat(s);return isNaN(n)?0:n}
 function blurFmt(el){var v=raw(el.value);if(isNaN(v))v=0;el.value=v.toFixed(2).replace(".",",");if(v===0){el.classList.add("zero-val")}else{el.classList.remove("zero-val")}}
 function normDT(s){
@@ -671,6 +696,7 @@ function render(){
   if(A.modal==="listino")el.innerHTML+=rMListino();
   if(A.modal==="svcblocco"&&A.svcb)el.innerHTML+=rMSvcBlocco();
   if(pickerFor)el.innerHTML+=rPicker();
+  if(A.modal==="bulk"&&A.bulk)bulkScrollRipristina();
 }
 function rPicker(){
   var cur=colorMap[pickerFor]||"";
@@ -788,16 +814,16 @@ function rCov(){
 
   // DATI
   h+=grp('DATI','#c8e6c9');
-  h+='<button class="btn btn-new btn-sm" onclick="A.modal=\'newop\';render()">+ Nuovo operatore</button>';
+  h+='<button class="btn btn-new btn-sm" onclick="A.modal=\'newop\';render()">+ Aggiungi operatore</button>';
   if(A.dirty)h+='<button class="btn btn-save btn-sm" onclick="sv()">\u2714 Salva</button>';
   else h+='<button class="btn btn-sm" style="background:#eceff1;color:#90a4ae" disabled title="Nessuna modifica da salvare">\u2714 Salvato</button>';
   h+='<button class="btn btn-sm" style="background:#1565c0;color:#fff" onclick="expJSON()" title="Scarica un backup completo: dati e modello del contratto">\u2b07 Backup</button>';
-  h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()" title="Ripristina i dati da un file di backup">\u2b06 Ripristina</button>';
+  h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #1565c0;color:#1565c0" onclick="impJSON()" title="Ripristina i dati da un file di backup">\u2b06 Importa</button>';
   h+='</div></div>';
 
   // ANAGRAFICHE
   h+=grp('ANAGRAFICHE','#cfd8dc');
-  h+='<button class="btn btn-sm" style="background:#37474f;color:#fff" onclick="document.getElementById(\'anagFile\').click()" title="Carica l\'Elenco lavoratori: compila le anagrafiche degli operatori corrispondenti, senza sovrascrivere">\ud83d\udcc7 Importa da Excel</button>';
+  h+='<button class="btn btn-sm" style="background:#37474f;color:#fff" onclick="document.getElementById(\'anagFile\').click()" title="Carica l\'Elenco lavoratori: compila le anagrafiche degli operatori corrispondenti, senza sovrascrivere">\u2935 Importa anagrafiche</button>';
   h+='<input type="file" id="anagFile" accept=".xlsx,.xls" style="display:none" onchange="importAnagFile(this)">';
   h+='<button class="btn btn-sm" style="background:#546e7a;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo</button>';
   h+='<button class="btn btn-sm" style="background:#78909c;color:#fff" onclick="nomiOpen()" title="Allinea il nominativo delle schede a cognome e nome dell\'anagrafica">\u270e Allinea nomi</button>';
@@ -809,7 +835,7 @@ function rCov(){
   h+='<button class="btn btn-sm" style="background:#ad1457;color:#fff" onclick="bulkOpen()" title="Crea lo stesso atto contrattuale su pi\u00f9 operatori in una volta, con importo ritoccabile per ciascuno">\ud83d\udcda Atto in blocco</button>';
   h+='<button class="btn btn-sm" style="background:#c2185b;color:#fff" onclick="lettereBlocco()" title="Genera in un solo file zip un contratto in PDF per ogni operatore con un importo valorizzato nell\u2019atto">\ud83d\udcc4 Contratti in blocco</button>';
   h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #ad1457;color:#ad1457" onclick="A.modal=\'listino\';render()" title="Tariffe per servizio: alimentano gli atti e le righe nuove">\ud83d\udcb6 Listino</button>';
-  h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #ad1457;color:#ad1457" onclick="A.modal=\'modello\';render()" title="Carica o sostituisci il modello Word usato per tutti i contratti">\u2699 Modello</button>';
+  h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #ad1457;color:#ad1457" onclick="A.modal=\'modello\';render()" title="Carica o sostituisci il modello Word usato per tutti i contratti">\ud83d\udd04 Aggiorna modello contratto</button>';
   h+='</div></div>';
 
   // REPORT
@@ -1325,27 +1351,54 @@ function bozzaLeggi(){
     return o;
   }catch(e){return null}
 }
+var bozzaKO=false;
+function bozzaSpiaAgg(txt,col){
+  var sp=document.getElementById("bozzaSpia");
+  if(sp){sp.textContent=txt;sp.style.color=col}
+}
 function bozzaScrivi(){
   if(!A.bulk)return;
+  var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
+  var ora=p2(dt.getDate())+"/"+p2(dt.getMonth()+1)+"/"+dt.getFullYear()+" "+p2(dt.getHours())+"."+p2(dt.getMinutes());
   try{
-    var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
     localStorage.setItem(ZKEY,JSON.stringify({
       campi:A.bulk.campi,sel:A.bulk.sel,imp:A.bulk.imp,manuale:A.bulk.manuale||{},
-      quando:p2(dt.getDate())+"/"+p2(dt.getMonth()+1)+"/"+dt.getFullYear()+" "+p2(dt.getHours())+"."+p2(dt.getMinutes())
+      fonte:A.bulk.fonte||{},quando:ora,creato:A.bulk.creato||""
     }));
-  }catch(e){}
+    // Verifica vera: rileggo cio' che ho scritto. "Salvato" non deve mai essere una bugia.
+    var ric=localStorage.getItem(ZKEY);
+    if(!ric)throw new Error("rilettura vuota");
+    A.bulk.salvata=ora;A.bulk.errore="";bozzaKO=false;
+    bozzaSpiaAgg("✔ bozza salvata alle "+ora,"#2e7d32");
+  }catch(e){
+    A.bulk.salvata=null;A.bulk.errore=e.message||"errore sconosciuto";
+    bozzaSpiaAgg("⚠ BOZZA NON SALVATA: "+e.message,"#c62828");
+    if(!bozzaKO){bozzaKO=true;toast("ATTENZIONE: la bozza non si salva ("+e.message+")","#c62828")}
+  }
+}
+// Posizione di scorrimento del pannello: senza questo, ogni spunta riporta l'elenco all'inizio.
+var bulkScroll={lista:0,pannello:0};
+function bulkScrollSalva(){
+  var l=document.getElementById("bulkLista");if(l)bulkScroll.lista=l.scrollTop;
+  var p=document.getElementById("bulkPannello");if(p)bulkScroll.pannello=p.scrollTop;
+}
+function bulkScrollRipristina(){
+  var l=document.getElementById("bulkLista");if(l)l.scrollTop=bulkScroll.lista;
+  var p=document.getElementById("bulkPannello");if(p)p.scrollTop=bulkScroll.pannello;
 }
 function bozzaSvuota(){
   if(!confirm("Svuoto la bozza e riparto da zero?\n\nNessun atto gi\u00e0 creato viene toccato."))return;
   try{localStorage.removeItem(ZKEY)}catch(e){}
-  A.bulk={campi:{tipoAtto:"INCARICO INIZIALE"},sel:{},imp:{},manuale:{}};
+  A.bulk={campi:{tipoAtto:"INCARICO INIZIALE"},sel:{},imp:{},manuale:{},fonte:{}};
+  bulkScroll={lista:0,pannello:0};
   render();
   toast("Bozza svuotata","#e65100");
 }
 function bulkOpen(){
   var b=bozzaLeggi();
-  if(b)A.bulk={campi:b.campi||{tipoAtto:"INCARICO INIZIALE"},sel:b.sel||{},imp:b.imp||{},manuale:b.manuale||{},quando:b.quando||""};
-  else A.bulk={campi:{tipoAtto:"INCARICO INIZIALE"},sel:{},imp:{},manuale:{}};
+  if(b)A.bulk={campi:b.campi||{tipoAtto:"INCARICO INIZIALE"},sel:b.sel||{},imp:b.imp||{},manuale:b.manuale||{},fonte:b.fonte||{},quando:b.quando||"",creato:b.creato||""};
+  else A.bulk={campi:{tipoAtto:"INCARICO INIZIALE"},sel:{},imp:{},manuale:{},fonte:{}};
+  bulkScroll={lista:0,pannello:0};
   A.modal="bulk";render();
 }
 function bulkClose(){A.bulk=null;A.modal=null;render()}
@@ -1358,8 +1411,16 @@ function bulkSetCampo(f,v){
       if(A.bulk.sel[i]&&!(A.bulk.manuale&&A.bulk.manuale[i]))A.bulk.imp[i]=v;
     }
   }
-  bozzaScrivi();render();
+  bulkScrollSalva();bozzaScrivi();render();bulkScrollRipristina();
 }
+// Salvataggio a ogni tasto digitato, senza ridisegnare: il cursore resta dove sta.
+function bulkLive(f,v){
+  if(!A.bulk)return;
+  A.bulk.campi[f]=v;
+  bozzaScrivi();
+}
+// Campi in euro: quando esci dal campo l'importo si normalizza (18.50 -> 18,50)
+function bulkSetEuro(f,v){bulkSetCampo(f,euroFmt(v))}
 function bulkSelChange(f,el){bulkSetCampo(f,el.value)}
 function bulkTutti(v){
   if(!A.bulk)return;
@@ -1367,12 +1428,12 @@ function bulkTutti(v){
     A.bulk.sel[i]=v;
     if(v&&A.bulk.imp[i]===undefined){
       var dd=bulkDefault(i);
-      A.bulk.imp[i]=dd.v;
+      A.bulk.imp[i]=euroFmt(dd.v);
       if(!A.bulk.fonte)A.bulk.fonte={};
       A.bulk.fonte[i]=dd.da;
     }
   }
-  bozzaScrivi();render();
+  bulkScrollSalva();bozzaScrivi();render();bulkScrollRipristina();
 }
 function bulkDefault(i){
   // Ordine: importo gia' usato dall'operatore, poi listino del servizio, poi importo comune
@@ -1387,17 +1448,27 @@ function bulkToggle(i){
   A.bulk.sel[i]=!A.bulk.sel[i];
   if(A.bulk.sel[i]&&A.bulk.imp[i]===undefined){
     var dd=bulkDefault(i);
-    A.bulk.imp[i]=dd.v;
+    A.bulk.imp[i]=euroFmt(dd.v);
     if(!A.bulk.fonte)A.bulk.fonte={};
     A.bulk.fonte[i]=dd.da;
   }
-  bozzaScrivi();render();
+  bulkScrollSalva();bozzaScrivi();render();bulkScrollRipristina();
 }
+// Importo di riga: a ogni tasto salva la bozza, uscendo dal campo normalizza in formato italiano
 function bulkImp(i,v){
   if(!A.bulk)return;
   if(!A.bulk.manuale)A.bulk.manuale={};
   A.bulk.manuale[i]=true;
   A.bulk.imp[i]=v;
+  bozzaScrivi();
+}
+function bulkImpFine(i,el){
+  if(!A.bulk)return;
+  var norm=euroFmt(el.value);
+  el.value=norm;
+  if(!A.bulk.manuale)A.bulk.manuale={};
+  A.bulk.manuale[i]=true;
+  A.bulk.imp[i]=norm;
   bozzaScrivi();
 }
 function bulkConta(){
@@ -1417,7 +1488,7 @@ function bulkCrea(){
   var righe=[];
   for(var s=0;s<scelti.length;s++){
     var op=A.d[scelti[s]];
-    var im=A.bulk.imp[scelti[s]];
+    var im=euroFmt(A.bulk.imp[scelti[s]]);
     righe.push("  \u2022 "+op.name+(im?"   \u20ac "+im:""));
   }
   var testo="Creo un nuovo atto su "+scelti.length+" operatori:\n\n"+righe.slice(0,25).join("\n");
@@ -1431,15 +1502,21 @@ function bulkCrea(){
     var nuovo={};
     for(var k in c){
       if(!Object.prototype.hasOwnProperty.call(c,k))continue;
-      if(c[k]!==""&&c[k]!==null&&c[k]!==undefined)nuovo[k]=c[k];
+      if(c[k]===""||c[k]===null||c[k]===undefined)continue;
+      // rete di sicurezza: gli importi entrano nell'atto sempre in formato italiano
+      if(k==="importoOC"||k==="importoPenale")nuovo[k]=euroFmt(c[k]);
+      else nuovo[k]=c[k];
     }
     var imp=A.bulk.imp[idx];
-    if(imp!==""&&imp!==null&&imp!==undefined)nuovo.importoOC=imp;
+    if(imp!==""&&imp!==null&&imp!==undefined)nuovo.importoOC=euroFmt(imp);
     if(!nuovo.tipoAtto)nuovo.tipoAtto=(an.atti.length===0)?"INCARICO INIZIALE":"VARIAZIONE";
     an.atti.push(nuovo);
     fatti++;
   }
-  // La bozza resta finche' non salvi: se chiudi senza salvare, la ritrovi.
+  // La bozza resta sempre: la ritrovi qui per controllo finche' non premi "Svuota bozza".
+  var dtc=new Date();var pc=function(n){return n<10?"0"+n:""+n};
+  A.bulk.creato=pc(dtc.getDate())+"/"+pc(dtc.getMonth()+1)+"/"+dtc.getFullYear()+" "+pc(dtc.getHours())+"."+pc(dtc.getMinutes());
+  bozzaScrivi();
   A.bulk=null;A.modal=null;
   markD();render();
   alert("Atto creato su "+fatti+" operatori.\n\nRICORDA: premi \u2714 Salva per rendere definitiva l'operazione.");
@@ -1809,8 +1886,9 @@ function lettereBlocco(){
 }
 function rMBulk(){
   var c=A.bulk.campi;
-  var inp=function(f,lbl,w,ph){
-    return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(c[f]||"")+'" placeholder="'+(ph||"")+'" style="width:'+(w||130)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="bulkSetCampo(\''+f+'\',this.value)"></div>';
+  var inp=function(f,lbl,w,ph,euro){
+    var fine=euro?"bulkSetEuro":"bulkSetCampo";
+    return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(c[f]||"")+'" placeholder="'+(ph||"")+'" style="width:'+(w||130)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" oninput="bulkLive(\''+f+'\',this.value)" onchange="'+fine+'(\''+f+'\',this.value)"></div>';
   };
   var sel=function(f,lbl,opts){
     var v=c[f]||"";
@@ -1820,12 +1898,19 @@ function rMBulk(){
     for(var o=0;o<opts.length;o++)h2+='<option value="'+escHTML(opts[o])+'"'+(v===opts[o]?" selected":"")+'>'+escHTML(opts[o])+'</option>';
     return h2+'</select></div>';
   };
-  var h='<div class="modal-overlay"><div class="modal" style="width:920px;max-width:97vw;max-height:92vh;overflow-y:auto">';
+  var h='<div class="modal-overlay"><div class="modal" id="bulkPannello" style="width:920px;max-width:97vw;max-height:92vh;overflow-y:auto">';
   h+='<h3>\ud83d\udccb Nuovo atto su pi\u00f9 operatori</h3>';
-  h+='<div style="font-size:11px;color:#666;margin-bottom:10px">Compila le condizioni una volta sola, scegli a chi applicarle e ritocca solo gli importi diversi.</div>';
+  h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">';
+  h+='<span style="font-size:11px;color:#666">Compila le condizioni una volta sola, scegli a chi applicarle e ritocca solo gli importi diversi.</span>';
+  var spiaT="la bozza si salva da s\u00e9 a ogni modifica",spiaC="#78909c";
+  if(A.bulk.errore){spiaT="\u26a0 BOZZA NON SALVATA: "+A.bulk.errore;spiaC="#c62828"}
+  else if(A.bulk.salvata){spiaT="\u2714 bozza salvata alle "+A.bulk.salvata;spiaC="#2e7d32"}
+  h+='<span id="bozzaSpia" style="font-size:10px;font-weight:700;margin-left:auto;color:'+spiaC+'">'+spiaT+'</span>';
+  h+='</div>';
   if(A.bulk.quando){
     h+='<div style="display:flex;align-items:center;gap:10px;background:#fff8e1;border:1px solid #ffb300;border-radius:5px;padding:5px 10px;margin-bottom:10px;flex-wrap:wrap">';
-    h+='<span style="font-size:11px;color:#795548">\u270e Bozza ripresa da <strong>'+escHTML(A.bulk.quando)+'</strong> \u2014 nessun atto \u00e8 stato creato</span>';
+    if(A.bulk.creato)h+='<span style="font-size:11px;color:#795548">\u270e Bozza del <strong>'+escHTML(A.bulk.quando)+'</strong> \u2014 su questi dati hai gi\u00e0 creato gli atti il <strong>'+escHTML(A.bulk.creato)+'</strong>. Resta qui per controllo: premi <strong>Svuota bozza</strong> quando non ti serve pi\u00f9.</span>';
+    else h+='<span style="font-size:11px;color:#795548">\u270e Bozza ripresa da <strong>'+escHTML(A.bulk.quando)+'</strong> \u2014 nessun atto \u00e8 stato creato</span>';
     h+='<button class="btn btn-sm" style="background:#eceff1;color:#c62828;margin-left:auto" onclick="bozzaSvuota()">Svuota bozza</button>';
     h+='</div>';
   }
@@ -1836,8 +1921,8 @@ function rMBulk(){
   h+=inp("struttura","Struttura (facoltativa)",190,"es. CASA DI QUARTIERE")+inp("comuneIndirizzo","Comune e indirizzo",210,"es. MILANO MUNICIPIO 1");
   h+=inp("dataContratto","Data contratto",95,"gg/mm/aaaa")+inp("dataAvvio","Data avvio",95,"gg/mm/aaaa")+inp("dataConclusione","Data conclusione",95,"gg/mm/aaaa");
   h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:10px">';
-  h+=inp("importoOC","Importo \u20ac (comune)",95)+sel("corpoOrario","Corpo o orario",CORPO_OPTS)+inp("monteOreTot","Monte ore tot.",85);
-  h+=sel("cadenzamento","Cadenzamento",CADENZ_OPTS)+inp("ggPreavviso","GG preavviso",75)+inp("importoPenale","Penale \u20ac",75);
+  h+=inp("importoOC","Importo \u20ac (comune)",95,"es. 18,50",true)+sel("corpoOrario","Corpo o orario",CORPO_OPTS)+inp("monteOreTot","Monte ore tot.",85);
+  h+=sel("cadenzamento","Cadenzamento",CADENZ_OPTS)+inp("ggPreavviso","GG preavviso",75)+inp("importoPenale","Penale \u20ac",75,"es. 50,00",true);
   h+='</div>';
   h+='<div style="display:flex;align-items:center;gap:10px;margin:10px 0 4px">';
   h+='<span style="font-size:11px;font-weight:900;color:#37474f">2. A CHI APPLICARLO</span>';
@@ -1845,7 +1930,7 @@ function rMBulk(){
   h+='<button class="btn btn-sm" style="background:#eceff1;color:#333" onclick="bulkTutti(false)">nessuno</button>';
   h+='<span style="font-size:12px;font-weight:900;color:#1565c0;margin-left:auto">selezionati: '+bulkConta()+'</span>';
   h+='</div>';
-  h+='<div style="max-height:320px;overflow-y:auto;border:1px solid #ddd;border-radius:5px">';
+  h+='<div id="bulkLista" style="max-height:320px;overflow-y:auto;border:1px solid #ddd;border-radius:5px">';
   h+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
   h+='<thead><tr style="background:#37474f;color:#fff"><th style="padding:4px 6px;width:30px"></th><th style="padding:4px 6px;text-align:left">Operatore</th><th style="padding:4px;width:60px">Campi</th><th style="padding:4px;width:90px">Importo \u20ac</th></tr></thead><tbody>';
   var ordine=[];for(var i=0;i<A.d.length;i++)ordine.push(i);
@@ -1856,13 +1941,7 @@ function rMBulk(){
     var vv=function(k){if(an[k])return an[k];if(ac&&ac[k])return ac[k];return""};
     var filled=0;for(var f2=0;f2<ANAG_FIELDS.length;f2++){if(vv(ANAG_FIELDS[f2][0]))filled++}
     var scelto=!!A.bulk.sel[oi];
-    h+='<tr style="background:'+(scelto?'#e8f5e9':(q%2?'#fafafa':'#fff'))+';border-bottom:1px solid #eee">';
-    h+='<td style="padding:2px 6px;text-align:center"><input type="checkbox"'+(scelto?' checked':'')+' onchange="bulkToggle('+oi+')" style="cursor:pointer"></td>';
-    h+='<td style="padding:2px 6px;font-weight:700;cursor:pointer" onclick="bulkToggle('+oi+')">'+escHTML(op.name);
-    if(giaFatto)h+=' <span style="font-size:9px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:0 5px;font-weight:700">gi\u00e0 fatto</span>';
-    h+='</td>';
-    h+='<td style="padding:2px;text-align:center;font-weight:900;color:'+(filled===0?'#c62828':(filled>=ANAG_FIELDS.length-2?'#1b5e20':'#e65100'))+'">'+filled+'/'+ANAG_FIELDS.length+'</td>';
-    // gia' presente un atto con queste stesse condizioni?
+    // gia' presente un atto con queste stesse condizioni? Va calcolato PRIMA di stampare la riga.
     var giaFatto=null;
     if(an.atti&&an.atti.length){
       for(var gf=an.atti.length-1;gf>=0;gf--){
@@ -1877,9 +1956,15 @@ function rMBulk(){
         if(ugu){giaFatto=ax;break}
       }
     }
+    h+='<tr style="background:'+(scelto?'#e8f5e9':(q%2?'#fafafa':'#fff'))+';border-bottom:1px solid #eee">';
+    h+='<td style="padding:2px 6px;text-align:center"><input type="checkbox"'+(scelto?' checked':'')+' onchange="bulkToggle('+oi+')" style="cursor:pointer"></td>';
+    h+='<td style="padding:2px 6px;font-weight:700;cursor:pointer" onclick="bulkToggle('+oi+')">'+escHTML(op.name);
+    if(giaFatto)h+=' <span style="font-size:9px;color:#2e7d32;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:0 5px;font-weight:700">gi\u00e0 fatto</span>';
+    h+='</td>';
+    h+='<td style="padding:2px;text-align:center;font-weight:900;color:'+(filled===0?'#c62828':(filled>=ANAG_FIELDS.length-2?'#1b5e20':'#e65100'))+'">'+filled+'/'+ANAG_FIELDS.length+'</td>';
     h+='<td style="padding:2px 4px;text-align:center">';
     if(scelto){
-      h+='<input type="text" value="'+escHTML(A.bulk.imp[oi]===undefined?(c.importoOC||""):A.bulk.imp[oi])+'" style="width:72px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:2px" onchange="bulkImp('+oi+',this.value)">';
+      h+='<input type="text" value="'+escHTML(A.bulk.imp[oi]===undefined?(c.importoOC||""):A.bulk.imp[oi])+'" style="width:72px;font-size:11px;text-align:center;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:2px" oninput="bulkImp('+oi+',this.value)" onchange="bulkImpFine('+oi+',this)">';
       var fo=(A.bulk.fonte&&A.bulk.fonte[oi])?A.bulk.fonte[oi]:"";
       var man=(A.bulk.manuale&&A.bulk.manuale[oi]);
       if(man)h+='<div style="font-size:8px;color:#e65100;font-weight:700">a mano</div>';
@@ -2055,8 +2140,8 @@ function dataEstesa(s){
 // Formato italiano senza toLocaleString: 1.234,56
 function numEuro(v){
   if(v===null||v===undefined||v==="")return "";
-  var n=numIT(v);
-  if(!n)return String(v);
+  var n=euroIn(v);
+  if(isNaN(n)||!n)return String(v);
   return n.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
 }
 function escXML(s){
@@ -2235,6 +2320,24 @@ function normName(s){
 }
 window._anagAltro={};
 function anagSet(i,f,v){ensureAnag(i)[f]=v;markD()}
+// Domicilio uguale alla residenza: copia i tre campi, con conferma se il domicilio e' diverso e pieno
+function domComeRes(i){
+  var an=ensureAnag(i);
+  var ir=an.indRes||"",cr=an.capRes||"",lr=an.luogoRes||"";
+  if(ir===""&&cr===""&&lr===""){alert("La residenza è vuota: non c'è nulla da copiare nel domicilio.");return}
+  var pieno=(an.indDom||an.capDom||an.luogoDom)?true:false;
+  var diverso=(String(an.indDom||"")!==ir)||(String(an.capDom||"")!==cr)||(String(an.luogoDom||"")!==lr);
+  if(!diverso){toast("Il domicilio è già uguale alla residenza","#78909c");return}
+  if(pieno){
+    var msg="DOMICILIO ATTUALE\n  "+(an.indDom||"—")+"   "+(an.capDom||"")+"   "+(an.luogoDom||"");
+    msg+="\n\nLO SOSTITUISCO CON LA RESIDENZA\n  "+(ir||"—")+"   "+cr+"   "+lr;
+    msg+="\n\nProcedo?";
+    if(!confirm(msg))return;
+  }
+  an.indDom=ir;an.capDom=cr;an.luogoDom=lr;
+  markD();render();
+  toast("Domicilio = residenza. Ricorda ✔ Salva","#2e7d32");
+}
 function anagSelChange(i,f,el){
   var key=i+"_"+f;
   if(el.value==="__ALTRO__"){window._anagAltro[key]=true;ensureAnag(i)[f]=ensureAnag(i)[f]||"";markD();render()}
@@ -2349,6 +2452,8 @@ function rAnag(i){
     h+=fld("email","Email",190);
     h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">';
     h+=fld("indRes","Indirizzo residenza",210)+fld("capRes","CAP",60)+fld("luogoRes","Luogo residenza",140);
+    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">&nbsp;</label>';
+    h+='<button class="btn btn-sm" style="background:#00695c;color:#fff;white-space:nowrap" onclick="domComeRes('+i+')" title="Copia indirizzo, CAP e luogo dalla residenza al domicilio">⇩ Domicilio = residenza</button></div>';
     h+=fld("indDom","Indirizzo domicilio",210)+fld("capDom","CAP",60)+fld("luogoDom","Luogo domicilio",140);
     h+='</div>';
     // ===== ATTI =====
