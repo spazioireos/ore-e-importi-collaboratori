@@ -809,6 +809,36 @@ function exportAnagExcel(){
     toast("Riepilogo anagrafiche scaricato","#2e7d32");
   }catch(e){toast("Errore export: "+e.message,"#c62828")}
 }
+// Riquadro riepilogativo delle cadenze di pagamento: nominativi raggruppati, a colpo d'occhio
+function rCadenzaBox(){
+  var gruppi={};for(var g=0;g<CADPAG_OPTS.length;g++)gruppi[CADPAG_OPTS[g]]=[];
+  var daImp=[];
+  for(var i=0;i<A.d.length;i++){
+    var v=cadValore(i);var nm=A.d[i].name||"";
+    if(v&&gruppi[v])gruppi[v].push(nm);
+    else daImp.push(nm);
+  }
+  var alfab=function(arr){arr.sort(function(a,b){a=a.toUpperCase();b=b.toUpperCase();return a<b?-1:a>b?1:0});return arr};
+  var h='<div style="background:#fff;border:1px solid #cfd8dc;border-radius:8px;padding:8px 12px;margin:0 0 10px">';
+  h+='<div style="font-size:11px;font-weight:900;color:#37474f;letter-spacing:0.5px;margin-bottom:6px">💶 CADENZA DI PAGAMENTO</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+  for(var k=0;k<CADPAG_OPTS.length;k++){
+    var cat=CADPAG_OPTS[k];var nomi=alfab(gruppi[cat]);
+    h+='<div style="flex:1 1 220px;min-width:200px;border-left:4px solid '+cadColore(cat)+';background:#fafafa;border-radius:4px;padding:5px 9px">';
+    h+='<div style="font-size:10px;font-weight:900;color:'+cadColore(cat)+'">'+cat+' <span style="color:#90a4ae">('+nomi.length+')</span></div>';
+    h+='<div style="font-size:10px;color:#444;line-height:1.4">'+(nomi.length?escHTML(nomi.join(", ")):'<span style="color:#bbb">—</span>')+'</div>';
+    h+='</div>';
+  }
+  if(daImp.length){
+    var nd=alfab(daImp);
+    h+='<div style="flex:1 1 220px;min-width:200px;border-left:4px dashed #90a4ae;background:#fafafa;border-radius:4px;padding:5px 9px">';
+    h+='<div style="font-size:10px;font-weight:900;color:#90a4ae">DA IMPOSTARE <span>('+nd.length+')</span></div>';
+    h+='<div style="font-size:10px;color:#444;line-height:1.4">'+escHTML(nd.join(", "))+'</div>';
+    h+='</div>';
+  }
+  h+='</div></div>';
+  return h;
+}
 function rCov(){
   var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede</p></div><div class="cover-body">';
   var kpis={},allYrs={};
@@ -861,6 +891,8 @@ function rCov(){
   h+='<button class="btn btn-sm" style="background:#00838f;color:#fff" onclick="exportCreditoProgetto()" title="Quanto si deve ancora agli operatori, diviso per progetto, senza compensare positivi e negativi">\ud83d\udcb0 Credito per progetto</button>';
   h+='</div></div>';
   h+='</div>';
+  // ===== POST-IT: cadenza di pagamento, nominativi raggruppati =====
+  h+=rCadenzaBox();
   h+='<div style="display:none">';
   h+='</div>';
   h+='</div><div class="op-grid">';
@@ -882,6 +914,10 @@ function rCov(){
     var aDeb=false;
     for(var yd2=0;yd2<yrs.length;yd2++){var cld=compLiq(op,yrs[yd2]);if(cld&&cld.impRes<0)aDeb=true}
     if(aDeb)h+='<div style="background:#c62828;color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:3px;margin-bottom:3px;display:inline-block">\u26a0 A DEBITO</div>';
+    // Badge cadenza di pagamento
+    var cadC=cadValore(i);
+    if(cadC)h+='<div style="background:'+cadColore(cadC)+';color:#fff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:10px;margin-bottom:4px;display:inline-block">\ud83d\udcb6 '+escHTML(cadC)+'</div>';
+    else h+='<div style="background:#eceff1;color:#90a4ae;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;margin-bottom:4px;display:inline-block;border:1px dashed #cfd8dc">cadenza?</div>';
     h+='<div class="ost">';
     for(var y=0;y<yrs.length;y++){var cl=compLiq(op,yrs[y]);if(!cl)continue;h+='<div class="sv"><div class="sl">Res.'+yrs[y]+'</div><div class="sn'+(cl.oreRes>0?' red':'')+'">'+f2(cl.oreRes)+'h</div></div>'}
     h+='</div></div>';
@@ -2047,6 +2083,26 @@ var ATTO_FIELDS=[
  ["cadenzamento","Cadenzamento pagamento"],["ggPreavviso","Giorni preavviso"],
  ["importoPenale","Importo penale"],["note","Note"]];
 var AMBITO_OPTS=["ISTITUTO/I SCOLASTICO/I","CENTRO/I DI AGGREGAZIONE","SEDE SOCIETARIA","DOMICILIO PROPRIO","STRUTTURE VARIE SUL TERRITORIO"];
+// ===== CADENZA DI PAGAMENTO (dato per-lavoratore, indipendente dal cadenzamento del contratto) =====
+var CADPAG_OPTS=["MENSILE","BIMESTRALE","A RICHIESTA","PERIODICO"];
+function cadColore(v){
+  v=String(v||"").toUpperCase();
+  if(v==="MENSILE")return"#2e7d32";
+  if(v==="BIMESTRALE")return"#e65100";
+  if(v==="A RICHIESTA")return"#1565c0";
+  if(v==="PERIODICO")return"#6a1b9a";
+  return"#90a4ae";
+}
+function cadValore(i){var an=A.d[i]?A.d[i].anag:null;return(an&&an.cadPag)?String(an.cadPag).toUpperCase():""}
+// Deduce una proposta dalla cadenza del contratto corrente. Solo i casi certi; gli altri li lascia decidere all'utente.
+function cadDaContratto(i){
+  var ac=(A.d[i]&&A.d[i].anag&&A.d[i].anag.atti&&A.d[i].anag.atti.length)?attoCorrente(i):null;
+  if(!ac)return"";
+  var c=String(ac.cadenzamento||"").toUpperCase();
+  if(c.indexOf("ENTRO IL GIORNO 20 DEL MESE")>=0)return"MENSILE";
+  if(c.indexOf("UNICA SOLUZIONE")>=0)return"A RICHIESTA";
+  return""; // "due soluzioni" o vuoto: nessuna corrispondenza certa
+}
 var ANAG_FIELDS=PERS_FIELDS.concat(ATTO_FIELDS);
 var TIPO_ATTO_OPTS=["INCARICO INIZIALE","VARIAZIONE","PROROGA","RINNOVO"];
 // Migrazione trasparente: la vecchia anagrafica a valore singolo diventa il primo atto.
@@ -2337,6 +2393,17 @@ function normName(s){
 }
 window._anagAltro={};
 function anagSet(i,f,v){ensureAnag(i)[f]=v;markD()}
+// Imposta la cadenza di pagamento deducendola dal contratto (azione esplicita dell'utente, poi salva)
+function cadDeduci(i){
+  var prop=cadDaContratto(i);
+  if(!prop){
+    alert("Non riesco a dedurre la cadenza dal contratto.\n\nIl contratto corrente non ha un cadenzamento riconoscibile (o prevede due soluzioni annue): scegli tu la cadenza dalla tendina.");
+    return;
+  }
+  ensureAnag(i).cadPag=prop;
+  markD();render();
+  toast("Cadenza impostata: "+prop+". Ricorda ✔ Salva","#2e7d32");
+}
 // Domicilio uguale alla residenza: copia i tre campi, con conferma se il domicilio e' diverso e pieno
 function domComeRes(i){
   var an=ensureAnag(i);
@@ -2472,6 +2539,18 @@ function rAnag(i){
     h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">&nbsp;</label>';
     h+='<button class="btn btn-sm" style="background:#00695c;color:#fff;white-space:nowrap" onclick="domComeRes('+i+')" title="Copia indirizzo, CAP e luogo dalla residenza al domicilio">⇩ Domicilio = residenza</button></div>';
     h+=fld("indDom","Indirizzo domicilio",210)+fld("capDom","CAP",60)+fld("luogoDom","Luogo domicilio",140);
+    h+='</div>';
+    // ===== CADENZA DI PAGAMENTO (per-lavoratore) =====
+    var cadV=an.cadPag||"";
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:14px">';
+    h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Cadenza pagamento</label>';
+    h+='<select onchange="anagSet('+i+',\'cadPag\',this.value);render()" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;padding:3px;min-width:150px">';
+    h+='<option value=""'+(cadV===""?" selected":"")+'>— non impostata —</option>';
+    for(var co=0;co<CADPAG_OPTS.length;co++)h+='<option value="'+CADPAG_OPTS[co]+'"'+(cadV===CADPAG_OPTS[co]?" selected":"")+'>'+CADPAG_OPTS[co]+'</option>';
+    h+='</select></div>';
+    if(cadV)h+='<span style="display:inline-block;background:'+cadColore(cadV)+';color:#fff;font-size:10px;font-weight:900;padding:3px 9px;border-radius:10px">'+escHTML(cadV)+'</span>';
+    h+='<button class="btn btn-sm" style="background:#546e7a;color:#fff;white-space:nowrap" onclick="cadDeduci('+i+')" title="Propone la cadenza leggendo il cadenzamento del contratto corrente (mensile o a richiesta)">↺ Deduci dal contratto</button>';
+    h+='<span style="font-size:10px;color:#90a4ae">Dato indipendente dal contratto: non modifica le lettere.</span>';
     h+='</div>';
     // ===== ATTI =====
     h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">';
