@@ -1084,8 +1084,8 @@ function rYB(idx,yr,ci){
   h+='<span>Importo maturato: <strong>'+fE(cl.dispImp)+'</strong></span>';}
   h+='</div>';
   // REGISTRO LIQUIDAZIONI
-  h+='<div class="sec-lbl" style="background:#B8860B;color:#fff">REGISTRO LIQUIDAZIONI / PAGAMENTI</div>';
-  h+='<table><thead><tr style="background:#edd9a3"><th style="width:25px">N.</th><th style="min-width:90px">Data pag.</th><th>Ore liq.</th><th>\u20ac/h<br><span style="font-size:9px;font-weight:400;font-style:italic">(inserisci importo in funz. della notula per il serv. di attribuzione)</span></th>';
+  h+='<div class="sec-lbl" style="background:#4c8047;color:#fff">REGISTRO LIQUIDAZIONI / PAGAMENTI</div>';
+  h+='<table><thead><tr style="background:#afd6ab"><th style="width:25px">N.</th><th style="min-width:90px">Data pag.</th><th>Ore liq.</th><th>\u20ac/h<br><span style="font-size:9px;font-weight:400;font-style:italic">(inserisci importo in funz. della notula per il serv. di attribuzione)</span></th>';
   h+='<th>Lordo</th><th>Rit. 20%</th><th>Netto</th><th style="width:55px">Rimborso</th><th style="min-width:200px">Attribuzione</th>';
   h+='<th style="font-size:13px;font-weight:900">ORE A CREDITO OPERATORE</th><th style="font-size:13px;font-weight:900">IMPORTO A CREDITO OPERATORE</th><th style="width:25px"></th></tr></thead><tbody>';
   if(cl.rows.length===0)h+='<tr><td colspan="12" style="text-align:center;color:#999;padding:6px">Nessuna liquidazione registrata</td></tr>';
@@ -1972,7 +1972,7 @@ function rMBulk(){
   h+=sel("tipoAtto","Tipo atto",TIPO_ATTO_OPTS)+sel("qualifica","Qualifica",QUALIFICHE)+sel("tipoAmbito","Tipo ambito",AMBITO_OPTS);
   h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
   h+=inp("struttura","Struttura (facoltativa)",190,"es. CASA DI QUARTIERE")+inp("comuneIndirizzo","Comune e indirizzo",210,"es. MILANO MUNICIPIO 1");
-  h+=inp("dataContratto","Data contratto",95,"gg/mm/aaaa")+inp("dataAvvio","Data avvio",95,"gg/mm/aaaa")+inp("dataConclusione","Data conclusione",95,"gg/mm/aaaa");
+  h+=inp("dataContratto","Data contratto",95,"gg/mm/aaaa")+inp("dataAvvio","Data avvio",95,"gg/mm/aaaa")+inp("dataConclusione","Data conclusione",95,"gg/mm/aaaa")+inp("dataProrogaTacita","Proroga tacita fino al",110,"gg/mm/aaaa");
   h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:10px">';
   h+=inp("importoOC","Importo \u20ac (comune)",95,"es. 18,50",true)+sel("corpoOrario","Corpo o orario",CORPO_OPTS)+inp("monteOreTot","Monte ore tot.",85);
   h+=sel("cadenzamento","Cadenzamento",CADENZ_OPTS)+inp("ggPreavviso","GG preavviso",75)+inp("importoPenale","Penale \u20ac",75,"es. 50,00",true);
@@ -2068,7 +2068,7 @@ function meseAnno(m,yr){return MESI_AB[m]+String(yr).substr(2)}
 // ===== ANAGRAFICA =====
 var QUALIFICHE=["INSEGNANTE","INSEGNANTE/ISTRUTTORE","TECNICO ESPERTO E/O ISTRUTTORE PER LABORATORI","ASSISTENTE IN AREA SOCIO-EDUCATIVA","ASSISTENTE IN AREA SOCIO-EDUCATIVA / RICREATIVA","ASSISTENTE EDUCATIVO/LUDICO-EDUCATIVO","ASSISTENTE EDUCATIVO E/O ALLA COMUNICAZIONE","EDUCATORE","ADDETTO ALLE PULIZIE","ADDETTO ALLA CUSTODIA E/O ALLA VIGILANZA","ADDETTO AD ATTIVITA' SEGRETARIALI E/O DI CUSTODIA E VIGILANZA"];
 var CORPO_OPTS=["ORARIO","A CORPO/FORFAIT"];
-var CADENZ_OPTS=["IN UNICA SOLUZIONE: ENTRO 30 GG DA TERMINE CONTRATTUALE","IN DUE SOLUZIONI: ENTRO IL 1 FEBBRAIO ED ENTRO IL 1 LUGLIO SUCCESSIVI ALLA DATA DI AVVIO DEL SERVIZIO","ENTRO IL GIORNO 20 DEL MESE SUCCESSIVO A QUELLO LAVORATO"];
+var CADENZ_OPTS=["IN UNICA SOLUZIONE: ENTRO 30 GG DA TERMINE CONTRATTUALE","IN DUE SOLUZIONI: ENTRO IL 1 FEBBRAIO ED ENTRO IL 1 LUGLIO SUCCESSIVI ALLA DATA DI AVVIO DEL SERVIZIO","IN TRE SOLUZIONI: ENTRO IL 1 FEBBRAIO, IL 1 LUGLIO ED IL 15 SETTEMBRE SUCCESSIVI ALLA DATA DI AVVIO DEL SERVIZIO, PER IL PERIODO PRECEDENTEMENTE LAVORATO","ENTRO IL GIORNO 20 DEL MESE SUCCESSIVO A QUELLO LAVORATO"];
 var PERS_FIELDS=[
  ["cognome","Cognome"],["nome","Nome"],["luogoNascita","Luogo nascita"],["dataNascita","Data nascita"],
  ["sesso","Sesso"],["cf","Codice fiscale"],["email","Email"],
@@ -2078,6 +2078,7 @@ var ATTO_FIELDS=[
  ["tipoAtto","Tipo atto"],["qualifica","Qualifica"],
  ["tipoAmbito","Tipo ambito"],["struttura","Struttura"],["comuneIndirizzo","Comune e indirizzo"],
  ["dataContratto","Data contratto"],["dataAvvio","Data avvio"],["dataConclusione","Data conclusione"],
+ ["dataProrogaTacita","Proroga tacita fino al"],
  ["monteOreTot","Monte ore totale"],
  ["importoOC","Importo orario o corpo"],["corpoOrario","Corpo o orario"],
  ["cadenzamento","Cadenzamento pagamento"],["ggPreavviso","Giorni preavviso"],
@@ -2243,6 +2244,7 @@ function mergeMap(i,idx){
   m.COMUNE_INDIRIZZO=at.comuneIndirizzo||"";
   m.DATA_AVVIO=dataEstesa(at.dataAvvio);
   m.DATA_CONCLUSIONE=dataEstesa(at.dataConclusione);
+  m.DATA_PROROGA_TACITA=dataEstesa(at.dataProrogaTacita);
   m.DATA_CONTRATTO=dataEstesa(at.dataContratto);
   m.IMPORTO=numEuro(at.importoOC);
   var corpo=String(at.corpoOrario||"").toUpperCase();
@@ -2598,7 +2600,7 @@ function rAnag(i){
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Tipo ambito</label>'+attoSelHTML(i,a,"tipoAmbito",AMBITO_OPTS)+'</div>';
         h+=af("struttura","Struttura (facoltativa)",210,"es. SCUOLA DELL\'INFANZIA")+af("comuneIndirizzo","Comune e indirizzo",230,"es. COLZATE / BG V. ROMA");
         h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
-        h+=af("dataContratto","Data contratto",90,"gg/mm/aaaa")+af("dataAvvio","Data avvio",90,"gg/mm/aaaa")+af("dataConclusione","Data conclusione",90,"gg/mm/aaaa");
+        h+=af("dataContratto","Data contratto",90,"gg/mm/aaaa")+af("dataAvvio","Data avvio",90,"gg/mm/aaaa")+af("dataConclusione","Data conclusione",90,"gg/mm/aaaa")+af("dataProrogaTacita","Proroga tacita fino al",110,"gg/mm/aaaa");
         h+=af("monteOreTot","Monte ore tot.",80)+af("importoOC","Importo \u20ac",80);
         h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">';
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Corpo o orario</label>'+attoSelHTML(i,a,"corpoOrario",CORPO_OPTS)+'</div>';
@@ -2655,7 +2657,7 @@ function importAnagFile(inp){
 function applyAnagRows(rows){
   if(!rows||rows.length<2){alert("Excel vuoto o senza intestazioni.");return}
   var hd=rows[0];var col={};
-  var want={"COGNOME":"cognome","NOME":"nome","LUOGO NASCITA":"luogoNascita","DATA NASCITA":"dataNascita","CODICE FISCALE":"cf","INDIRIZZO RESIDENZA":"indRes","CAP RESIDENZA":"capRes","LUOGO RESIDENZA":"luogoRes","INDIRIZZO DOMICILIO":"indDom","CAP DOMICILIO":"capDom","LUOGO DOMICILIO":"luogoDom","QUALIFICA":"qualifica","STRUTTURA E/O LOCALITA' E/O INDIRIZZO":"struttura","TIPO AMBITO":"tipoAmbito","COMUNE E INDIRIZZO":"comuneIndirizzo","DATA CONTRATTO":"dataContratto","DATA AVVIO":"dataAvvio","DATA CONCLUSIONE":"dataConclusione","MONTE ORE TOTALE":"monteOreTot","IMPORTO ORARIO O CORPO":"importoOC","CORPO O ORARIO?":"corpoOrario","CADENZAMENTO PAGAMENTO":"cadenzamento","GIORNI DI PREAVVISO":"ggPreavviso","IMPORTO PENALE":"importoPenale","INDIRIZZO EMAIL":"email","NOTE":"note"};
+  var want={"COGNOME":"cognome","NOME":"nome","LUOGO NASCITA":"luogoNascita","DATA NASCITA":"dataNascita","CODICE FISCALE":"cf","INDIRIZZO RESIDENZA":"indRes","CAP RESIDENZA":"capRes","LUOGO RESIDENZA":"luogoRes","INDIRIZZO DOMICILIO":"indDom","CAP DOMICILIO":"capDom","LUOGO DOMICILIO":"luogoDom","QUALIFICA":"qualifica","STRUTTURA E/O LOCALITA' E/O INDIRIZZO":"struttura","TIPO AMBITO":"tipoAmbito","COMUNE E INDIRIZZO":"comuneIndirizzo","DATA CONTRATTO":"dataContratto","DATA AVVIO":"dataAvvio","DATA CONCLUSIONE":"dataConclusione","PROROGA TACITA FINO AL":"dataProrogaTacita","MONTE ORE TOTALE":"monteOreTot","IMPORTO ORARIO O CORPO":"importoOC","CORPO O ORARIO?":"corpoOrario","CADENZAMENTO PAGAMENTO":"cadenzamento","GIORNI DI PREAVVISO":"ggPreavviso","IMPORTO PENALE":"importoPenale","INDIRIZZO EMAIL":"email","NOTE":"note"};
   for(var c=0;c<hd.length;c++){
     var hh=String(hd[c]||"").replace(/\s+/g," ").replace(/^\s+|\s+$/g,"").toUpperCase();
     if(want[hh])col[want[hh]]=c;
