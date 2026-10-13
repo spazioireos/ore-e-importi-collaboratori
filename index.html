@@ -404,6 +404,12 @@ function parseDT(s){
   if(!s)return null;
   s=String(s).trim();
   var m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(!m){
+    // Accetta anche date senza separatori: 11022025 -> 11/02/2025 ; 110225 -> 11/02/2025
+    var only=s.replace(/\D/g,"");
+    if(only.length===8)m=[s,only.slice(0,2),only.slice(2,4),only.slice(4,8)];
+    else if(only.length===6)m=[s,only.slice(0,2),only.slice(2,4),only.slice(4,6)];
+  }
   if(m){var d=parseInt(m[1],10),mo=parseInt(m[2],10),y=parseInt(m[3],10);
     if(y<100)y+=2000;
     if(d<1||d>31||mo<1||mo>12)return null;
@@ -1466,6 +1472,20 @@ function bulkSetCampo(f,v){
   }
   bulkScrollSalva();bozzaScrivi();render();bulkScrollRipristina();
 }
+// Atto in blocco: spunta proroga tacita
+function bulkProrogaFlag(checked){
+  if(!A.bulk)return;
+  A.bulk.campi.prorogaFlag=!!checked;
+  if(!checked)A.bulk.campi.dataProrogaTacita="";
+  bulkScrollSalva();bozzaScrivi();render();bulkScrollRipristina();
+}
+// Atto in blocco: modalita' monte ore
+function bulkMonteMode(mode){
+  if(!A.bulk)return;
+  if(mode==="ND")A.bulk.campi.monteOreTot="";
+  else{if(!(A.bulk.campi.monteOreTot&&String(A.bulk.campi.monteOreTot).trim()))A.bulk.campi.monteOreTot="0"}
+  bulkScrollSalva();bozzaScrivi();render();bulkScrollRipristina();
+}
 // Salvataggio a ogni tasto digitato, senza ridisegnare: il cursore resta dove sta.
 function bulkLive(f,v){
   if(!A.bulk)return;
@@ -1943,6 +1963,10 @@ function rMBulk(){
     var fine=euro?"bulkSetEuro":"bulkSetCampo";
     return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(c[f]||"")+'" placeholder="'+(ph||"")+'" style="width:'+(w||130)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" oninput="bulkLive(\''+f+'\',this.value)" onchange="'+fine+'(\''+f+'\',this.value)"></div>';
   };
+  // variante data (auto-slash)
+  var inpD=function(f,lbl,w){
+    return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(c[f]||"")+'" placeholder="gg/mm/aaaa" style="width:'+(w||95)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" oninput="bulkLive(\''+f+'\',this.value)" onchange="this.value=normDT(this.value);bulkSetCampo(\''+f+'\',this.value)"></div>';
+  };
   var sel=function(f,lbl,opts){
     var v=c[f]||"";
     var h2='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label>';
@@ -1972,9 +1996,21 @@ function rMBulk(){
   h+=sel("tipoAtto","Tipo atto",TIPO_ATTO_OPTS)+sel("qualifica","Qualifica",QUALIFICHE)+sel("tipoAmbito","Tipo ambito",AMBITO_OPTS);
   h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
   h+=inp("struttura","Struttura (facoltativa)",190,"es. CASA DI QUARTIERE")+inp("comuneIndirizzo","Comune e indirizzo",210,"es. MILANO MUNICIPIO 1");
-  h+=inp("dataContratto","Data contratto",95,"gg/mm/aaaa")+inp("dataAvvio","Data avvio",95,"gg/mm/aaaa")+inp("dataConclusione","Data conclusione",95,"gg/mm/aaaa")+inp("dataProrogaTacita","Proroga tacita fino al",110,"gg/mm/aaaa");
+  h+=inpD("dataContratto","Data contratto",95)+inpD("dataAvvio","Data avvio",95)+inpD("dataConclusione","Data conclusione",95);
+  // Proroga tacita in blocco: spunta + data condizionale
+  var bPr=(c.prorogaFlag===true);
+  h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Proroga tacita</label>';
+  h+='<label style="display:flex;align-items:center;gap:4px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 6px;cursor:pointer"><input type="checkbox"'+(bPr?" checked":"")+' onchange="bulkProrogaFlag(this.checked)" style="cursor:pointer"> s\u00ec</label></div>';
+  if(bPr)h+=inpD("dataProrogaTacita","Proroga tacita fino al",110);
   h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:10px">';
-  h+=inp("importoOC","Importo \u20ac (comune)",95,"es. 18,50",true)+sel("corpoOrario","Corpo o orario",CORPO_OPTS)+inp("monteOreTot","Monte ore tot.",85);
+  // Monte ore in blocco: tendina ND / numero
+  var bMo=(c.monteOreTot!==undefined&&c.monteOreTot!==null&&String(c.monteOreTot).trim()!=="");
+  h+=inp("importoOC","Importo \u20ac (comune)",95,"es. 18,50",true)+sel("corpoOrario","Corpo o orario",CORPO_OPTS);
+  h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Monte ore</label>';
+  h+='<select onchange="bulkMonteMode(this.value)" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;padding:3px;max-width:230px">';
+  h+='<option value="ND"'+(!bMo?" selected":"")+'>NON DETERMINATO PREVENTIVAMENTE</option>';
+  h+='<option value="NUM"'+(bMo?" selected":"")+'>NUMERO DI ORE</option></select></div>';
+  if(bMo)h+=inp("monteOreTot","N. ore",70);
   h+=sel("cadenzamento","Cadenzamento",CADENZ_OPTS)+inp("ggPreavviso","GG preavviso",75)+inp("importoPenale","Penale \u20ac",75,"es. 50,00",true);
   h+='</div>';
   h+='<div style="display:flex;align-items:center;gap:10px;margin:10px 0 4px">';
@@ -2085,16 +2121,25 @@ var ATTO_FIELDS=[
  ["importoPenale","Importo penale"],["note","Note"]];
 var AMBITO_OPTS=["ISTITUTO/I SCOLASTICO/I","CENTRO/I DI AGGREGAZIONE","SEDE SOCIETARIA","DOMICILIO PROPRIO","STRUTTURE VARIE SUL TERRITORIO"];
 // ===== CADENZA DI PAGAMENTO (dato per-lavoratore, indipendente dal cadenzamento del contratto) =====
-var CADPAG_OPTS=["MENSILE","BIMESTRALE","A RICHIESTA","PERIODICO"];
+var CADPAG_OPTS=["MENSILE","BIMESTRALE","A RICHIESTA","01FEB/01LUG","01FEB/01LUG/15SET"];
 function cadColore(v){
   v=String(v||"").toUpperCase();
   if(v==="MENSILE")return"#2e7d32";
   if(v==="BIMESTRALE")return"#e65100";
   if(v==="A RICHIESTA")return"#1565c0";
+  if(v==="01FEB/01LUG")return"#6a1b9a";
+  if(v==="01FEB/01LUG/15SET")return"#00838f";
   if(v==="PERIODICO")return"#6a1b9a";
   return"#90a4ae";
 }
 function cadValore(i){var an=A.d[i]?A.d[i].anag:null;return(an&&an.cadPag)?String(an.cadPag).toUpperCase():""}
+// Proroga tacita attiva? Flag esplicito; per gli atti preesistenti: attiva se c'e' gia' una data di proroga.
+function prorogaAttiva(at){
+  if(!at)return false;
+  if(at.prorogaFlag===true)return true;
+  if(at.prorogaFlag===false)return false;
+  return !!(at.dataProrogaTacita&&String(at.dataProrogaTacita).trim());
+}
 // Deduce una proposta dalla cadenza del contratto corrente. Solo i casi certi; gli altri li lascia decidere all'utente.
 function cadDaContratto(i){
   var ac=(A.d[i]&&A.d[i].anag&&A.d[i].anag.atti&&A.d[i].anag.atti.length)?attoCorrente(i):null;
@@ -2142,6 +2187,10 @@ function attoCorrente(i){
   return best;
 }
 function attoSet(i,idx,f,v){var atti=getAtti(i);if(!atti[idx])return;atti[idx][f]=v;markD()}
+// Spunta proroga tacita: se tolta, svuoto anche la data per chiarezza
+function attoProrogaFlag(i,idx,checked){var atti=getAtti(i);if(!atti[idx])return;atti[idx].prorogaFlag=!!checked;if(!checked)atti[idx].dataProrogaTacita="";markD();render()}
+// Modalita' monte ore: ND = non determinato (vuoto) ; NUM = numero (metto "0" cosi' compare la casella)
+function attoMonteMode(i,idx,mode){var atti=getAtti(i);if(!atti[idx])return;if(mode==="ND")atti[idx].monteOreTot="";else{if(!(atti[idx].monteOreTot&&String(atti[idx].monteOreTot).trim()))atti[idx].monteOreTot="0"}markD();render()}
 function attoAdd(i){
   var atti=getAtti(i);
   atti.push({tipoAtto:atti.length===0?"INCARICO INIZIALE":"VARIAZIONE"});
@@ -2245,6 +2294,12 @@ function mergeMap(i,idx){
   m.DATA_AVVIO=dataEstesa(at.dataAvvio);
   m.DATA_CONCLUSIONE=dataEstesa(at.dataConclusione);
   m.DATA_PROROGA_TACITA=dataEstesa(at.dataProrogaTacita);
+  // Clausola proroga condizionale: frase completa se flaggata, altrimenti formula alternativa
+  if(prorogaAttiva(at)){
+    m.CLAUSOLA_PROROGA="Alla scadenza il contratto si intenderà tacitamente prorogato alle medesime condizioni economiche e normative fino al "+dataEstesa(at.dataProrogaTacita)+", salvo che una delle parti ne comunichi all’altra la cessazione, anche a mezzo email o messaggistica, entro il "+dataEstesa(at.dataConclusione)+".";
+  }else{
+    m.CLAUSOLA_PROROGA="Alla scadenza il contratto cesserà automaticamente, senza necessità di disdetta e senza proroga o rinnovo taciti.";
+  }
   m.DATA_CONTRATTO=dataEstesa(at.dataContratto);
   m.IMPORTO=numEuro(at.importoOC);
   var corpo=String(at.corpoOrario||"").toUpperCase();
@@ -2516,10 +2571,15 @@ function rAnag(i){
       var v=an[f]||"";
       return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="'+(ph||"")+'" style="width:'+(w||150)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="anagSet('+i+',\''+f+'\',this.value)"></div>';
     };
+    // variante data (auto-slash)
+    var fldD=function(f,lbl,w){
+      var v=an[f]||"";
+      return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="gg/mm/aaaa" style="width:'+(w||90)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="this.value=normDT(this.value);anagSet('+i+',\''+f+'\',this.value)"></div>';
+    };
     h+='<div style="padding:10px 14px">';
     h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin-bottom:5px">DATI PERSONALI</div>';
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
-    h+=fld("cognome","Cognome",140)+fld("nome","Nome",140)+fld("luogoNascita","Luogo nascita",160)+fld("dataNascita","Data nascita",90,"gg/mm/aaaa");
+    h+=fld("cognome","Cognome",140)+fld("nome","Nome",140)+fld("luogoNascita","Luogo nascita",160)+fldD("dataNascita","Data nascita",90);
     var sx=an.sesso||"";
     h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Sesso</label>';
     h+='<select onchange="anagSet('+i+',\'sesso\',this.value);render()" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;padding:3px;width:60px">';
@@ -2592,6 +2652,11 @@ function rAnag(i){
           var v=at[f]||"";
           return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="'+(ph||"")+'" style="width:'+(w||150)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="attoSet('+i+','+a+',\''+f+'\',this.value)"></div>';
         };
+        // variante data: normalizza 11022025 -> 11/02/2025 all'uscita dal campo
+        var afD=function(f,lbl,w){
+          var v=at[f]||"";
+          return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="gg/mm/aaaa" style="width:'+(w||90)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="this.value=normDT(this.value);attoSet('+i+','+a+',\''+f+'\',this.value)"></div>';
+        };
         h+='<div style="padding:8px 10px;background:#fff">';
         h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Tipo atto</label>'+attoSelHTML(i,a,"tipoAtto",TIPO_ATTO_OPTS)+'</div>';
@@ -2600,8 +2665,21 @@ function rAnag(i){
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Tipo ambito</label>'+attoSelHTML(i,a,"tipoAmbito",AMBITO_OPTS)+'</div>';
         h+=af("struttura","Struttura (facoltativa)",210,"es. SCUOLA DELL\'INFANZIA")+af("comuneIndirizzo","Comune e indirizzo",230,"es. COLZATE / BG V. ROMA");
         h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
-        h+=af("dataContratto","Data contratto",90,"gg/mm/aaaa")+af("dataAvvio","Data avvio",90,"gg/mm/aaaa")+af("dataConclusione","Data conclusione",90,"gg/mm/aaaa")+af("dataProrogaTacita","Proroga tacita fino al",110,"gg/mm/aaaa");
-        h+=af("monteOreTot","Monte ore tot.",80)+af("importoOC","Importo \u20ac",80);
+        h+=afD("dataContratto","Data contratto",90)+afD("dataAvvio","Data avvio",90)+afD("dataConclusione","Data conclusione",90);
+        // Proroga tacita: spunta facoltativa + data visibile solo se spuntata
+        var prFlag=prorogaAttiva(at);
+        h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Proroga tacita</label>';
+        h+='<label style="display:flex;align-items:center;gap:4px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 6px;cursor:pointer"><input type="checkbox"'+(prFlag?" checked":"")+' onchange="attoProrogaFlag('+i+','+a+',this.checked)" style="cursor:pointer"> s\u00ec</label></div>';
+        if(prFlag)h+=afD("dataProrogaTacita","Proroga tacita fino al",110);
+        h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
+        // Monte ore: tendina NON DETERMINATO / numero
+        var moHas=(at.monteOreTot!==undefined&&at.monteOreTot!==null&&String(at.monteOreTot).trim()!=="");
+        h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Monte ore</label>';
+        h+='<select onchange="attoMonteMode('+i+','+a+',this.value)" style="font-size:11px;font-family:\'Inter\',sans-serif;border:1px solid #f59e0b;border-radius:3px;background:#fff9c4;padding:3px;max-width:230px">';
+        h+='<option value="ND"'+(!moHas?" selected":"")+'>NON DETERMINATO PREVENTIVAMENTE</option>';
+        h+='<option value="NUM"'+(moHas?" selected":"")+'>NUMERO DI ORE</option></select></div>';
+        if(moHas)h+=af("monteOreTot","N. ore",70);
+        h+=af("importoOC","Importo \u20ac",80);
         h+='</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start">';
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Corpo o orario</label>'+attoSelHTML(i,a,"corpoOrario",CORPO_OPTS)+'</div>';
         h+='<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">Cadenzamento pagamento</label>'+attoSelHTML(i,a,"cadenzamento",CADENZ_OPTS)+'</div>';
