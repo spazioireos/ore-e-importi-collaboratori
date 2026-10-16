@@ -711,6 +711,7 @@ function render(){
   if(A.modal==="newop")el.innerHTML+=rMNO();
   if(A.modal==="newyr")el.innerHTML+=rMNY();
   if(A.modal==="report")el.innerHTML+=rMReport();
+  if(A.modal==="mensile")el.innerHTML+=rMMensile();
   if(A.modal==="bulk"&&A.bulk)el.innerHTML+=rMBulk();
   if(A.modal==="modello")el.innerHTML+=rMModello();
   if(A.modal==="nomi"&&A.nomi)el.innerHTML+=rMNomi();
@@ -894,6 +895,7 @@ function rCov(){
   var aYrs=Object.keys(allYrs).sort();
   for(var y=0;y<aYrs.length;y++)h+='<button class="btn btn-xls btn-sm" onclick="exportYear(\''+aYrs[y]+'\')">\u2b07 Excel '+aYrs[y]+'</button>';
   h+='<button class="btn btn-sm" style="background:#00695c;color:#fff" onclick="A.modal=\'report\';render()" title="Riepilogo delle liquidazioni in un intervallo di date">\ud83d\udcca Per data</button>';
+  h+='<button class="btn btn-sm" style="background:#2e7d32;color:#fff" onclick="A.modal=\'mensile\';render()" title="Quanto lordo, ritenuta e netto risultano pagati ogni mese su tutti gli operatori">\ud83d\udcc5 Per mese</button>';
   h+='<button class="btn btn-sm" style="background:#00838f;color:#fff" onclick="exportCreditoProgetto()" title="Quanto si deve ancora agli operatori, diviso per progetto, senza compensare positivi e negativi">\ud83d\udcb0 Credito per progetto</button>';
   h+='</div></div>';
   h+='</div>';
@@ -2095,6 +2097,151 @@ function doReport(){
   if(_repMode==="single"){var d=document.getElementById("repFrom").value.trim();if(!d){alert("Inserire la data");return;}exportByDate(d,d);}
   else{var f=document.getElementById("repFrom2").value.trim();var t=document.getElementById("repTo").value.trim();if(!f||!t){alert("Inserire entrambe le date");return;}exportByDate(f,t);}
   A.modal=null;render();
+}
+// ===== RIEPILOGO MENSILE DEI COMPENSI (tutti gli operatori) =====
+// Stessa logica per-pagamento del report "Per data": compenso normale -> lordo/ritenuta/netto;
+// rimborso -> escluso da lordo e ritenuta, il netto pieno confluisce nel Netto.
+function calcMensile(){
+  var map={};var senza={lordo:0,rit:0,netto:0,rimb:0,n:0};
+  for(var i=0;i<A.d.length;i++){
+    var op=A.d[i];var yrs=gY(op);
+    for(var y=0;y<yrs.length;y++){
+      var pays=(op.years[yrs[y]].payments)||[];
+      for(var p=0;p<pays.length;p++){
+        var pr=pays[p];
+        var h=parseFloat(pr.hours)||0;var rt=parseFloat(pr.rate)||0;
+        var calcL=rM(h*rt);var isR=pr.rimborso===true;
+        var lordo=isR?0:calcL;
+        var rit=isR?0:rM(calcL*0.20);
+        var netto=isR?calcL:rM(calcL-rM(calcL*0.20));
+        var pk=dtKey(pr.date);
+        var b;
+        if(!pk){b=senza;}
+        else{var mk=pk.substring(0,7);if(!map[mk])map[mk]={lordo:0,rit:0,netto:0,rimb:0,n:0};b=map[mk];}
+        b.lordo=rM(b.lordo+lordo);b.rit=rM(b.rit+rit);b.netto=rM(b.netto+netto);
+        if(isR)b.rimb=rM(b.rimb+netto);
+        b.n++;
+      }
+    }
+  }
+  return{map:map,senza:senza};
+}
+function meseLabel(mk){
+  var yr=mk.substring(0,4);var mo=parseInt(mk.substring(5,7),10)-1;
+  return MESI_IT[mo]+" "+yr;
+}
+function rMMensile(){
+  var d=calcMensile();var map=d.map;var senza=d.senza;
+  var keys=Object.keys(map).sort();
+  var anyRimb=senza.rimb>0;for(var kk=0;kk<keys.length;kk++){if(map[keys[kk]].rimb>0)anyRimb=true;}
+  var byYear={};for(var k2=0;k2<keys.length;k2++){var yr=keys[k2].substring(0,4);if(!byYear[yr])byYear[yr]=[];byYear[yr].push(keys[k2]);}
+  var years=Object.keys(byYear).sort();
+  var h='<div class="modal-overlay" onclick="if(event.target===this){A.modal=null;render()}" onkeydown="if(event.key===\'Escape\'){A.modal=null;render()}">';
+  h+='<div class="modal" role="dialog" aria-modal="true" style="width:720px;max-width:97vw;max-height:92vh;overflow-y:auto">';
+  h+='<h3 style="margin:0 0 2px">📅 Riepilogo mensile dei compensi</h3>';
+  h+='<p style="font-size:11px;color:#666;margin:0 0 10px">Quanto lordo, ritenuta (20%) e netto risultano pagati ogni mese, su tutti gli operatori, in base alle liquidazioni registrate.</p>';
+  var cols=anyRimb?6:5;
+  h+='<table style="border-collapse:collapse;width:100%;font-size:12px">';
+  h+='<thead><tr style="background:#4c8047;color:#fff">';
+  h+='<th style="padding:6px 8px;text-align:left">Mese</th>';
+  h+='<th style="padding:6px 8px;text-align:right">Lordo</th>';
+  h+='<th style="padding:6px 8px;text-align:right">Ritenuta 20%</th>';
+  h+='<th style="padding:6px 8px;text-align:right">Netto</th>';
+  if(anyRimb)h+='<th style="padding:6px 8px;text-align:right">di cui rimborsi</th>';
+  h+='<th style="padding:6px 8px;text-align:center">Liq.</th>';
+  h+='</tr></thead><tbody>';
+  var gL=0,gR=0,gN=0,gRi=0,gn=0;
+  if(keys.length===0&&senza.n===0){
+    h+='<tr><td colspan="'+cols+'" style="padding:14px;text-align:center;color:#888">Nessuna liquidazione registrata</td></tr>';
+  }
+  for(var yi=0;yi<years.length;yi++){
+    var yk=years[yi];var mks=byYear[yk];
+    var yL=0,yR=0,yN=0,yRi=0,yn=0;
+    for(var mi=0;mi<mks.length;mi++){
+      var mk=mks[mi];var b=map[mk];
+      h+='<tr style="background:'+(mi%2?'#f4f9f3':'#fff')+';border-bottom:1px solid #e8f0e7">';
+      h+='<td style="padding:5px 8px">'+meseLabel(mk)+'</td>';
+      h+='<td style="padding:5px 8px;text-align:right">'+fE(b.lordo)+'</td>';
+      h+='<td style="padding:5px 8px;text-align:right">'+fE(b.rit)+'</td>';
+      h+='<td style="padding:5px 8px;text-align:right;font-weight:700">'+fE(b.netto)+'</td>';
+      if(anyRimb)h+='<td style="padding:5px 8px;text-align:right;color:#00695c">'+(b.rimb?fE(b.rimb):'')+'</td>';
+      h+='<td style="padding:5px 8px;text-align:center;color:#607d8b">'+b.n+'</td>';
+      h+='</tr>';
+      yL=rM(yL+b.lordo);yR=rM(yR+b.rit);yN=rM(yN+b.netto);yRi=rM(yRi+b.rimb);yn+=b.n;
+    }
+    h+='<tr style="background:#afd6ab;font-weight:900;border-bottom:2px solid #4c8047">';
+    h+='<td style="padding:5px 8px">Totale '+yk+'</td>';
+    h+='<td style="padding:5px 8px;text-align:right">'+fE(yL)+'</td>';
+    h+='<td style="padding:5px 8px;text-align:right">'+fE(yR)+'</td>';
+    h+='<td style="padding:5px 8px;text-align:right">'+fE(yN)+'</td>';
+    if(anyRimb)h+='<td style="padding:5px 8px;text-align:right">'+(yRi?fE(yRi):'')+'</td>';
+    h+='<td style="padding:5px 8px;text-align:center">'+yn+'</td>';
+    h+='</tr>';
+    gL=rM(gL+yL);gR=rM(gR+yR);gN=rM(gN+yN);gRi=rM(gRi+yRi);gn+=yn;
+  }
+  if(senza.n>0){
+    h+='<tr style="background:#fff3e0;border-bottom:1px solid #ffcc80">';
+    h+='<td style="padding:5px 8px;color:#e65100;font-weight:700">Senza data</td>';
+    h+='<td style="padding:5px 8px;text-align:right">'+fE(senza.lordo)+'</td>';
+    h+='<td style="padding:5px 8px;text-align:right">'+fE(senza.rit)+'</td>';
+    h+='<td style="padding:5px 8px;text-align:right;font-weight:700">'+fE(senza.netto)+'</td>';
+    if(anyRimb)h+='<td style="padding:5px 8px;text-align:right">'+(senza.rimb?fE(senza.rimb):'')+'</td>';
+    h+='<td style="padding:5px 8px;text-align:center;color:#607d8b">'+senza.n+'</td>';
+    h+='</tr>';
+    gL=rM(gL+senza.lordo);gR=rM(gR+senza.rit);gN=rM(gN+senza.netto);gRi=rM(gRi+senza.rimb);gn+=senza.n;
+  }
+  if(keys.length>0||senza.n>0){
+    h+='<tr style="background:#2e4d2a;color:#fff;font-weight:900;font-size:13px">';
+    h+='<td style="padding:7px 8px">TOTALE GENERALE</td>';
+    h+='<td style="padding:7px 8px;text-align:right">'+fE(gL)+'</td>';
+    h+='<td style="padding:7px 8px;text-align:right">'+fE(gR)+'</td>';
+    h+='<td style="padding:7px 8px;text-align:right">'+fE(gN)+'</td>';
+    if(anyRimb)h+='<td style="padding:7px 8px;text-align:right">'+(gRi?fE(gRi):'')+'</td>';
+    h+='<td style="padding:7px 8px;text-align:center">'+gn+'</td>';
+    h+='</tr>';
+  }
+  h+='</tbody></table>';
+  h+='<p style="font-size:10px;color:#90a4ae;margin:8px 0 0">Raggruppamento per mese della data di pagamento. I rimborsi spese (se presenti) sono esclusi da lordo e ritenuta; il loro netto è incluso nella colonna Netto.</p>';
+  h+='<div class="ma" style="margin-top:12px">';
+  h+='<button class="btn btn-back" onclick="A.modal=null;render()">Chiudi</button>';
+  h+='<button class="btn btn-xls" onclick="exportMensile()">⬇ Excel</button>';
+  h+='</div></div></div>';
+  return h;
+}
+function exportMensile(){
+  if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return}
+  try{
+    var d=calcMensile();var map=d.map;var senza=d.senza;
+    var keys=Object.keys(map).sort();
+    var anyRimb=senza.rimb>0;for(var kk=0;kk<keys.length;kk++){if(map[keys[kk]].rimb>0)anyRimb=true;}
+    var byYear={};for(var k2=0;k2<keys.length;k2++){var yr=keys[k2].substring(0,4);if(!byYear[yr])byYear[yr]=[];byYear[yr].push(keys[k2]);}
+    var years=Object.keys(byYear).sort();
+    var head=["Mese","Lordo","Ritenuta 20%","Netto"];if(anyRimb)head.push("di cui rimborsi");head.push("N. liquidazioni");
+    var aoa=[["RIEPILOGO MENSILE DEI COMPENSI (tutti gli operatori)"],
+      ["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],head];
+    var gL=0,gR=0,gN=0,gRi=0,gn=0;
+    for(var yi=0;yi<years.length;yi++){
+      var yk=years[yi];var mks=byYear[yk];var yL=0,yR=0,yN=0,yRi=0,yn=0;
+      for(var mi=0;mi<mks.length;mi++){
+        var mk=mks[mi];var b=map[mk];
+        var row=[meseLabel(mk),b.lordo,b.rit,b.netto];if(anyRimb)row.push(b.rimb);row.push(b.n);
+        aoa.push(row);
+        yL=rM(yL+b.lordo);yR=rM(yR+b.rit);yN=rM(yN+b.netto);yRi=rM(yRi+b.rimb);yn+=b.n;
+      }
+      var sub=["Totale "+yk,yL,yR,yN];if(anyRimb)sub.push(yRi);sub.push(yn);aoa.push(sub);aoa.push([]);
+      gL=rM(gL+yL);gR=rM(gR+yR);gN=rM(gN+yN);gRi=rM(gRi+yRi);gn+=yn;
+    }
+    if(senza.n>0){var sr=["Senza data",senza.lordo,senza.rit,senza.netto];if(anyRimb)sr.push(senza.rimb);sr.push(senza.n);aoa.push(sr);
+      gL=rM(gL+senza.lordo);gR=rM(gR+senza.rit);gN=rM(gN+senza.netto);gRi=rM(gRi+senza.rimb);gn+=senza.n;}
+    var tot=["TOTALE GENERALE",gL,gR,gN];if(anyRimb)tot.push(gRi);tot.push(gn);aoa.push([]);aoa.push(tot);
+    var ws=XLSX.utils.aoa_to_sheet(aoa);
+    var wcols=[{wch:16},{wch:14},{wch:14},{wch:14}];if(anyRimb)wcols.push({wch:14});wcols.push({wch:16});ws["!cols"]=wcols;
+    var wb=XLSX.utils.book_new();wb.Props={Author:"Christian Canonica",Title:"Riepilogo mensile compensi"};
+    XLSX.utils.book_append_sheet(wb,ws,"Riepilogo mensile");
+    var dt=new Date();var p=function(n){return n<10?"0"+n:""+n};
+    XLSX.writeFile(wb,"Riepilogo_Mensile_Compensi_"+p(dt.getDate())+p(dt.getMonth()+1)+dt.getFullYear()+"_Spazio_Ireos.xlsx");
+    toast("Riepilogo mensile scaricato","#1b5e20");
+  }catch(e){toast("Errore export: "+e.message,"#c62828")}
 }
 // ACTIONS
 function addSvc(idx,yr){var yd=A.d[idx].years[yr];if(!yd.services)yd.services=[];yd.services.push(eSvc(yd.default_rate||18));markD();render()}
