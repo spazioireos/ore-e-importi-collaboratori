@@ -720,6 +720,13 @@ function render(){
   if(pickerFor)el.innerHTML+=rPicker();
   if(A.modal==="bulk"&&A.bulk)bulkScrollRipristina();
 }
+function searchInput(inp){
+  var pos=inp.selectionStart;
+  A.q=inp.value;
+  render();
+  var el=document.getElementById('qSearch');
+  if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}
+}
 function rPicker(){
   var cur=colorMap[pickerFor]||"";
   var h='<div class="modal-overlay" onclick="if(event.target===this){closePicker()}"><div class="modal" onclick="event.stopPropagation()" style="max-width:340px">';
@@ -826,24 +833,15 @@ function rCadenzaBox(){
     else daImp.push(nm);
   }
   var alfab=function(arr){arr.sort(function(a,b){a=a.toUpperCase();b=b.toUpperCase();return a<b?-1:a>b?1:0});return arr};
-  var h='<div style="background:#fff;border:1px solid #cfd8dc;border-radius:8px;padding:8px 12px;margin:0 0 10px">';
-  h+='<div style="font-size:11px;font-weight:900;color:#37474f;letter-spacing:0.5px;margin-bottom:6px">💶 CADENZA DI PAGAMENTO</div>';
-  h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
-  for(var k=0;k<CADPAG_OPTS.length;k++){
-    var cat=CADPAG_OPTS[k];var nomi=alfab(gruppi[cat]);
-    h+='<div style="flex:1 1 220px;min-width:200px;border-left:4px solid '+cadColore(cat)+';background:#fafafa;border-radius:4px;padding:5px 9px">';
-    h+='<div style="font-size:10px;font-weight:900;color:'+cadColore(cat)+'">'+cat+' <span style="color:#90a4ae">('+nomi.length+')</span></div>';
-    h+='<div style="font-size:10px;color:#444;line-height:1.4">'+(nomi.length?escHTML(nomi.join(", ")):'<span style="color:#bbb">—</span>')+'</div>';
-    h+='</div>';
-  }
-  if(daImp.length){
-    var nd=alfab(daImp);
-    h+='<div style="flex:1 1 220px;min-width:200px;border-left:4px dashed #90a4ae;background:#fafafa;border-radius:4px;padding:5px 9px">';
-    h+='<div style="font-size:10px;font-weight:900;color:#90a4ae">DA IMPOSTARE <span>('+nd.length+')</span></div>';
-    h+='<div style="font-size:10px;color:#444;line-height:1.4">'+escHTML(nd.join(", "))+'</div>';
-    h+='</div>';
-  }
-  h+='</div></div>';
+  var pill=function(lab,nomi,col,dash){
+    var t=(nomi&&nomi.length)?escHTML(nomi.join(", ")):"nessuno";
+    return '<span title="'+t+'" style="display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;color:'+col+';background:#fafafa;border:1px '+(dash?"dashed":"solid")+' '+col+';border-radius:12px;padding:3px 10px;cursor:default">'+escHTML(lab)+'<span style="background:'+col+';color:#fff;border-radius:8px;padding:0 6px;font-size:10px;font-weight:900">'+(nomi?nomi.length:0)+'</span></span>';
+  };
+  var h='<div style="background:#fff;border:1px solid #cfd8dc;border-radius:8px;padding:7px 11px;margin:0 0 10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px">';
+  h+='<span style="font-size:10px;font-weight:900;color:#37474f;letter-spacing:0.4px;margin-right:4px">💶 CADENZA DI PAGAMENTO</span>';
+  for(var k=0;k<CADPAG_OPTS.length;k++){var cat=CADPAG_OPTS[k];h+=pill(cat,alfab(gruppi[cat]),cadColore(cat),false);}
+  h+=pill("DA IMPOSTARE",alfab(daImp),"#90a4ae",true);
+  h+='</div>';
   return h;
 }
 function rCov(){
@@ -853,7 +851,7 @@ function rCov(){
   var kYrs=Object.keys(kpis).sort();
   h+='<div class="kpi-bar"><div class="kpi"><div class="kl">Schede</div><div class="kv">'+A.d.length+'</div></div>';
   for(var k=0;k<kYrs.length;k++){var ky=kYrs[k],kd=kpis[ky];h+='<div class="kpi"><div class="kl">Ore res.'+ky+'</div><div class="kv'+(kd.oR>0?' red':'')+'">'+f2(kd.oR)+'</div></div>';h+='<div class="kpi"><div class="kl">Imp.res.'+ky+'</div><div class="kv'+(kd.iR>0?' red':'')+'">'+fE(kd.iR)+'</div></div>'}
-  h+='</div><div class="toolbar"><input placeholder="Cerca operatore..." value="'+A.q+'" oninput="A.q=this.value;render()">';
+  h+='</div><div class="toolbar"><input id="qSearch" placeholder="Cerca operatore..." value="'+A.q+'" oninput="searchInput(this)">';
   h+='<select onchange="A.fr=this.value;render()"><option value="">Tutte le tariffe</option>';
   var rts={};for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){var svcs=A.d[i].years[yrs[y]].services||[];for(var s=0;s<svcs.length;s++)if(svcs[s].rate)rts[svcs[s].rate]=1}}
   var rk=Object.keys(rts).sort(function(a,b){return a-b});
