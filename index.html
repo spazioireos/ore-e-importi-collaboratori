@@ -18,6 +18,7 @@ body{font-family:'Inter','Leelawadee UI','Leelawadee',sans-serif;background:#f4f
 .cover-header{background:linear-gradient(135deg,#37474f,#546e7a);color:#fff;padding:12px 20px;text-align:center}
 .cover-header h1{font-size:20px;font-weight:900;letter-spacing:0.5px}
 .cover-header p{font-size:12px;opacity:0.7;margin-top:2px}
+.revtag{display:inline-block;font-size:11px;font-weight:600;line-height:1.1;padding:2px 7px;margin-left:8px;border-radius:999px;background:rgba(128,128,128,0.2);border:1px solid rgba(128,128,128,0.28);color:inherit;vertical-align:middle;letter-spacing:0.2px;white-space:nowrap}
 .cover-body{padding:8px 14px;max-width:100%}
 .toolbar{display:flex;gap:6px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
 .toolbar input{padding:5px 9px;border:1px solid #aaa;border-radius:4px;font-size:14px;font-family:'Inter','Leelawadee UI','Leelawadee',sans-serif;width:240px}
@@ -845,7 +846,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede</p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 1 \u00b7 29ott26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -3345,7 +3346,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale</p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 1 \u00b7 29ott26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
