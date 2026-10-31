@@ -7,7 +7,12 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 1 · 29ott26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 2 · 31ott26.**
+- **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
+  scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
+  `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
+  minuscole sono dentro l'attributo `style`, perciò si recuperano con `[style*="..."]` e
+  `!important`. Misurato dopo: **zero** bersagli sotto i 40px.
 - **Verifica prima del commit**: estrarre il blocco `<script>` inline e passarlo a
   `node --check`. Attenzione agli apici: l'HTML è dentro stringhe JS con apici singoli.
 - **Non toccare senza richiesta esplicita**: il motore dei residui "a secchi" (riporto per

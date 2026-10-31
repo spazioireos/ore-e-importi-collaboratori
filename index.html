@@ -144,6 +144,31 @@ input[type=number]{-moz-appearance:textfield}
 .recovery-primary:hover{background:#0d47a1}
 .recovery-secondary{background:#fff;color:#666;border:2px solid #ccc}
 .recovery-secondary:hover{background:#f5f5f5}
+
+/* ================== LEGGIBILITA' (rev 2 - 31ott26) ==================
+   Pensata per leggere comodamente anche con la vista stanca:
+   1) nessuna scritta sotto i 12px: le etichette minuscole diventano leggibili;
+   2) i grigi chiari su bianco diventano piu' scuri, quindi piu' contrastati;
+   3) quando sei dentro una casella il bordo si vede bene;
+   4) pulsanti e caselle piu' alti, piu' facili da centrare col dito o col mouse.
+   Solo aspetto: nessuna logica, nessun dato, nessun comportamento cambiato.
+   Le misure minuscole sono scritte dentro l'attributo style degli elementi,
+   percio' si recuperano con il selettore [style*="..."] e con !important.    */
+body{font-size:15px;line-height:1.35}
+[style*="font-size:8px"],[style*="font-size: 8px"],
+[style*="font-size:9px"],[style*="font-size: 9px"],
+[style*="font-size:10px"],[style*="font-size: 10px"]{font-size:12px !important}
+[style*="font-size:11px"],[style*="font-size: 11px"]{font-size:12.5px !important}
+[style*="color:#999"],[style*="color: #999"],
+[style*="color:#aaa"],[style*="color: #aaa"],
+[style*="color:#bbb"],[style*="color: #bbb"]{color:#4b5563 !important}
+input,select,textarea,button{font-size:15px}
+input,select,textarea{min-height:40px}
+button{min-height:40px}
+input:focus,select:focus,textarea:focus{outline:3px solid #1d4ed8;outline-offset:1px}
+button:focus-visible{outline:3px solid #1d4ed8;outline-offset:2px}
+.revtag{font-size:12px}
+/* =================== fine aggiunta leggibilita' =================== */
 </style>
 </head>
 <body>
@@ -846,7 +871,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 1 \u00b7 29ott26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 2 \u00b7 31ott26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -3346,7 +3371,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 1 \u00b7 29ott26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 2 \u00b7 31ott26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
