@@ -7,12 +7,28 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 2 · 31ott26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 3 · 03nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
   minuscole sono dentro l'attributo `style`, perciò si recuperano con `[style*="..."]` e
   `!important`. Misurato dopo: **zero** bersagli sotto i 40px.
+- 🎨 **Colori (rev 3, 03/11/2026)** — passata di *frontend-design* chiesta da Christian. Via la
+  palette "Material" presa in prestito, dentro la stessa scala blu di Dipendenti:
+  `#2f6fae` testata, `#1f4e82` barra della scheda, `#5a9ce2` filetto dei cartellini,
+  `#64748b`/`#475569` per i grigi. **Il magenta/cremisi della pulsantiera Contratti è sparito**
+  (`#880e4f`, `#ad1457`, `#c2185b` → blu). Ora il colore dice **che tipo di azione è**: blu =
+  dati e contratti, verde = report, grigio = anagrafiche, **rosso solo per cancellare**.
+  I quattro bordi pastello dei gruppi sono diventati un bordo neutro `#d7dde5`: a distinguere il
+  gruppo è il colore del titolo.
+- **Scritte in tondo (rev 3)**: tolti i `text-transform:uppercase` dalle etichette (`.kpi .kl`,
+  `.op-card .sv .sl`, `.sec-lbl`) e messi i titoli dei gruppi in frase (*Dati, Anagrafiche,
+  Contratti, Report, Cadenza di pagamento*), da 9-10px a 12,5px. Anche i titoli di copertina e
+  della schermata PIN non sono più tutti maiuscoli.
+  ⚠️ **NON toccare le targhette della cadenza** (`MENSILE`, `BIMESTRALE`, `01FEB/01LUG`…):
+  `CADPAG_OPTS` contiene **valori salvati nei dati** di ogni collaboratore, non etichette —
+  cambiarli altererebbe i dati. Il titolo maiuscolo dell'export Excel resta: è l'intestazione di
+  un documento che si consegna.
 - **Verifica prima del commit**: estrarre il blocco `<script>` inline e passarlo a
   `node --check`. Attenzione agli apici: l'HTML è dentro stringhe JS con apici singoli.
 - **Non toccare senza richiesta esplicita**: il motore dei residui "a secchi" (riporto per
