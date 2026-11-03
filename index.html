@@ -864,14 +864,14 @@ function rCadenzaBox(){
     return '<span title="'+t+'" style="display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;color:'+col+';background:#fafafa;border:1px '+(dash?"dashed":"solid")+' '+col+';border-radius:12px;padding:3px 10px;cursor:default">'+escHTML(lab)+'<span style="background:'+col+';color:#fff;border-radius:8px;padding:0 6px;font-size:10px;font-weight:900">'+(nomi?nomi.length:0)+'</span></span>';
   };
   var h='<div style="background:#fff;border:1px solid #cfd8dc;border-radius:8px;padding:7px 11px;margin:0 0 10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px">';
-  h+='<span style="font-size:12.5px;font-weight:800;color:#1f4e82;margin-right:4px">💶 Cadenza di pagamento</span>';
+  h+='<span style="font-size:12.5px;font-weight:800;color:#1f4e82;margin-right:4px">💶 CADENZA DI PAGAMENTO</span>';
   for(var k=0;k<CADPAG_OPTS.length;k++){var cat=CADPAG_OPTS[k];h+=pill(cat,alfab(gruppi[cat]),cadColore(cat),false);}
-  h+=pill("Da impostare",alfab(daImp),"#64748b",true);
+  h+=pill("DA IMPOSTARE",alfab(daImp),"#64748b",true);
   h+='</div>';
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>Operatori occasionali</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 3 \u00b7 03nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 3 \u00b7 03nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -889,7 +889,7 @@ function rCov(){
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 9px">';
 
   // DATI
-  h+=grp('Dati','#1b5e20');
+  h+=grp('DATI','#1b5e20');
   h+='<button class="btn btn-new btn-sm" onclick="A.modal=\'newop\';render()">+ Aggiungi operatore</button>';
   if(A.dirty)h+='<button class="btn btn-save btn-sm" onclick="sv()">\u2714 Salva</button>';
   else h+='<button class="btn btn-sm" style="background:#eceff1;color:#90a4ae" disabled title="Nessuna modifica da salvare">\u2714 Salvato</button>';
@@ -898,7 +898,7 @@ function rCov(){
   h+='</div></div>';
 
   // ANAGRAFICHE
-  h+=grp('Anagrafiche','#475569');
+  h+=grp('ANAGRAFICHE','#475569');
   h+='<button class="btn btn-sm" style="background:#475569;color:#fff" onclick="document.getElementById(\'anagFile\').click()" title="Carica l\'Elenco lavoratori: compila le anagrafiche degli operatori corrispondenti, senza sovrascrivere">\u2935 Importa anagrafiche</button>';
   h+='<input type="file" id="anagFile" accept=".xlsx,.xls" style="display:none" onchange="importAnagFile(this)">';
   h+='<button class="btn btn-sm" style="background:#64748b;color:#fff" onclick="A.v=\'anagList\';render()" title="Tabella di tutte le anagrafiche con evidenza dei campi mancanti">\ud83d\udccb Riepilogo</button>';
@@ -906,7 +906,7 @@ function rCov(){
   h+='</div></div>';
 
   // CONTRATTI
-  h+=grp('Contratti','#1f4e82');
+  h+=grp('CONTRATTI','#1f4e82');
   h+='<button class="btn btn-sm" style="background:#1f4e82;color:#fff" onclick="svcOpen()" title="Crea a pi\u00f9 operatori la stessa riga servizio nella tabella ore, gi\u00e0 con nome e importo">\u2795 Riga servizio in blocco</button>';
   h+='<button class="btn btn-sm" style="background:#2f6fae;color:#fff" onclick="bulkOpen()" title="Crea lo stesso atto contrattuale su pi\u00f9 operatori in una volta, con importo ritoccabile per ciascuno">\ud83d\udcda Atto in blocco</button>';
   h+='<button class="btn btn-sm" style="background:#5a9ce2;color:#1f2937" onclick="lettereBlocco()" title="Genera in un solo file zip un contratto in PDF per ogni operatore con un importo valorizzato nell\u2019atto">\ud83d\udcc4 Contratti in blocco</button>';
@@ -915,7 +915,7 @@ function rCov(){
   h+='</div></div>';
 
   // REPORT
-  h+=grp('Report','#1b5e20');
+  h+=grp('REPORT','#1b5e20');
   var aYrs=Object.keys(allYrs).sort();
   for(var y=0;y<aYrs.length;y++)h+='<button class="btn btn-xls btn-sm" onclick="exportYear(\''+aYrs[y]+'\')">\u2b07 Excel '+aYrs[y]+'</button>';
   h+='<button class="btn btn-sm" style="background:#2e7d32;color:#fff" onclick="A.modal=\'report\';render()" title="Riepilogo delle liquidazioni in un intervallo di date">\ud83d\udcca Per data</button>';
@@ -3370,7 +3370,7 @@ function setPin(p){localStorage.setItem(PIN_KEY,p)}
 function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
-  h+='<h2>Operatori occasionali</h2>';
+  h+='<h2>OPERATORI OCCASIONALI</h2>';
   h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 3 \u00b7 03nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}

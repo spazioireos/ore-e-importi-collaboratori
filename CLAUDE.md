@@ -21,14 +21,15 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   dati e contratti, verde = report, grigio = anagrafiche, **rosso solo per cancellare**.
   I quattro bordi pastello dei gruppi sono diventati un bordo neutro `#d7dde5`: a distinguere il
   gruppo è il colore del titolo.
-- **Scritte in tondo (rev 3)**: tolti i `text-transform:uppercase` dalle etichette (`.kpi .kl`,
-  `.op-card .sv .sl`, `.sec-lbl`) e messi i titoli dei gruppi in frase (*Dati, Anagrafiche,
-  Contratti, Report, Cadenza di pagamento*), da 9-10px a 12,5px. Anche i titoli di copertina e
-  della schermata PIN non sono più tutti maiuscoli.
+- **Etichette più grandi (rev 3)**: tolti i `text-transform:uppercase` dal CSS delle etichette
+  (`.kpi .kl`, `.op-card .sv .sl`, `.sec-lbl`), che sono passate da 9-10px a 12,5px.
+  ⚠️ **Le parole non sono state cambiate**: il 03/11/2026 Christian ha chiesto di rimettere
+  esattamente le sue diciture (`OPERATORI OCCASIONALI`, `DATI`, `ANAGRAFICHE`, `CONTRATTI`,
+  `REPORT`, `CADENZA DI PAGAMENTO`, `DA IMPOSTARE`), ed è stato fatto. Vale la regola permanente
+  al §10.6: **le diciture non si toccano**.
   ⚠️ **NON toccare le targhette della cadenza** (`MENSILE`, `BIMESTRALE`, `01FEB/01LUG`…):
   `CADPAG_OPTS` contiene **valori salvati nei dati** di ogni collaboratore, non etichette —
-  cambiarli altererebbe i dati. Il titolo maiuscolo dell'export Excel resta: è l'intestazione di
-  un documento che si consegna.
+  cambiarli altererebbe i dati.
 - **Verifica prima del commit**: estrarre il blocco `<script>` inline e passarlo a
   `node --check`. Attenzione agli apici: l'HTML è dentro stringhe JS con apici singoli.
 - **Non toccare senza richiesta esplicita**: il motore dei residui "a secchi" (riporto per
@@ -214,6 +215,12 @@ esplicitamente**: una valutazione teorica del codice non sostituisce una verific
   telefono**.
 - Terminologia di dominio corretta e, dove serve generalità, neutra (es. "Committente" invece di
   "Comune").
+- 🔴 **LE DICITURE NON SI TOCCANO** (regola permanente di Christian, 03/11/2026: «non devi toccare
+  le diciture, furono da me scelte»). Titoli, etichette, nomi dei pulsanti, voci dei menù, testi
+  delle schermate: **le parole restano quelle**, maiuscole comprese. Una passata grafica cambia
+  **colori, misure, spazi e disposizione**, non il testo. Se una dicitura sembra sbagliata o
+  rimanda a qualcosa che non esiste più: **segnalarla a Christian e aspettare**, non correggerla
+  di propria iniziativa.
 - Alla consegna: spiegare **in parole semplici (12\*)** cosa fa ogni pulsante, così Christian
   verifica che corrisponda a ciò che voleva.
 
