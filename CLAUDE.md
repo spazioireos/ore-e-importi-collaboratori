@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 4 · 03nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 5 · 03nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -41,6 +41,20 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Zeri leggibili (rev 4)**: `.zero` e `.zero-val` erano `#c8ced6`, che sul bianco si stacca
   meno di 2 volte (ne servono 4,5): ora `#64748b`. Restano riconoscibili come "vuoto" ma si
   leggono.
+- 📐 **Righe compatte e «Adatta larghezza»** (rev 5, 03/11/2026). Dentro la scheda l'anno non
+  entrava più in una schermata. Due interventi, in fondo al `<style>` e nella barra di
+  navigazione:
+  - **solo dentro le tabelle** le caselle scendono da 40 a 28px e le celle hanno meno imbottitura
+    (`table input,table select{min-height:28px}`, `table th{padding:2px 5px}`,
+    `table td{padding:1px 4px}`). ⚠️ **Fuori dalle tabelle non cambia niente**: pulsanti e
+    caselle restano alti 40px, come vuole il blocco leggibilità della rev 2. Misurato: righe da
+    41-47px a 19-40px, scheda da 943 a 864px di altezza.
+  - **`fitW()`** (pulsante *⤢ Adatta larghezza*) rimpicciolisce `.sheet-body` con `zoom` quanto
+    basta perché la tabella più larga entri, **verificando davvero** dopo ogni passo (bordi e
+    imbottiture ingannano il conto: senza la verifica si fermava a 0,97 e l'ultima colonna
+    restava tagliata; con la verifica arriva a 0,94 ed entra). `zoom100()` torna alla misura
+    normale. La misura scelta si ricorda in `localStorage` (`spazioireos_opoc_zoom`, limitata fra
+    0,4 e 1) e si riapplica a ogni ridisegno della scheda, non sulla copertina.
 - **Verifica prima del commit**: estrarre il blocco `<script>` inline e passarlo a
   `node --check`. Attenzione agli apici: l'HTML è dentro stringhe JS con apici singoli.
 - **Non toccare senza richiesta esplicita**: il motore dei residui "a secchi" (riporto per

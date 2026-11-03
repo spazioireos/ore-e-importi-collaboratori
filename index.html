@@ -169,6 +169,18 @@ input:focus,select:focus,textarea:focus{outline:3px solid #1d4ed8;outline-offset
 button:focus-visible{outline:3px solid #1d4ed8;outline-offset:2px}
 .revtag{font-size:12px}
 /* =================== fine aggiunta leggibilita' =================== */
+
+/* ============ RIGHE COMPATTE E ADATTA LARGHEZZA (rev 5 - 03nov26) ============
+   Christian, 03/11/2026: dentro la scheda l'anno non entrava piu' in una
+   schermata e le righe erano troppo alte. Qui si abbassano le righe SOLO dentro
+   le tabelle (fuori, pulsanti e caselle restano alti 40px come prima) e si
+   aggiunge il pulsante "Adatta larghezza", che rimpicciolisce quanto basta.
+   Solo aspetto: nessun dato e nessun calcolo toccati.                        */
+table input,table select{min-height:28px;padding-top:1px;padding-bottom:1px}
+table th{padding:2px 5px}
+table td{padding:1px 4px}
+.sheet-body{transition:none}
+/* ====================== fine aggiunta rev 5 ====================== */
 </style>
 </head>
 <body>
@@ -729,6 +741,31 @@ function exportByDate(from,to){
 }
 
 // RENDER
+var ZOOMK="spazioireos_opoc_zoom";
+function zoomLeggi(){try{var v=parseFloat(localStorage.getItem(ZOOMK));return(v>=0.4&&v<=1)?v:1}catch(e){return 1}}
+function zoomScrivi(z){try{localStorage.setItem(ZOOMK,String(z))}catch(e){}}
+function zoomApplica(z){var b=document.querySelector('.sheet-body');if(!b)return;b.style.zoom=(z===1?'':String(z))}
+function fitW(){
+  var b=document.querySelector('.sheet-body');if(!b)return;
+  b.style.zoom='';
+  var largo=0,ts=b.querySelectorAll('table');
+  for(var i=0;i<ts.length;i++){var x=ts[i].scrollWidth;if(x>largo)largo=x}
+  var disp=b.clientWidth;
+  if(!largo||!disp){return}
+  var z=(disp-10)/largo;
+  if(z>1)z=1; if(z<0.4)z=0.4;
+  z=Math.round(z*100)/100;
+  zoomApplica(z);
+  // la misura dipende anche dai bordi e dalle imbottiture: si verifica e si stringe ancora
+  for(var g=0;g<12 && z>0.4;g++){
+    var fuori=false,t2=b.querySelectorAll('table');
+    for(var k=0;k<t2.length;k++){ var p=t2[k].parentNode; if(p && t2[k].scrollWidth > p.clientWidth+1){ fuori=true; break } }
+    if(!fuori)break;
+    z=Math.round((z-0.02)*100)/100; zoomApplica(z);
+  }
+  zoomScrivi(z);
+}
+function zoom100(){zoomScrivi(1);zoomApplica(1)}
 function render(){
   var el=document.getElementById('app');
   if(A.v==="cover")el.innerHTML=rCov();
@@ -744,6 +781,7 @@ function render(){
   if(A.modal==="listino")el.innerHTML+=rMListino();
   if(A.modal==="svcblocco"&&A.svcb)el.innerHTML+=rMSvcBlocco();
   if(pickerFor)el.innerHTML+=rPicker();
+  if(A.v!=="cover"&&A.v!=="anagList")zoomApplica(zoomLeggi());
   if(A.modal==="bulk"&&A.bulk)bulkScrollRipristina();
 }
 function searchInput(inp){
@@ -871,7 +909,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 4 \u00b7 03nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 5 \u00b7 03nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -972,6 +1010,8 @@ function rSh(){
   h+='</div></div>';
   h+='<div class="nav-bar"><div class="nav-left">';
   h+='<button class="btn-nav" onclick="goBack()">\u2190 Torna alla lista</button>';
+  h+='<button class="btn-nav" onclick="fitW()" title="Rimpicciolisce quanto basta perche\u0027 l\u0027anno entri tutto nello schermo">\u2922 Adatta larghezza</button>';
+  h+='<button class="btn-nav" onclick="zoom100()" title="Torna alla misura normale">100%</button>';
   if(A.sel>0)h+='<button class="btn-nav-prev" onclick="openS('+(A.sel-1)+')">\u25c0 Prec.</button>';
   if(A.sel<A.d.length-1)h+='<button class="btn-nav-next" onclick="openS('+(A.sel+1)+')">Succ. \u25b6</button>';
   h+='</div><div class="nav-right">';
@@ -3371,7 +3411,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 4 \u00b7 03nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 5 \u00b7 03nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
