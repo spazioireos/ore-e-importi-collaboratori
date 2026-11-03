@@ -82,13 +82,13 @@ td.res-big-pos{font-size:15px;font-weight:900;padding:3px 5px;background:#e8f5e9
 td.res-big-neg{font-size:15px;font-weight:900;padding:3px 5px;background:#ffebee;color:#c62828}
 td.bal-pos{background:#e8f5e9;font-weight:700}
 td.bal-neg{background:#ffebee;font-weight:700}
-.zero{color:#c8ced6}
+.zero{color:#64748b}
 .neg{color:#c62828;font-weight:700}
 /* No spin buttons on number inputs */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 input[type=number]{-moz-appearance:textfield}
-.edit-cell input.zero-val,.date-cell input.zero-val{color:#c8ced6}
+.edit-cell input.zero-val,.date-cell input.zero-val{color:#64748b}
 .edit-cell input,.date-cell input{width:100%;border:none;background:transparent;text-align:center;font-size:13px;font-family:'Inter','Leelawadee UI','Leelawadee',sans-serif;padding:0;outline:none;color:#000}
 .edit-cell input.svc-input,input.svc-input{font-size:9px!important;text-align:left;width:100%;border:none;background:transparent;font-family:'Inter','Leelawadee UI','Leelawadee',sans-serif;outline:none;color:#000}
 .rate-in{width:55px;text-align:center;border:none;background:transparent;font-size:13px;font-family:'Inter','Leelawadee UI','Leelawadee',sans-serif;outline:none;color:#000;font-weight:700}
@@ -185,8 +185,8 @@ var YC=[
   {bg:"#ccd9c8",lt:"#e4ebe1",s:"#4e6a48"}   // salvia
 ];
 // Frame: dispari verdone, pari bordeaux
-var FRAME_ODD="#2e5c31";
-var FRAME_EVEN="#7b1f2e";
+var FRAME_ODD="#64748b";
+var FRAME_EVEN="#1f4e82";
 
 function moYr(m,yr){return MO3[m]+"-"+String(yr).slice(-2)}
 function ld(){
@@ -871,7 +871,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 3 \u00b7 03nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 4 \u00b7 03nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -999,7 +999,7 @@ function rYB(idx,yr,ci){
   var cf=cfwd(op,yr);var cfH='';
   var FRAME=(parseInt(yr)%2===0)?FRAME_EVEN:FRAME_ODD;
   var h='<div class="year-block" style="border-color:'+FRAME+';border-width:4px">'+cfH;
-  h+='<div class="ytitle" style="background:#A72920;color:#fff"><span style="font-size:22px;font-weight:900;letter-spacing:0.5px">ANNO '+yr+'</span><span>';
+  h+='<div class="ytitle" style="background:#1f4e82;color:#fff"><span style="font-size:22px;font-weight:900;letter-spacing:0.5px">ANNO '+yr+'</span><span>';
   h+='Imp. contratt. pred. <input class="rate-hdr" type="text" value="'+n2(defRt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.default_rate=raw(this.value);markD()"> ';
   // btn servizio spostato sotto tabella ore
   if(Object.keys(op.years).length>1)h+=' <button class="btn-del-yr" onclick="delYr('+idx+',\''+yr+'\')">Elimina '+yr+'</button>';
@@ -1014,7 +1014,7 @@ function rYB(idx,yr,ci){
     h+='</div>';
   }
   // ORE EFFETTUATE
-  h+='<div class="sec-lbl" style="background:#DC143C;color:#fff">ORE EFFETTUATE</div>';
+  h+='<div class="sec-lbl" style="background:#eef5fc;color:#1f4e82;border-bottom:1px solid #b9d5f1">ORE EFFETTUATE</div>';
   h+='<table><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th style="min-width:110px">Importo<br><span style="font-size:9px;font-weight:400">contrattuale</span></th><th>Res.'+(parseInt(yr)-1)+'</th>';
   for(var m=0;m<12;m++)h+='<th class="month-hdr">'+moYr(m,yr)+'</th>';
   h+='<th>Ore anno</th><th>Ore+Res</th><th>Imp.Mat.</th></tr></thead><tbody>';
@@ -1116,7 +1116,7 @@ function rYB(idx,yr,ci){
   h+='<span>Importo maturato: <strong>'+fE(cl.dispImp)+'</strong></span>';}
   h+='</div>';
   // REGISTRO LIQUIDAZIONI
-  h+='<div class="sec-lbl" style="background:#4c8047;color:#fff">REGISTRO LIQUIDAZIONI / PAGAMENTI</div>';
+  h+='<div class="sec-lbl" style="background:#eef5fc;color:#1f4e82;border-bottom:1px solid #b9d5f1">REGISTRO LIQUIDAZIONI / PAGAMENTI</div>';
   h+='<table><thead><tr style="background:#afd6ab"><th style="width:25px">N.</th><th style="min-width:90px">Data pag.</th><th>Ore liq.</th><th>\u20ac/h<br><span style="font-size:9px;font-weight:400;font-style:italic">(inserisci importo in funz. della notula per il serv. di attribuzione)</span></th>';
   h+='<th>Lordo</th><th>Rit. 20%</th><th>Netto</th><th style="width:55px">Rimborso</th><th style="min-width:200px">Attribuzione</th>';
   h+='<th style="font-size:13px;font-weight:900">ORE A CREDITO OPERATORE</th><th style="font-size:13px;font-weight:900">IMPORTO A CREDITO OPERATORE</th><th style="width:25px"></th></tr></thead><tbody>';
@@ -1169,7 +1169,7 @@ function rYB(idx,yr,ci){
   var comp=bkResid(op,yr);
   if(comp.length>0){
     h+='<div style="margin-top:8px;padding:8px 10px;background:#fbfbfb;border:1px solid #e0e0e0;border-radius:6px">';
-    h+='<div style="font-weight:700;font-size:12px;color:#555;margin-bottom:4px">Il credito <span style="font-size:15px;font-weight:900;color:#A72920">'+yr+'</span> viene da:</div>';
+    h+='<div style="font-weight:700;font-size:12px;color:#555;margin-bottom:4px">Il credito <span style="font-size:15px;font-weight:900;color:#1f4e82">'+yr+'</span> viene da:</div>';
     for(var q=0;q<comp.length;q++){
       var cb=comp[q];var cnm=cb.name||'(senza nome)';var ccol=valColor(cb.name);
       var neg=cb.hours<0;
@@ -3371,7 +3371,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 3 \u00b7 03nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 4 \u00b7 03nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
