@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 5 · 03nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 6 · 03nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -55,6 +55,19 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     restava tagliata; con la verifica arriva a 0,94 ed entra). `zoom100()` torna alla misura
     normale. La misura scelta si ricorda in `localStorage` (`spazioireos_opoc_zoom`, limitata fra
     0,4 e 1) e si riapplica a ogni ridisegno della scheda, non sulla copertina.
+- 🔠 **I numeri che scrivi sono il dato** (rev 6, 03/11/2026, Christian: «le celle per
+  inserimento ore contengono numeri troppo piccoli»). Le ore, le date e le tariffe scritte a mano
+  erano a **13px in tondo**, più piccole del testo intorno (15px): la cosa meno leggibile della
+  tabella era proprio il dato. Ora `.edit-cell input`, `.date-cell input`, `.rate-in` e
+  `.rate-hdr` sono a **15px in neretto**, così si staccano dai numeri **calcolati** dall'app, che
+  restano a 12-13px. Le righe non si sono alzate (restano 21-43px). Il nome del servizio resta a
+  11px: ha uno `style` in riga con `!important` scritto dal JavaScript, e per cambiarlo
+  servirebbe toccare il codice che disegna la riga — **non fatto**, non era richiesto.
+- 🔢 **ARROTONDAMENTO: usare SEMPRE `R2`** (da rev 6, 03/11/2026). Stesso difetto trovato in
+  USOINT: `67,5 × 22,99` → 1551,82 invece di 1551,83. **`R2(v,dec)`** (sopra `rM`) ripulisce con
+  `toPrecision(12)`; messa nei **4 punti** che arrotondavano e dentro **tutte le funzioni che
+  scrivono i numeri** (`f2`, `fE`, `n2`, `blurFmt`, i due formattatori con i separatori, la
+  tendina delle tariffe e il costo orario predefinito). ⚠️ Sui **negativi** ora è **simmetrico**.
 - **Verifica prima del commit**: estrarre il blocco `<script>` inline e passarlo a
   `node --check`. Attenzione agli apici: l'HTML è dentro stringhe JS con apici singoli.
 - **Non toccare senza richiesta esplicita**: il motore dei residui "a secchi" (riporto per

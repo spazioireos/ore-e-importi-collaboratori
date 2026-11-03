@@ -179,6 +179,17 @@ button:focus-visible{outline:3px solid #1d4ed8;outline-offset:2px}
 table input,table select{min-height:28px;padding-top:1px;padding-bottom:1px}
 table th{padding:2px 5px}
 table td{padding:1px 4px}
+
+/* ============ I NUMERI CHE SCRIVI SONO IL DATO (rev 6 - 03nov26) ============
+   Christian, 03/11/2026: «le celle per inserimento ore contengono numeri troppo
+   piccoli». Erano a 13px e in tondo, piu' piccoli del testo intorno (15px):
+   quello che scrivi era la cosa meno leggibile della tabella. Ora le ore, le
+   date e le tariffe che scrivi tu sono a 15px e in neretto, quindi si staccano
+   dai numeri calcolati dall'app, che restano a 13px. Il nome del servizio sale
+   da 9px a 13px. Solo aspetto: nessun dato, nessun calcolo, nessuna dicitura. */
+.edit-cell input,.date-cell input{font-size:15px;font-weight:700}
+.rate-in,.rate-hdr{font-size:15px;font-weight:700}
+/* ==================== fine aggiunta rev 6 ==================== */
 .sheet-body{transition:none}
 /* ====================== fine aggiunta rev 5 ====================== */
 </style>
@@ -394,9 +405,9 @@ var pickerFor=null;
 function openPicker(txt,ev){if(ev){ev.stopPropagation()}var t=String(txt||"").trim();if(!t)return;pickerFor=t;render()}
 function setColor(txt,col){var t=String(txt||"").trim();if(!t)return;if(col===""){delete colorMap[t]}else{colorMap[t]=col}saveColors();pickerFor=null;markD();render()}
 function closePicker(){pickerFor=null;render()}
-function f2(v){var n=parseFloat(v);if(isNaN(n))return"";if(n===0)return'<span class="zero">0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212'+s+'</span>';return s}
-function fE(v){var n=parseFloat(v);if(isNaN(n))return"";if(n===0)return'<span class="zero">\u20ac 0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212\u20ac '+s+'</span>';return"\u20ac "+s}
-function n2(v){return parseFloat(v||0).toFixed(2).replace(".",",")}
+function f2(v){var n=R2(parseFloat(v));if(isNaN(n))return"";if(n===0)return'<span class="zero">0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212'+s+'</span>';return s}
+function fE(v){var n=R2(parseFloat(v));if(isNaN(n))return"";if(n===0)return'<span class="zero">\u20ac 0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212\u20ac '+s+'</span>';return"\u20ac "+s}
+function n2(v){return R2(parseFloat(v||0)).toFixed(2).replace(".",",")}
 // Lettura di un importo digitato a mano. Accetta 18,50 - 18.50 - "e 18,50" - 1.500,00 - 1.500
 // Regola: con la virgola, quella e' il decimale. Con solo un punto e 1 o 2 cifre dopo, il punto
 // e' il decimale (18.50 = 18,50). Con 3 cifre dopo o piu' punti, sono separatori di migliaia.
@@ -419,11 +430,11 @@ function euroFmt(v){
   if(v===null||v===undefined||String(v).replace(/\s/g,"")==="")return "";
   var n=euroIn(v);
   if(isNaN(n))return String(v);
-  var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+  var s=Math.abs(R2(n)).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
   return (n<0?"-":"")+s;
 }
 function raw(v){var s=String(v).replace(",",".").replace(/[^0-9.\-]/g,"");var n=parseFloat(s);return isNaN(n)?0:n}
-function blurFmt(el){var v=raw(el.value);if(isNaN(v))v=0;el.value=v.toFixed(2).replace(".",",");if(v===0){el.classList.add("zero-val")}else{el.classList.remove("zero-val")}}
+function blurFmt(el){var v=R2(raw(el.value));if(isNaN(v))v=0;el.value=v.toFixed(2).replace(".",",");if(v===0){el.classList.add("zero-val")}else{el.classList.remove("zero-val")}}
 function normDT(s){
   if(!s)return"";
   s=String(s).trim();
@@ -437,7 +448,12 @@ function fcl(el){if(raw(el.value)===0)el.value=""}
 function markD(){if(!A.dirty){A.dirty=true;var b=document.getElementById('ubadge');if(b)b.style.display='inline-block'}}
 function toast(m,c){var o=document.getElementById('toast');if(o)o.remove();var d=document.createElement('div');d.id='toast';d.className='toast';d.setAttribute('role','alert');d.style.background=c||'#2e7d32';d.textContent=m;document.body.appendChild(d);setTimeout(function(){d.remove()},2200)}
 function escHTML(s){if(s===null||s===undefined)return'';s=String(s);var map={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;','/':'&#x2F;'};return s.replace(/[&<>"'\/]/g,function(m){return map[m]})}
-function rM(v){return Math.round((parseFloat(v)||0)*100)/100}
+/* R2: arrotonda SENZA farsi ingannare dal modo in cui il computer tiene i decimali.
+   67,5 x 22,99 dentro la macchina vale 1551,8249999999998 e R2(x) lo
+   butta giu' a 1551,82 invece di 1551,83 (segnalato da Christian il 03/11/2026).
+   toPrecision(12) ripulisce il pelo prima di arrotondare. Vale anche per toFixed. */
+function R2(v,dec){dec=(dec==null)?2:dec;var n=Number(v);if(!isFinite(n))return 0;var seg=n<0?-1:1;n=Math.abs(n);var p=Math.pow(10,dec);return seg*(Math.round(Number((n*p).toPrecision(12)))/p)}
+function rM(v){return R2((parseFloat(v)||0))}
 function parseDT(s){
   if(!s)return null;
   s=String(s).trim();
@@ -754,14 +770,14 @@ function fitW(){
   if(!largo||!disp){return}
   var z=(disp-10)/largo;
   if(z>1)z=1; if(z<0.4)z=0.4;
-  z=Math.round(z*100)/100;
+  z=R2(z);
   zoomApplica(z);
   // la misura dipende anche dai bordi e dalle imbottiture: si verifica e si stringe ancora
   for(var g=0;g<12 && z>0.4;g++){
     var fuori=false,t2=b.querySelectorAll('table');
     for(var k=0;k<t2.length;k++){ var p=t2[k].parentNode; if(p && t2[k].scrollWidth > p.clientWidth+1){ fuori=true; break } }
     if(!fuori)break;
-    z=Math.round((z-0.02)*100)/100; zoomApplica(z);
+    z=R2((z-0.02)); zoomApplica(z);
   }
   zoomScrivi(z);
 }
@@ -909,7 +925,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 5 \u00b7 03nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 6 \u00b7 03nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -919,7 +935,7 @@ function rCov(){
   h+='<select onchange="A.fr=this.value;render()"><option value="">Tutte le tariffe</option>';
   var rts={};for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){var svcs=A.d[i].years[yrs[y]].services||[];for(var s=0;s<svcs.length;s++)if(svcs[s].rate)rts[svcs[s].rate]=1}}
   var rk=Object.keys(rts).sort(function(a,b){return a-b});
-  for(var r=0;r<rk.length;r++)h+='<option value="'+rk[r]+'"'+(A.fr===rk[r]?' selected':'')+'>\u20ac '+parseFloat(rk[r]).toFixed(2).replace(".",",")+'/h</option>';
+  for(var r=0;r<rk.length;r++)h+='<option value="'+rk[r]+'"'+(A.fr===rk[r]?' selected':'')+'>\u20ac '+R2(parseFloat(rk[r])).toFixed(2).replace(".",",")+'/h</option>';
   h+='</select>';
   h+='</div>';
   // ===== PULSANTIERA A GRUPPI =====
@@ -1254,7 +1270,7 @@ function rMNY(){
     h+='<em style="font-size:10px">Ore riportate automaticamente.</em></div>';
   } else {h+='<div class="cf-info" style="background:#e8f5e9;border-color:#66bb6a">\u2705 Nessun residuo dal '+lastY+'</div>'}
   if(svcList){h+='<div class="cf-info" style="background:#e1f5fe;border-color:#4fc3f7"><strong>Servizi duplicati dal '+lastY+':</strong>'+svcList+'</div>'}
-  h+='<label>Costo orario predefinito \u20ac per '+ny+'</label><input id="nyR" type="number" step="0.01" value="'+defRt.toFixed(2)+'">';
+  h+='<label>Costo orario predefinito \u20ac per '+ny+'</label><input id="nyR" type="number" step="0.01" value="'+R2(defRt).toFixed(2)+'">';
   h+='<div class="ma"><button class="btn btn-back" onclick="A.modal=null;render()">Annulla</button>';
   h+='<button class="btn btn-new" onclick="confAY('+ny+')">Aggiungi '+ny+'</button></div></div></div>';return h;
 }
@@ -2476,7 +2492,7 @@ function numEuro(v){
   if(v===null||v===undefined||v==="")return "";
   var n=euroIn(v);
   if(isNaN(n)||!n)return String(v);
-  return n.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+  return R2(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
 }
 function escXML(s){
   return String(s===null||s===undefined?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -3411,7 +3427,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 5 \u00b7 03nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 6 \u00b7 03nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
