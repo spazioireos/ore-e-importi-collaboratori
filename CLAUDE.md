@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 6 · 03nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 7 · 05nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -63,6 +63,27 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   restano a 12-13px. Le righe non si sono alzate (restano 21-43px). Il nome del servizio resta a
   11px: ha uno `style` in riga con `!important` scritto dal JavaScript, e per cambiarlo
   servirebbe toccare il codice che disegna la riga — **non fatto**, non era richiesto.
+- 📉 **RIGHE PIÙ BASSE NELLE DUE TABELLE DELLA SCHEDA** (rev 7, 05/11/2026, Christian: «in
+  collaboratori abbassa l'altezza righe delle liquidazioni e delle ore mensili effettuate almeno
+  del 40%»).
+  - **La causa vera non erano le caselle**: dopo la rev 5 erano già a 28px, ma le righe restavano
+    a **43px** perché dentro la prima colonna c'è un **pulsante**, e la regola generale
+    `button{min-height:40px}` (blocco leggibilità rev 2) lo teneva a 40.
+  - **Come è stato fatto**: classe **`.tbl-dense`** messa su **due sole tabelle** — quella di
+    *ORE EFFETTUATE* e quella del *REGISTRO LIQUIDAZIONI / PAGAMENTI* — e un blocco CSS in fondo
+    al `<style>`: dentro quelle due tabelle caselle, tendine e pulsanti scendono a **22px** e le
+    celle perdono l'imbottitura verticale. ⚠️ **Fuori di lì non cambia niente**: in copertina e
+    nel resto della scheda i pulsanti restano a **40px** (misurato: 16 su 16 in copertina, 10 su
+    10 nella scheda).
+  - **Misurato in esecuzione**: righe dei dati da **43 a 23px (−46,5%)**, riga dei totali 21→19,
+    altezza della scheda da **911 a 790px**. L'intestazione passa da 37 a **31px (−16%)**: lì
+    dentro ci sono **due o tre righe di testo** (es. «€/h» + la nota in corsivo) e per scendere
+    ancora bisognerebbe rimpicciolire le scritte sotto i 12px, che il blocco leggibilità vieta.
+  - ⚠️ **Conseguenza accettata**: dentro quelle due tabelle i pulsanti ▲▼✕ e le caselle sono ora
+    **22px**, quindi più piccoli del bersaglio comodo da dito (40px). È ciò che è stato chiesto;
+    fuori dalle due tabelle la regola del §10.6 resta in piedi.
+  - **Provato**: scrittura in una cella delle ore (il valore resta), `node --check` sul blocco
+    `<script>`, zero errori di pagina. **Nessuna dicitura, nessun dato, nessun calcolo toccati.**
 - 🔢 **ARROTONDAMENTO: usare SEMPRE `R2`** (da rev 6, 03/11/2026). Stesso difetto trovato in
   USOINT: `67,5 × 22,99` → 1551,82 invece di 1551,83. **`R2(v,dec)`** (sopra `rM`) ripulisce con
   `toPrecision(12)`; messa nei **4 punti** che arrotondavano e dentro **tutte le funzioni che

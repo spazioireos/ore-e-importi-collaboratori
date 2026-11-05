@@ -190,6 +190,22 @@ table td{padding:1px 4px}
 .edit-cell input,.date-cell input{font-size:15px;font-weight:700}
 .rate-in,.rate-hdr{font-size:15px;font-weight:700}
 /* ==================== fine aggiunta rev 6 ==================== */
+
+/* ====== RIGHE PIU' BASSE NELLE DUE TABELLE DELLA SCHEDA (rev 7 - 05nov26) ======
+   Christian, 05/11/2026: «in collaboratori abbassa l'altezza righe delle
+   liquidazioni e delle ore mensili effettuate almeno del 40%».
+   Le righe erano alte 43px, ma NON per colpa delle caselle (28px): a tenerle
+   alte era il PULSANTE dentro la prima colonna, che la regola generale
+   "button{min-height:40px}" tiene a 40. Qui si abbassano caselle e pulsanti
+   SOLO dentro queste due tabelle (classe .tbl-dense, messa su di loro e su
+   nessun'altra): fuori di qui, e in tutte le altre tabelle dell'app, non
+   cambia niente.
+   Solo aspetto: nessuna dicitura, nessun dato, nessun calcolo toccati.       */
+.tbl-dense input,.tbl-dense select{min-height:22px;padding-top:0;padding-bottom:0}
+.tbl-dense button{min-height:22px;padding-top:0;padding-bottom:0;line-height:1.05}
+.tbl-dense td{padding:0 4px;vertical-align:middle}
+.tbl-dense th{padding:1px 5px;line-height:1.15;vertical-align:middle}
+/* ==================== fine aggiunta rev 7 ==================== */
 .sheet-body{transition:none}
 /* ====================== fine aggiunta rev 5 ====================== */
 </style>
@@ -925,7 +941,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 6 \u00b7 03nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 7 \u00b7 05nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -1071,7 +1087,7 @@ function rYB(idx,yr,ci){
   }
   // ORE EFFETTUATE
   h+='<div class="sec-lbl" style="background:#eef5fc;color:#1f4e82;border-bottom:1px solid #b9d5f1">ORE EFFETTUATE</div>';
-  h+='<table><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th style="min-width:110px">Importo<br><span style="font-size:9px;font-weight:400">contrattuale</span></th><th>Res.'+(parseInt(yr)-1)+'</th>';
+  h+='<table class="tbl-dense"><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th style="min-width:110px">Importo<br><span style="font-size:9px;font-weight:400">contrattuale</span></th><th>Res.'+(parseInt(yr)-1)+'</th>';
   for(var m=0;m<12;m++)h+='<th class="month-hdr">'+moYr(m,yr)+'</th>';
   h+='<th>Ore anno</th><th>Ore+Res</th><th>Imp.Mat.</th></tr></thead><tbody>';
   // Righe grigie: residuo portato dagli anni precedenti, con servizio di provenienza
@@ -1173,7 +1189,7 @@ function rYB(idx,yr,ci){
   h+='</div>';
   // REGISTRO LIQUIDAZIONI
   h+='<div class="sec-lbl" style="background:#eef5fc;color:#1f4e82;border-bottom:1px solid #b9d5f1">REGISTRO LIQUIDAZIONI / PAGAMENTI</div>';
-  h+='<table><thead><tr style="background:#afd6ab"><th style="width:25px">N.</th><th style="min-width:90px">Data pag.</th><th>Ore liq.</th><th>\u20ac/h<br><span style="font-size:9px;font-weight:400;font-style:italic">(inserisci importo in funz. della notula per il serv. di attribuzione)</span></th>';
+  h+='<table class="tbl-dense"><thead><tr style="background:#afd6ab"><th style="width:25px">N.</th><th style="min-width:90px">Data pag.</th><th>Ore liq.</th><th>\u20ac/h<br><span style="font-size:9px;font-weight:400;font-style:italic">(inserisci importo in funz. della notula per il serv. di attribuzione)</span></th>';
   h+='<th>Lordo</th><th>Rit. 20%</th><th>Netto</th><th style="width:55px">Rimborso</th><th style="min-width:200px">Attribuzione</th>';
   h+='<th style="font-size:13px;font-weight:900">ORE A CREDITO OPERATORE</th><th style="font-size:13px;font-weight:900">IMPORTO A CREDITO OPERATORE</th><th style="width:25px"></th></tr></thead><tbody>';
   if(cl.rows.length===0)h+='<tr><td colspan="12" style="text-align:center;color:#999;padding:6px">Nessuna liquidazione registrata</td></tr>';
@@ -3427,7 +3443,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 6 \u00b7 03nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 7 \u00b7 05nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
