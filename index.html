@@ -205,6 +205,43 @@ table td{padding:1px 4px}
 .tbl-dense button{min-height:22px;padding-top:0;padding-bottom:0;line-height:1.05}
 .tbl-dense td{padding:0 4px;vertical-align:middle}
 .tbl-dense th{padding:1px 5px;line-height:1.15;vertical-align:middle}
+
+/* ========== TELEFONO E LEGGIBILITA' (rev 8 - 07nov26) ==========
+   Trovati con l'audit generale del gestionale, provati in esecuzione, corretti
+   con il Nu* di Christian. Due difetti PREESISTENTI, entrambi di solo aspetto.
+
+   A) A 390px la SCHEDA dell'operatore scorreva di lato (478px su 390): la barra
+      di navigazione non andava a capo, e dentro c'e' la tendina "Vai a
+      operatore..." larga 160px. Ora, sotto i 900px, le parti della barra vanno
+      a capo e la tendina si adatta. Nient'altro cambia: le tabelle continuano
+      a scorrere dentro il loro riquadro come prima.
+
+   B) Restavano scritte sotto i 12,5px FUORI dalle tabelle, contro la regola
+      §10.6: i pulsantini .btn-sm/.btn-add-pay a 10px, .btn-add-yr/.os/
+      .drive-status a 11px, le etichette .kl/.sl a 12px e le scritte con
+      font-size:12px nell'attributo style. Il blocco della rev 2 li portava a
+      12px (non 12,5) e non vedeva le regole di classe.
+      ATTENZIONE: DENTRO le tabelle non si tocca nulla: le righe basse della
+      rev 5, la rev 6 e il -40% della rev 7 restano come sono, percio' ogni
+      regola qui esclude i discendenti di table con :not(table *).
+      ATTENZIONE: la targhetta .revtag resta a 12px: eccezione gia' dichiarata. */
+@media (max-width:900px){
+  .nav-bar{flex-wrap:wrap;gap:6px}
+  .nav-left:not(table *),.nav-right:not(table *){flex-wrap:wrap;min-width:0}
+  .op-selector{max-width:100%}
+}
+.btn-sm:not(table *),.btn-add-pay:not(table *),.btn-add-yr:not(table *),
+.os:not(table *),.drive-status,.kl:not(table *),.sl:not(table *){font-size:12.5px !important}
+[style*="font-size:12px"]:not(table *):not(.revtag),
+[style*="font-size: 12px"]:not(table *):not(.revtag),
+/* le misure da 8 a 11px nell'attributo style: il blocco della rev 2 le portava a 12px,
+   cioe' ancora sotto il minimo. Qui, FUORI dalle tabelle, arrivano a 12,5px. */
+[style*="font-size:8px"]:not(table *),[style*="font-size: 8px"]:not(table *),
+[style*="font-size:9px"]:not(table *),[style*="font-size: 9px"]:not(table *),
+[style*="font-size:10px"]:not(table *),[style*="font-size: 10px"]:not(table *),
+[style*="font-size:11px"]:not(table *),[style*="font-size: 11px"]:not(table *),
+.cover-header p:not(table *){font-size:12.5px !important}
+/* ============== fine aggiunta rev 8 ============== */
 /* ==================== fine aggiunta rev 7 ==================== */
 .sheet-body{transition:none}
 /* ====================== fine aggiunta rev 5 ====================== */
@@ -941,7 +978,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 7 \u00b7 05nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 8 \u00b7 07nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -3443,7 +3480,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 7 \u00b7 05nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 8 \u00b7 07nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}

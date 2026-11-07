@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 7 · 05nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 8 · 07nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -63,6 +63,34 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   restano a 12-13px. Le righe non si sono alzate (restano 21-43px). Il nome del servizio resta a
   11px: ha uno `style` in riga con `!important` scritto dal JavaScript, e per cambiarlo
   servirebbe toccare il codice che disegna la riga — **non fatto**, non era richiesto.
+- 📱 **A 390px LA SCHEDA NON SCORRE PIÙ DI LATO, E NIENTE RESTA SOTTO I 12,5px** (rev 8,
+  07/11/2026, trovati con l'**audit generale del gestionale** e corretti con il Nu\* di
+  Christian). **Due difetti PREESISTENTI, entrambi di solo aspetto**: nessuna dicitura, nessun
+  dato, nessun calcolo toccati.
+  - **A) La scheda dell'operatore scorreva di lato sul telefono**: misurati **478px su 390**.
+    Non era la tabella (quella scorre già dentro il suo riquadro): era la **barra di
+    navigazione**, che non andava a capo, e dentro c'è la tendina **«Vai a operatore…»** larga
+    160px. Aggiunta una `@media (max-width:900px)` — la **prima** dell'app, che non ne aveva
+    nessuna — con `flex-wrap` su `.nav-bar`/`.nav-left`/`.nav-right` e `max-width:100%` su
+    `.op-selector`. **Misurato: 478 → 390px.**
+  - **B) Scritte sotto i 12,5px fuori dalle tabelle** (regola §10.6): i pulsantini `.btn-sm` e
+    `.btn-add-pay` a **10px**, `.btn-add-yr`/`.os`/`.drive-status` a **11px**, le etichette
+    `.kl`/`.sl` e `.cover-header p` a **12px**, più tutte le misure 8-11px scritte
+    nell'attributo `style`. ⚠️ Il blocco della rev 2 le portava a **12px**, cioè ancora sotto il
+    minimo, e **non vedeva le regole di classe**. Ora, **fuori dalle tabelle**, il minimo è
+    12,5px. **Misurato: dalle 40 scritte della copertina e 15 della scheda a ZERO.**
+  - ⚠️ **DENTRO le tabelle non è stato cambiato nulla**: ogni regola esclude i discendenti di
+    `table` con `:not(table *)`, perché lì valgono le righe basse della rev 5, i numeri in
+    neretto della rev 6 e il **−40%** della rev 7 chiesto da Christian. **Verificato in
+    esecuzione**: le righe delle due tabelle dense restano **19-31px, identiche alla rev 7**
+    (23 · 23 · 19 · 31), e i pulsanti **fuori** dalle tabelle restano **0 sotto i 40px su 16 in
+    copertina e 11 nella scheda**, come prima.
+  - ⚠️ La **targhetta della revisione** (`.revtag`, 12px) resta com'è: eccezione già dichiarata.
+  - **Provato in esecuzione**: `g2-opoc.cjs` **9/9** (PIN a 6 cifre, PIN sbagliato, ricaricamento),
+    `g2b-opoc.cjs` **13/13** (backup rotto / senza operatori / di schema più nuovo rifiutati senza
+    toccare i dati, `67,5 × 22,99 = 1.551,83`, niente salvataggio automatico, 💾 che salva
+    davvero, dati ancora lì dopo il ricaricamento), `conf-opoc.cjs` per il confronto delle
+    misure. **Zero errori di pagina.**
 - 📉 **RIGHE PIÙ BASSE NELLE DUE TABELLE DELLA SCHEDA** (rev 7, 05/11/2026, Christian: «in
   collaboratori abbassa l'altezza righe delle liquidazioni e delle ore mensili effettuate almeno
   del 40%»).
