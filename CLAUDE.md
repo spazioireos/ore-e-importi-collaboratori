@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 8 · 07nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 9 · 08nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -63,6 +63,42 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   restano a 12-13px. Le righe non si sono alzate (restano 21-43px). Il nome del servizio resta a
   11px: ha uno `style` in riga con `!important` scritto dal JavaScript, e per cambiarlo
   servirebbe toccare il codice che disegna la riga — **non fatto**, non era richiesto.
+- 📐 **COMPATTAZIONE: PIU' ROBA A SCHERMO, STESSI COLORI E STESSE ALTEZZE** (rev 9, 08/11/2026,
+  richiesta di Christian: «REVISIONE GRAFICA COMPLESSIVA DEL GESTIONALE — l'interfaccia attuale
+  presenta spaziature eccessive»). Intervento **di solo CSS**: un blocco nuovo in fondo al
+  `<style>`, **nessuna riga di JavaScript, nessun attributo HTML, nessuna classe nuova**.
+  - 🔑 **TRE SCELTE DI CHRISTIAN, prese con una domanda PRIMA di costruire**, perché la sua
+    richiesta conteneva due contraddizioni interne:
+    1. **niente verde**: la codifica a colori per provenienza del dato (giallo manuale / verde
+       parametro / azzurro formula / bianco incerto) **non è ottenibile dal solo CSS**, perché
+       «parametro preassegnato» e «compilazione manuale» nel DOM sono **la stessa casella**:
+       servirebbe un contrassegno nel JavaScript, che il suo stesso vincolo vietava. **Rimandata**
+       (sua risposta: «Parte 2 hai fatto bene a non fare»);
+    2. **i colori già scelti da lui vincono sempre**: qui **nessun colore è stato toccato**;
+    3. **le altezze NON si riducono**: la sua richiesta chiedeva di abbassare anche caselle,
+       tendine e pulsanti, ma il §10.6 dice il contrario; **vale il §10.6**, si stringono solo
+       gli SPAZI.
+  - ⚠️ **Il verde non si può fare senza toccare il codice**: non riproporlo come se bastasse il
+    CSS. Se un giorno lo si vorrà davvero, serve il suo permesso per **un solo contrassegno** sulle
+    caselle precompilate da un parametro.
+  - **Che cosa si stringe**: copertina (`.cover-header`, `.cover-body`, `.toolbar`, `.kpi-bar`,
+    `.kpi`, `.op-grid`, `.op-card`), scheda (`.sheet-header`, `.sheet-body`, `.year-sep`,
+    `.year-block`, `.ytitle`, `.carry-box`, `.sec-lbl`, `.bal-summary`), `.nav-bar`, `.modal`,
+    più le spaziature scritte in riga (**senza** spazio dopo i due punti).
+  - 🐞 **DIFETTO PREESISTENTE CORRETTO: a 390px la scheda sbordava di lato**, misurati
+    **415px su 390**. Non era la tabella (sta già nel suo riquadro che scorre) ma **`.acts`**, la
+    riga dei pulsanti della scheda («✔ Salvato · + Anno 2027 · ⬇ 2025 · ⬇ 2026 · Elimina»),
+    larga 307px e **senza `flex-wrap`**. ⚠️ **La rev 8 non l'aveva visto perché il suo backup di
+    prova aveva UN SOLO anno**, quindi un pulsante «⬇ anno» invece di due: con due annualità
+    ricompare. Chiuso con `flex-wrap:wrap` dentro la media query che c'era già.
+    **Misurato: 415 → 390px.**
+  - **Misurato in esecuzione** a 390 · 768 · 1280 · 1680px: copertina **da −5,1% a −7,5%**,
+    scheda da −3,4% a −4,7%.
+  - ✅ **NON cambiati**: le **righe delle due tabelle dense** (`23·23·19·23·23·21` → identiche,
+    quindi rev 5 / rev 6 / rev 7 intatte); **0 comandi sotto i 40px fuori dalle tabelle**, su 19 in
+    copertina e 24 nella scheda; scritte sotto i 12,5px identiche. **Zero errori di pagina.**
+  - ⚠️ **Le celle non sono state toccate**, quindi la larghezza che **`fitW()`** ha misurato e
+    salvato in `localStorage` resta valida: lo zoom salvato non va rifatto.
 - 📱 **A 390px LA SCHEDA NON SCORRE PIÙ DI LATO, E NIENTE RESTA SOTTO I 12,5px** (rev 8,
   07/11/2026, trovati con l'**audit generale del gestionale** e corretti con il Nu\* di
   Christian). **Due difetti PREESISTENTI, entrambi di solo aspetto**: nessuna dicitura, nessun

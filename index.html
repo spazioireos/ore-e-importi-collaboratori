@@ -245,6 +245,77 @@ table td{padding:1px 4px}
 /* ==================== fine aggiunta rev 7 ==================== */
 .sheet-body{transition:none}
 /* ====================== fine aggiunta rev 5 ====================== */
+
+/* ============ COMPATTAZIONE (rev 9 - 08nov26) ============
+   Richiesta di Christian dell'08/11/2026 (revisione grafica complessiva).
+   Sue tre scelte, prese con una domanda prima di costruire: niente verde,
+   i colori già scelti da lui vincono sempre, e le ALTEZZE NON si riducono.
+   Qui quindi NON si tocca nessun colore e restano intatti i min-height:
+   40px fuori dalle tabelle (rev 2), 28px dentro (rev 5), 22px nelle due
+   tabelle dense (rev 7).
+   ⚠️ ESCLUSIONE: tutto esclude i discendenti di table con :not(table *),
+   perché là valgono le righe basse della rev 5, i numeri in neretto della
+   rev 6 e il -40% della rev 7. Non toccando le celle, la larghezza che
+   fitW() ha misurato e salvato in localStorage resta valida.
+   Nessuna dicitura, nessun calcolo, nessun dato toccati.
+   ========================================================= */
+
+/* --- a) copertina --- */
+.cover-header:not(table *) { padding:8px 14px; }
+.cover-body:not(table *) { padding:5px 10px; }
+.toolbar:not(table *) { gap:4px; margin-bottom:4px; }
+.kpi-bar:not(table *) { gap:4px; margin-bottom:4px; }
+.kpi:not(table *) { padding:4px 8px; min-width:88px; }
+.op-grid:not(table *) { gap:5px; }
+.op-card:not(table *) { padding:5px 8px; }
+.op-card .os:not(table *) { margin:1px 0 2px; }
+
+/* --- b) scheda del collaboratore --- */
+.sheet-header:not(table *) { padding:5px 150px 5px 12px; }
+.sheet-body:not(table *) { padding:5px; }
+.year-sep:not(table *) { margin:7px 0; }
+.year-block:not(table *) { margin-bottom:3px; }
+.ytitle:not(table *) { padding:4px 9px; }
+.carry-box:not(table *) { padding:4px 10px; gap:5px; }
+.sec-lbl:not(table *) { padding:3px 9px; }
+.bal-summary:not(table *) { margin:4px 0; padding:6px 10px; }
+
+/* --- c) barra di navigazione e finestre --- */
+.nav-bar:not(table *) { padding:5px 12px; }
+.modal:not(table *) { padding:12px; }
+
+/* --- d) spaziature scritte in riga dal JavaScript: servono !important.
+       ⚠️ In quest'app gli stili in riga sono scritti a mano nelle stringhe,
+       quindi SENZA spazio dopo i due punti. --- */
+/* i quattro gruppi di pulsanti DATI / ANAGRAFICHE / CONTRATTI / REPORT */
+[style*="padding:5px 9px"]:not(table *) { padding:4px 7px !important; }
+[style*="margin:0 0 9px"]:not(table *) { margin:0 0 6px !important; }
+/* il post-it della cadenza di pagamento */
+[style*="padding:7px 11px"]:not(table *) { padding:5px 9px !important; }
+[style*="margin:0 0 10px"]:not(table *) { margin:0 0 7px !important; }
+/* riepilogo anagrafiche, blocco anagrafica, pannelli Rettifica e credito */
+[style*="padding:10px 14px"]:not(table *) { padding:7px 11px !important; }
+[style*="padding:8px 10px"]:not(table *) { padding:6px 8px !important; }
+[style*="padding:8px 12px"]:not(table *) { padding:6px 10px !important; }
+[style*="padding:6px 14px"]:not(table *) { padding:5px 12px !important; }
+[style*="margin-top:8px"]:not(table *) { margin-top:5px !important; }
+[style*="margin-bottom:10px"]:not(table *) { margin-bottom:7px !important; }
+
+/* --- e) DIFETTO PREESISTENTE, corretto qui: a 390px la scheda del
+       collaboratore sbordava di lato (misurati 415px su 390). Non era la
+       tabella, che sta già nel suo riquadro che scorre, ma la riga dei
+       pulsanti della scheda ("✔ Salvato · + Anno 2027 · ⬇ 2025 · ⬇ 2026 ·
+       Elimina"), larga 307px e senza flex-wrap. La rev 8 non l'aveva visto
+       perché il suo backup di prova aveva UN SOLO anno, quindi un pulsante
+       "⬇ anno" invece di due: con due annualità ricompare.
+       Una riga di CSS, nessuna dicitura e nessun pulsante toccati. --- */
+@media (max-width:900px){
+  .sheet-header .acts { flex-wrap:wrap; }
+  .sheet-header:not(table *) { padding:5px 12px; }
+}
+
+/* ============== fine aggiunta rev 9 ============== */
+
 </style>
 </head>
 <body>
@@ -978,7 +1049,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 8 \u00b7 07nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 9 \u00b7 08nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -3480,7 +3551,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 8 \u00b7 07nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 9 \u00b7 08nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
