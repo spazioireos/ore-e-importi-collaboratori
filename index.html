@@ -241,6 +241,12 @@ table td{padding:1px 4px}
 [style*="font-size:10px"]:not(table *),[style*="font-size: 10px"]:not(table *),
 [style*="font-size:11px"]:not(table *),[style*="font-size: 11px"]:not(table *),
 .cover-header p:not(table *){font-size:12.5px !important}
+/* rev 10 (09/11/2026, difetto B4 del collaudo generale). Erano rimaste TRE scritte a 12px
+   fuori dalle tabelle, contro il §10.6: il cartellino «NON SALVATO» (.unsaved) e i due
+   pulsanti «Elimina 2025»/«Elimina 2026» (.btn-del-yr). Il blocco della rev 8 non le vedeva
+   perche' sono REGOLE DI CLASSE, non misure scritte nell'attributo style.
+   ⚠️ Le regole originali NON sono state toccate: qui si aggiunge solo la misura minima. */
+.unsaved:not(table *),.btn-del-yr:not(table *){font-size:12.5px !important}
 /* ============== fine aggiunta rev 8 ============== */
 /* ==================== fine aggiunta rev 7 ==================== */
 .sheet-body{transition:none}
@@ -531,6 +537,13 @@ function setColor(txt,col){var t=String(txt||"").trim();if(!t)return;if(col===""
 function closePicker(){pickerFor=null;render()}
 function f2(v){var n=R2(parseFloat(v));if(isNaN(n))return"";if(n===0)return'<span class="zero">0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212'+s+'</span>';return s}
 function fE(v){var n=R2(parseFloat(v));if(isNaN(n))return"";if(n===0)return'<span class="zero">\u20ac 0,00</span>';var s=Math.abs(n).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");if(n<0)return'<span class="neg">\u2212\u20ac '+s+'</span>';return"\u20ac "+s}
+/* rev 10 (09/11/2026, difetto B5 del collaudo generale, corretto su richiesta di Christian).
+   f2() e fE() restituiscono HTML quando il valore e' ZERO o NEGATIVO (<span class="zero">,
+   <span class="neg">): dentro un confirm() o un alert(), che mostrano TESTO, i tag si vedevano
+   scritti. Misurato dal collaudo: «Residuo iniziale: <span class="zero">0,00</span>».
+   ⚠️ f2 e fE NON sono state toccate: servono al disegno della pagina. Questa toglie i tag
+   soltanto dove il testo finisce in una finestra di sistema. */
+function soloTesto(x){return String(x==null?"":x).replace(/<[^>]*>/g,"")}
 function n2(v){return R2(parseFloat(v||0)).toFixed(2).replace(".",",")}
 // Lettura di un importo digitato a mano. Accetta 18,50 - 18.50 - "e 18,50" - 1.500,00 - 1.500
 // Regola: con la virgola, quella e' il decimale. Con solo un punto e 1 o 2 cifre dopo, il punto
@@ -719,7 +732,7 @@ function bkPortati(op,yr){
 }
 function azzeraCredito(i,yr){
   var op=A.d[i];var cl=compLiq(op,yr);if(!cl)return;
-  if(!confirm("Azzerare il credito residuo?\nOre: "+f2(cl.oreRes)+" \u2192 0\nImporto: "+fE(cl.impRes)+" \u2192 0\n\nIl saldo verr\u00e0 chiuso a zero."))return;
+  if(!confirm("Azzerare il credito residuo?\nOre: "+soloTesto(f2(cl.oreRes))+" \u2192 0\nImporto: "+soloTesto(fE(cl.impRes))+" \u2192 0\n\nIl saldo verr\u00e0 chiuso a zero."))return;
   var yd=op.years[yr];
   yd.rettOre=rM((parseFloat(yd.rettOre)||0)+cl.oreRes);
   yd.rettImp=rM((parseFloat(yd.rettImp)||0)+cl.impRes);
@@ -1049,7 +1062,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 9 \u00b7 08nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 10 \u00b7 09nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -3234,7 +3247,7 @@ function setStartM(i,yr,s,val){
   var oreBloccate=0;var mesiConOre=[];
   for(var m=0;m<nm;m++){var hv=svc.hours[m]||0;if(hv>0){oreBloccate+=hv;mesiConOre.push(MESI_IT[m]+" ("+f2(hv)+"h)")}}
   if(oreBloccate>0){
-    var msg="ATTENZIONE: i mesi precedenti a "+MESI_IT[nm]+" contengono gi\u00e0 delle ore:\n\n"+mesiConOre.join("\n")+"\n\nTotale: "+f2(oreBloccate)+" ore\n\nSe procedi, queste ore RESTANO nei calcoli ma le celle diventano non modificabili.\nPer eliminarle o spostarle, fallo PRIMA di impostare il mese di inizio.\n\nProcedo comunque?";
+    var msg="ATTENZIONE: i mesi precedenti a "+MESI_IT[nm]+" contengono gi\u00e0 delle ore:\n\n"+mesiConOre.join("\n")+"\n\nTotale: "+soloTesto(f2(oreBloccate))+" ore\n\nSe procedi, queste ore RESTANO nei calcoli ma le celle diventano non modificabili.\nPer eliminarle o spostarle, fallo PRIMA di impostare il mese di inizio.\n\nProcedo comunque?";
     if(!confirm(msg)){render();return}
   }
   svc.startM=nm;
@@ -3255,7 +3268,7 @@ function delSvc(i,yr,s){
   if(Math.abs(tot)<0.0001){
     msg="QUESTO SERVIZIO NON HA ORE N\u00c9 RESIDUI.\n\nServizio: "+nm+"\n\nLo vuoi cancellare?";
   }else{
-    msg="ATTENZIONE: questo servizio contiene del credito.\n\nServizio: "+nm+"\nOre lavorate: "+f2(hTot)+"\nResiduo iniziale: "+f2(res)+"\nTOTALE: "+f2(tot)+" ore = "+fE(rM(tot*(svc.rate||0)))+"\n\nSe lo cancelli perdi questo credito. Procedo?";
+    msg="ATTENZIONE: questo servizio contiene del credito.\n\nServizio: "+nm+"\nOre lavorate: "+soloTesto(f2(hTot))+"\nResiduo iniziale: "+soloTesto(f2(res))+"\nTOTALE: "+soloTesto(f2(tot))+" ore = "+soloTesto(fE(rM(tot*(svc.rate||0))))+"\n\nSe lo cancelli perdi questo credito. Procedo?";
   }
   if(!confirm(msg))return;
   svcs.splice(s,1);markD();render();
@@ -3551,7 +3564,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 9 \u00b7 08nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 10 \u00b7 09nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}

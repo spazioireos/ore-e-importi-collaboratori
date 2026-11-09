@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 9 · 08nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 10 · 09nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -63,6 +63,24 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   restano a 12-13px. Le righe non si sono alzate (restano 21-43px). Il nome del servizio resta a
   11px: ha uno `style` in riga con `!important` scritto dal JavaScript, e per cambiarlo
   servirebbe toccare il codice che disegna la riga — **non fatto**, non era richiesto.
+- 🧹 **NIENTE PIÙ CODICE HTML NELLE FINESTRE, E LE ULTIME SCRITTE PICCOLE** (rev 10, 09/11/2026,
+  difetti **B4** e **B5** del collaudo generale, corretti su richiesta di Christian).
+  - **B5 — dentro una conferma si leggeva codice HTML.** `f2()` e `fE()` restituiscono
+    **HTML** quando il valore è **zero o negativo** (`<span class="zero">`, `<span class="neg">`);
+    dentro un `confirm()`, che mostra **testo**, i tag si vedevano scritti. Misurato dal
+    collaudo: «Residuo iniziale: **`<span class="zero">0,00</span>`**».
+    **Correzione**: una funzione nuova **`soloTesto(x)`** che toglie i tag, usata nei **tre**
+    dialoghi che li contenevano (eliminazione di un servizio, «Azzera credito residuo», avviso
+    sui mesi già compilati). ⚠️ **`f2` e `fE` NON sono state toccate**: servono al disegno della
+    pagina. **Misurato**: `f2(0)` grezzo dà `<span class="zero">0,00</span>`, ripulito **`0,00`**.
+  - **B4 — tre scritte a 12px fuori dalle tabelle** (§10.6): il cartellino **«NON SALVATO»**
+    (`.unsaved`) e i due pulsanti **«Elimina 2025»/«Elimina 2026»** (`.btn-del-yr`). Il blocco
+    della rev 8 non le vedeva perché sono **regole di classe**, non misure scritte nell'attributo
+    `style`. ⚠️ Le regole originali non sono state toccate.
+    **Misurato**: da 3 a **0**, e le **righe delle due tabelle dense restano 23·23·19·23·23·21**,
+    identiche alla rev 5/6/7.
+  - **Provato in esecuzione** (`fix-b45.cjs`, **8 controlli su 8**, zero errori di pagina).
+
 - 📐 **COMPATTAZIONE: PIU' ROBA A SCHERMO, STESSI COLORI E STESSE ALTEZZE** (rev 9, 08/11/2026,
   richiesta di Christian: «REVISIONE GRAFICA COMPLESSIVA DEL GESTIONALE — l'interfaccia attuale
   presenta spaziature eccessive»). Intervento **di solo CSS**: un blocco nuovo in fondo al
