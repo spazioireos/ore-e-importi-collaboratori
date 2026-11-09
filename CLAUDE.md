@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 11 · 09nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 12 · 09nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -82,6 +82,50 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     battuto diventa `7,00`, `-12,5` incollato diventa `12,50`, `8,5` entra come prima; con un
     nome già esistente compare l'avviso, rispondendo **no** il collaboratore non si crea (3 → 3)
     e rispondendo **sì** sì (3 → 4).
+
+- 🚫 **I NEGATIVI CHIUSI ANCHE DALLE ALTRE TRE PORTE, E L'ULTIMO HTML NEI DIALOGHI**
+  (rev 12, 09/11/2026, quattro difetti **trovati dal SECONDO collaudo**: la rev 11 e la rev 10
+  avevano chiuso **meno** di quanto dichiaravano).
+  - 🔴 **La rev 11 diceva che `raw()` è «il punto unico da cui passano tutti i numeri scritti a
+    mano». NON era vero**: è il punto unico delle caselle delle **tabelle**. Tre caselle
+    compilabili non ci passavano, e il difetto **A4 era ancora aperto da lì**:
+    | casella | come si leggeva | misurato |
+    |---|---|---|
+    | **«Costo orario €»** del modulo *Nuovo Operatore* (`nR`) | `parseFloat` | `-10` accettato → tariffa del 1° servizio **−10**, e nella scheda **«−€ 100,00»** per 10 ore |
+    | **«Costo orario predefinito €»** del modulo *Nuovo anno* (`nyR`) | `parseFloat` | `-25` accettato |
+    | **«Importo €»** del pannello della *riga servizio in blocco* | `euroIn`, la cui espressione **ammette il meno per costruzione** | `-18,50` accettato → `rate = -18.5` nei dati |
+    ⚠️ Era **esattamente il difetto originario** (il negativo sottrae senza avviso), da un'altra
+    porta — e la più pericolosa è `nR`, che si usa **ogni volta che si crea un collaboratore**.
+    **Correzione**: le prime due leggono ora con **`raw()`** (identica a `parseFloat` su tutto il
+    resto: vuoto e zero danno ancora 18); per la terza il segno si toglie dentro **`svcSet`**, nel
+    punto unico in cui l'importo viene normalizzato.
+  - 🔴 **E un `f2()` era rimasto scoperto dentro un `confirm`** (il difetto **B5** che la rev 10
+    doveva chiudere): nel dialogo di `setStartM` l'elenco dei mesi usava `f2(hv)` nudo, protetto
+    solo dalla guardia `hv>0`, che **non basta** — un valore positivo che arrotonda a zero la
+    supera. **Misurato con 0,0001 ore** (valore che si può scrivere a mano e che resta nei dati):
+    il dialogo mostrava «Gen (**`<span class="zero">0,00</span>`**h)». Ora dice «Gen (0,00h)».
+    ⚠️ **Regola da ricordare**: va avvolto in `soloTesto` **ogni** `f2()`/`fE()` che finisce in un
+    `confirm`/`alert`, non solo quelli che si pensa possano valere zero.
+  - **Provato in esecuzione** (`sc-op-rev12.cjs`, `sc-op-rev12b.cjs`, `sc-op-rev12c.cjs`): `-10`
+    nel Nuovo Operatore dà tariffa **10** e nella scheda **zero** importi «−€»; `-25` nel Nuovo
+    anno non produce tariffe negative; `-18,50` nell'Importo € diventa **18,50**; il dialogo con
+    0,0001 ore non contiene più codice HTML. **Non regressione**: `67,5 × 22,99 = 1.551,83`,
+    `raw()` identica sui numeri buoni (`8,5` → 8.5, `0` → 0, vuoto → 0), un costo orario normale
+    (22,99) e uno vuoto (valore di riserva 18) entrano come prima. **Zero errori di pagina.**
+  - 🟠 **DUE COSE SEGNALATE A CHRISTIAN E NON TOCCATE** (servono una sua decisione):
+    1. **`1.234,56` nelle ore e nelle tariffe diventa 1,23**: `raw()` sostituisce solo la **prima**
+       virgola e non tocca i punti (`"1.234,56"` → `"1.234.56"` → `parseFloat` = **1.234**).
+       ⚠️ **Difetto PREESISTENTE, verificato**: la `raw()` di prima della rev 11 dà lo stesso
+       risultato. Però il §10.2 chiede che «l'utente scriva 1.234,56 e il parsing lo capisca», e la
+       stessa app ha `euroIn()` che lo legge giusto: **due porte leggono lo stesso numero in due
+       modi diversi**. Non corretto perché cambierebbe **come si interpreta ciò che si scrive**.
+    2. **Un negativo già in archivio, per un istante, si vede senza il meno**: entrando e uscendo
+       da una casella senza scrivere, `blurFmt` riformatta con `raw()`, che ora scarta il segno.
+       **Misurato**: dato `-45,5` → casella «−45,50» → dopo entra/esci **«45,50»** → dopo il
+       ridisegno di nuovo «−45,50». **Il dato non viene mai alterato** e l'incoerenza è
+       transitoria, ma è l'unico effetto collaterale **introdotto** dalla rev 11, e quelle
+       rettifiche negative le scrive l'app stessa con «Azzera credito residuo». La correzione
+       tocca `blurFmt`, che riformatta **tutte** le caselle: serve il suo via libera.
 
 - 🧹 **NIENTE PIÙ CODICE HTML NELLE FINESTRE, E LE ULTIME SCRITTE PICCOLE** (rev 10, 09/11/2026,
   difetti **B4** e **B5** del collaudo generale, corretti su richiesta di Christian).

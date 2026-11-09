@@ -1067,7 +1067,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 11 \u00b7 09nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 12 \u00b7 09nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -1485,7 +1485,10 @@ function svcSet(f,v){
   if(!A.svcb)return;
   A.svcb[f]=v;
   // l'importo (€/h) si normalizza in italiano: accetta sia 18,50 sia 18.50
-  if(f==="rate")A.svcb.rate=euroFmt(v);
+  /* rev 12: l'importo di questa casella si legge con euroIn, la cui espressione ammette il
+     meno per costruzione, quindi -18,50 entrava nei dati come rate=-18.5. Il segno si toglie
+     qui, nel punto unico in cui l'importo viene normalizzato. */
+  if(f==="rate")A.svcb.rate=euroFmt(String(v===null||v===undefined?"":v).replace(/-/g,""));
   if(f==="servizio"){
     var ls=listTrova(v,A.svcb.ruolo||"");
     if(ls){A.svcb.rate=euroFmt(ls.rate||"");A.svcb.ruolo=ls.ruolo||""}
@@ -3250,7 +3253,7 @@ function setStartM(i,yr,s,val){
   var nm=parseInt(val)||0;
   // Ore gia' presenti nei mesi che verrebbero bloccati?
   var oreBloccate=0;var mesiConOre=[];
-  for(var m=0;m<nm;m++){var hv=svc.hours[m]||0;if(hv>0){oreBloccate+=hv;mesiConOre.push(MESI_IT[m]+" ("+f2(hv)+"h)")}}
+  for(var m=0;m<nm;m++){var hv=svc.hours[m]||0;if(hv>0){oreBloccate+=hv;mesiConOre.push(MESI_IT[m]+" ("+soloTesto(f2(hv))+"h)")}}
   if(oreBloccate>0){
     var msg="ATTENZIONE: i mesi precedenti a "+MESI_IT[nm]+" contengono gi\u00e0 delle ore:\n\n"+mesiConOre.join("\n")+"\n\nTotale: "+soloTesto(f2(oreBloccate))+" ore\n\nSe procedi, queste ore RESTANO nei calcoli ma le celle diventano non modificabili.\nPer eliminarle o spostarle, fallo PRIMA di impostare il mese di inizio.\n\nProcedo comunque?";
     if(!confirm(msg)){render();return}
@@ -3289,7 +3292,8 @@ function delPay(idx,yr,pi){
 function delYr(idx,yr){if(confirm("Eliminare anno "+yr+"?")){delete A.d[idx].years[yr];markD();render()}}
 function prepAY(){A.modal="newyr";render()}
 function confAY(ny){
-  var op=A.d[A.sel];var rt=parseFloat(document.getElementById('nyR').value)||18;
+  /* rev 12: come sopra — misurato che accettava -25. */
+  var op=A.d[A.sel];var rt=raw(document.getElementById('nyR').value)||18;
   var yrs=gY(op);var lastY=yrs[yrs.length-1];var cl=compLiq(op,lastY);
   // carry-forward handled by compLiq automatically
   // Clone services from previous year
@@ -3305,7 +3309,12 @@ function delOp(i){if(confirm("Eliminare "+A.d[i].sheet+"?")){A.d.splice(i,1);mar
 function creaOp(){
   var nm=document.getElementById('nN').value.trim().toUpperCase();
   var sh=document.getElementById('nS').value.trim();
-  var rt=parseFloat(document.getElementById('nR').value)||18;
+  /* rev 12 (09/11/2026, trovata dal SECONDO collaudo): questa casella NON passava da raw(),
+     quindi il divieto dei negativi della rev 11 non la toccava. Misurato: scrivendo -10 nei
+     dati finiva default_rate=-10 E la tariffa del primo servizio, e la scheda mostrava
+     «-€ 100,00» per 10 ore — cioe' esattamente il difetto A4, da un'altra porta.
+     raw() si comporta come parseFloat su tutto il resto (vuoto e zero danno ancora 18). */
+  var rt=raw(document.getElementById('nR').value)||18;
   var yr=document.getElementById('nYr').value.trim()||"2025";
   var vc=document.getElementById('nV').value.trim()||null;
   if(!nm){alert("Inserire il nome");return}
@@ -3573,7 +3582,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 11 \u00b7 09nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 12 \u00b7 09nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
