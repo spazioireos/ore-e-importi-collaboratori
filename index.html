@@ -429,11 +429,30 @@ function pacchetto(){
   return{formato:"opoc-3",versione:3,creato:new Date().toISOString(),
     operatori:A.d,modello:t?t:null,listino:li,belfiore:be};
 }
+/* rev 13 (09/11/2026, difetto trovato dal collaudo delle INTERCONNESSIONI).
+   Prima bastava `Array.isArray(data)`: un file JSON qualunque, per esempio `[1,2,3]`, veniva
+   ACCETTATO, sostituiva `spazioireos_opoc` e l'app restava con la pagina BIANCA anche dopo il
+   ricaricamento — recuperabile solo da un backup. `scartaSicuro` non se ne accorgeva, perche'
+   controllava soltanto `pk.operatori.length`, e [1,2,3] ha lunghezza 3.
+   Il §10.1 dice: «prima validare, poi — solo se valido — sovrascrivere; se l'import fallisce a
+   meta', i dati correnti non si toccano».
+   ⚠️ La prova e' larga di proposito, per non rifiutare un backup vecchio: ogni elemento deve
+   essere un oggetto, e almeno uno deve avere uno dei campi di un collaboratore. */
+function paionoOperatori(a){
+  if(!a||!a.length)return false;
+  var uno=false;
+  for(var i=0;i<a.length;i++){
+    var o=a[i];
+    if(!o||typeof o!=="object"||Array.isArray(o))return false;
+    if(typeof o.name==="string"||typeof o.sheet==="string"||o.years||o.anag||o.default_rate!==undefined)uno=true;
+  }
+  return uno;
+}
 function scarta(data){
   // Accetta il formato nuovo e tutti i precedenti: un backup vecchio resta valido
-  if(Array.isArray(data))return{operatori:data,modello:null,listino:null,belfiore:null};
-  if(data&&Array.isArray(data.operatori))return{operatori:data.operatori,modello:data.modello||null,
-    listino:data.listino||null,belfiore:data.belfiore||null};
+  if(Array.isArray(data))return paionoOperatori(data)?{operatori:data,modello:null,listino:null,belfiore:null}:null;
+  if(data&&Array.isArray(data.operatori))return paionoOperatori(data.operatori)?{operatori:data.operatori,modello:data.modello||null,
+    listino:data.listino||null,belfiore:data.belfiore||null}:null;
   return null;
 }
 // Rimette in funzione listino e codici catastali presi da un backup
@@ -1067,7 +1086,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 12 \u00b7 09nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 13 \u00b7 09nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -3582,7 +3601,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 12 \u00b7 09nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 13 \u00b7 09nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}

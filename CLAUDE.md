@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 12 · 09nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 13 · 09nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -82,6 +82,43 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     battuto diventa `7,00`, `-12,5` incollato diventa `12,50`, `8,5` entra come prima; con un
     nome già esistente compare l'avviso, rispondendo **no** il collaboratore non si crea (3 → 3)
     e rispondendo **sì** sì (3 → 4).
+
+- 🛡️ **UN FILE JSON QUALUNQUE NON SI IMPORTA PIÙ** (rev 13, 09/11/2026, difetto trovato dal
+  **collaudo delle INTERCONNESSIONI**).
+  - 🔴 **Misurato**: `scarta()` accettava **ogni** `Array.isArray(data)` senza guardarci dentro.
+    Importando un file che contiene `[1,2,3]` la conferma non diceva niente di anomalo,
+    `spazioireos_opoc` veniva **sostituito con la spazzatura**, poi l'app lanciava «Cannot convert
+    undefined or null to object» e restava con la **pagina BIANCA anche dopo il ricaricamento**:
+    recuperabile **solo da un backup**. `scartaSicuro` non se ne accorgeva, perche' controllava
+    soltanto `pk.operatori.length`, e `[1,2,3]` ha lunghezza 3.
+    ⚠️ I backup **di un'altra app** erano invece già respinti correttamente: il buco era solo
+    sugli **array**.
+  - **La correzione**: funzione nuova **`paionoOperatori(a)`**, usata in **entrambi** i rami di
+    `scarta` (l'array nudo dei backup vecchi e `{operatori:[...]}`). È larga di proposito, per non
+    rifiutare un backup storico: ogni elemento deve essere un **oggetto**, e almeno uno deve avere
+    uno dei campi di un collaboratore (`name`, `sheet`, `years`, `anag`, `default_rate`).
+    È il §10.1: «prima validare, poi — solo se valido — sovrascrivere».
+  - **Provato in esecuzione** (`ic-fix.cjs` 11 casi su `scarta`, `ic-fix3.cjs` **13 controlli su
+    13** su `scartaSicuro` e sul percorso completo): `[1,2,3]`, `["a"]`, `[]`, `[null]`,
+    `[{x:1}]`, `{operatori:[1,2,3]}`, i backup di Dipendenti e di USOINT, un oggetto qualunque e
+    un file che non è JSON vengono **tutti rifiutati** con l'avviso «Errore: Formato non valido»,
+    e l'archivio **non viene toccato**; un **backup vero** viene ancora accettato (3
+    collaboratori). **Zero errori di pagina.**
+  - 🟠 **Due cose che il collaudo delle interconnessioni ha trovato e che NON sono state
+    toccate** (servono una decisione di Christian):
+    1. **due schede aperte si cancellano a vicenda in silenzio**: nessun timbro, nessun avviso,
+       l'ultimo 💾 riscrive tutto l'elenco. È lo stesso difetto chiuso in Dipendenti con la
+       ver144 (misurato: il 41,5 della prima scheda sparisce, resta il 38,25 della seconda);
+    2. le quattro app stanno tutte sulla **stessa origine** `spazioireos.github.io`, quindi
+       condividono **un solo `localStorage`**: la separazione è data **solo** dal prefisso delle
+       chiavi. ⚠️ **Oggi non fa danni, misurato**: nessuna app legge o scrive le chiavi di
+       un'altra, e i prefissi non si sovrappongono.
+  - ✅ **ISOLAMENTO CONFERMATO IN ESECUZIONE** (24 controlli): Collaboratori non legge e non
+    scrive **nessuna** chiave delle altre app (spia su `Storage.prototype`: tocca solo
+    `spazioireos_opoc`, `_colors`, `_pin`, `_zoom`), non ha **nessun** collegamento a Firebase
+    (0 occorrenze nel file; le uniche richieste esterne sono 6 verso Google Fonts), convive con
+    Dipendenti nello stesso browser senza disturbarlo, e i backup delle altre app vengono
+    respinti senza toccare niente.
 
 - 🚫 **I NEGATIVI CHIUSI ANCHE DALLE ALTRE TRE PORTE, E L'ULTIMO HTML NEI DIALOGHI**
   (rev 12, 09/11/2026, quattro difetti **trovati dal SECONDO collaudo**: la rev 11 e la rev 10
