@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 10 · 09nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 11 · 09nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -63,6 +63,26 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   restano a 12-13px. Le righe non si sono alzate (restano 21-43px). Il nome del servizio resta a
   11px: ha uno `style` in riga con `!important` scritto dal JavaScript, e per cambiarlo
   servirebbe toccare il codice che disegna la riga — **non fatto**, non era richiesto.
+- 🚫 **NIENTE NEGATIVI, E AVVISO SUI NOMI DOPPI** (rev 11, 09/11/2026, due risposte di Christian
+  alla ricognizione: «**A4**: vieta sempre i negativi nelle celle compilabili da me» e «**A5**:
+  avviso non bloccante»).
+  - **A4** — il collaudo aveva misurato che **`-5`** nelle ore **sottraeva** (riga da 50,00 a
+    45,00 ore, importo 1.057,50 €) **senza nessun avviso**. La correzione è in **`raw()`**, il
+    punto **unico** da cui passano tutti i numeri scritti a mano: non accetta più il segno meno.
+    ⚠️ **Verificato prima di toccarlo** che tutte le chiamate di `raw()` sono su **valori di
+    caselle** (`this.value`, `el.value`, `inputs[i].value`): nessuna legge un dato salvato,
+    quindi **le rettifiche calcolate dall'app non sono toccate** (`azzeraCredito` usa
+    `parseFloat`, non `raw`).
+    ⚠️ **I valori negativi già nei dati NON vengono cambiati**: si impedisce solo di scriverne.
+  - **A5** — due collaboratori con lo **stesso nome** venivano accettati in silenzio. Ora
+    `creaOp()` avvisa: «Esiste già un collaboratore con questo nome … Puoi crearlo lo stesso, ma
+    nell'elenco saranno difficili da distinguere. Vuoi crearlo?» ⚠️ **Non bloccante**:
+    rispondendo **sì** si crea. ⚠️ **Dicitura nuova, scritta da Claude.**
+  - **Provato in esecuzione** (`rev11.cjs`, **8 controlli su 8**, zero errori di pagina): `-7`
+    battuto diventa `7,00`, `-12,5` incollato diventa `12,50`, `8,5` entra come prima; con un
+    nome già esistente compare l'avviso, rispondendo **no** il collaboratore non si crea (3 → 3)
+    e rispondendo **sì** sì (3 → 4).
+
 - 🧹 **NIENTE PIÙ CODICE HTML NELLE FINESTRE, E LE ULTIME SCRITTE PICCOLE** (rev 10, 09/11/2026,
   difetti **B4** e **B5** del collaudo generale, corretti su richiesta di Christian).
   - **B5 — dentro una conferma si leggeva codice HTML.** `f2()` e `fE()` restituiscono
