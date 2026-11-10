@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 13 · 09nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 14 · 10nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -82,6 +82,43 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     battuto diventa `7,00`, `-12,5` incollato diventa `12,50`, `8,5` entra come prima; con un
     nome già esistente compare l'avviso, rispondendo **no** il collaboratore non si crea (3 → 3)
     e rispondendo **sì** sì (3 → 4).
+
+- ➖ **IL MENO DI UN NEGATIVO GIÀ IN ARCHIVIO NON SPARISCE PIÙ** (rev 14, 10/11/2026, punto
+  **12** dell'elenco consegnato a Christian, sua risposta: «**Sistema**»).
+  - 🔴 **Il difetto, introdotto dalla rev 11 e misurato dal secondo collaudo**: entrando e
+    uscendo da una casella **senza scrivere niente**, `blurFmt` riformattava con `raw()`, che
+    dalla rev 11 **scarta il segno meno**. Un negativo già in archivio — e li scrive l'app stessa
+    con **«Azzera credito residuo»** — si vedeva per un istante **senza il meno**.
+    **Misurato nel percorso vero** (la casella del residuo di un servizio, dato `-45,5`):
+    rev 13 «-45,50» → entra/esci → **«45,50»**; **rev 14 «-45,50» → «-45,50»**.
+    ⚠️ **Il dato in archivio non era mai stato alterato**, né prima né adesso (verificato:
+    resta `-45.5` in tutti e due i casi): era una bugia solo a video, e transitoria.
+  - **La correzione, in due funzioni sole** (nessuna delle 8 chiamate è stata toccata):
+    **`fcl(el)`** (che già gira all'ingresso nella casella) ricorda il testo di partenza in
+    `data-ini`; **`blurFmt(el)`** se il testo è **identico** a quello trovato all'ingresso
+    **non riformatta** — aggiorna solo il colore dello zero — e quindi il meno resta.
+  - ⚠️ **Il divieto dei negativi della rev 11 NON è toccato**: se scrivi tu, `raw()` scarta il
+    segno come prima. **Misurato**: scrivendo `-12,5` nella stessa casella entra **12,50** e nei
+    dati finisce **12.5**.
+  - **Provato in esecuzione** (`rev14op.cjs` **15/15** in isolamento, `rev14opb.cjs` **7/7** nel
+    percorso vero con il confronto rev 13 ↔ rev 14, zero errori di pagina). **Non regressione**:
+    una casella a zero si svuota all'ingresso e torna «0,00» all'uscita, un positivo entrato e
+    lasciato resta identico, un numero scritto a mano si formatta come prima.
+    **Batteria rieseguita**: `mxop-1` 46 · `mxop-2` 54 · `mxop-3` 49 · `rev11` 8 · `fix-b45` 8 ·
+    `g2-opoc` 9 · `g2b-opoc` 13 · `ic-fix3` 13 · `sc-op-rev12c` 7 · `sc-op-rev12` 10, **zero
+    falliti** tranne un controllo che **falliva già prima** (quello script non riesce ad aprire il
+    modulo «Nuovo Operatore»: è una fragilità dello script, e `sc-op-rev12b` lo apre).
+    ⚠️ In cinque script le **attese erano invecchiate** (la targhetta scritta a mano, l'elenco di
+    operatori vuoto che dalla **rev 13** viene rifiutato prima, e un controllo che pretendeva
+    ancora il codice HTML nel dialogo, cioè il difetto chiuso dalla **rev 10**): aggiornate, non
+    aggirate.
+  - ✅ **PUNTO 11 CHIUSO SENZA TOCCARE NIENTE** (sua risposta: «Non metto mai numeri con le
+    migliaia puntate. Io scrivo 1234.56 o 1234,56 e per me questo vuol dire 1.234,56»).
+    **Verificato in esecuzione**: `raw("1234.56")` = **1234,56** e `raw("1234,56")` = **1234,56**,
+    cioè **i due modi che usa lui danno lo stesso numero**, già adesso. Resta vero che
+    `raw("1.234,56")` dà **1,234** (segnalato nella rev 12), ma è una scrittura che **lui non usa
+    mai**: ⚠️ **non correggerla senza chiederglielo**, perché cambierebbe come si interpreta
+    ciò che si scrive in tutte le caselle.
 
 - 🛡️ **UN FILE JSON QUALUNQUE NON SI IMPORTA PIÙ** (rev 13, 09/11/2026, difetto trovato dal
   **collaudo delle INTERCONNESSIONI**).
