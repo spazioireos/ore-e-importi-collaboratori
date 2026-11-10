@@ -329,7 +329,32 @@ table td{padding:1px 4px}
 <script>
 var SEED=[];
 var MO3=["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
-var LSK="spazioireos_opoc";  // STABLE KEY - NEVER CHANGE THIS
+var LSK="spazioireos_opoc";
+/* rev 15 (10/11/2026, punto 4 dell'elenco, risposta di Christian: «metti la stessa protezione
+   di dipendenti»). IL DIFETTO, misurato dal collaudo delle interconnessioni: con DUE SCHEDE
+   aperte sullo stesso browser l'ultima che premeva ✔ Salva riscriveva TUTTO l'elenco con quello
+   che aveva in memoria, e le modifiche dell'altra sparivano SENZA UN FIATO (misurato: il 41,5
+   della prima scheda spariva, restava il 38,25 della seconda).
+   LA DIFESA E' UN TIMBRO, identico a quello della ver144 di Dipendenti e della ver131 di USOINT:
+   a ogni salvataggio si scrive una chiave A PARTE con un numero sempre diverso, e ogni scheda
+   ricorda il timbro che conosce. Se quello in memoria e' diverso, qualcun altro ha salvato nel
+   frattempo e l'app CHIEDE prima di sovrascrivere.
+   ⚠️ Il timbro sta in una chiave SUA, fuori dai dati: il backup JSON non cambia di una virgola.
+   ⚠️ Vale per le schede dello STESSO browser. ⚠️ Dicitura nuova, scritta da Claude. */
+var LSK_TIMBRO=LSK+"__timbro";
+function timbroLeggi(){try{return localStorage.getItem(LSK_TIMBRO)||""}catch(e){return ""}}
+var timbroMio=timbroLeggi();
+function timbroSegna(){var t=String(Date.now())+"-"+Math.random().toString(36).slice(2,8);
+  try{localStorage.setItem(LSK_TIMBRO,t)}catch(e){}timbroMio=t;return t}
+function timbroControlla(){
+  var t=timbroLeggi();
+  if(t===timbroMio)return true;
+  var ok=confirm("Un'altra scheda ha salvato dopo di te\n\n"+
+    "Se salvi adesso, QUELLE modifiche vengono sostituite da quello che hai aperto qui.\n\n"+
+    "Per tenerle: annulla, fai un \u2b07 Backup, poi ricarica la pagina (F5).");
+  if(ok)timbroMio=t;
+  return ok;
+}  // STABLE KEY - NEVER CHANGE THIS
 // Pastel year colors
 // 3 colori pastello tenui che si ripetono ciclicamente
 var YC=[
@@ -399,11 +424,14 @@ function ld(){
   window._needsRecovery=true;
   return JSON.parse(JSON.stringify(SEED));
 }
-function sv(){try{
+function sv(){
+  if(!timbroControlla())return;   /* rev 15 (punto 4) */
+  try{
   sortPayments();
   saveColors();
   A.d.sort(function(a,b){var na=(a.name||"").toLowerCase();var nb=(b.name||"").toLowerCase();return na<nb?-1:na>nb?1:0});
   localStorage.setItem(LSK,JSON.stringify(A.d));
+  timbroSegna();   /* rev 15 (punto 4) */
   // La bozza dell'atto in blocco NON si cancella qui: resta finche' non premi tu "Svuota bozza".
   A.dirty=false;render();
   // Auto-backup: scarica JSON nei Download
@@ -1098,7 +1126,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 14 \u00b7 10nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 15 \u00b7 10nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -3613,7 +3641,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 14 \u00b7 10nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 15 \u00b7 10nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}

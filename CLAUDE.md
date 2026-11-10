@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 14 · 10nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 15 · 10nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -82,6 +82,35 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     battuto diventa `7,00`, `-12,5` incollato diventa `12,50`, `8,5` entra come prima; con un
     nome già esistente compare l'avviso, rispondendo **no** il collaboratore non si crea (3 → 3)
     e rispondendo **sì** sì (3 → 4).
+
+- 🔐 **DUE SCHEDE NON SI CANCELLANO PIÙ A VICENDA IN SILENZIO** (rev 15, 10/11/2026, punto
+  **4** dell'elenco, risposta di Christian: «**metti la stessa protezione di dipendenti**»).
+  - 🔴 **Il difetto, misurato dal collaudo delle interconnessioni**: con **due schede aperte**
+    sullo stesso browser, l'ultima che premeva **✔ Salva** riscriveva **tutto** l'elenco con quello
+    che aveva in memoria, e le modifiche dell'altra sparivano **senza un fiato** (misurato: il
+    **41,5** della prima scheda spariva, restava il **38,25** della seconda). È lo stesso difetto
+    chiuso in Dipendenti con la **ver144** e in USOINT con la **ver131**.
+  - **La difesa è un TIMBRO**: a ogni salvataggio `sv()` scrive **`LSK_TIMBRO`**
+    (`spazioireos_opoc__timbro`) con un numero sempre diverso, e ogni scheda ricorda in
+    **`timbroMio`** il timbro che conosce. Se quello in memoria è **diverso**,
+    **`timbroControlla()`** chiede prima di sovrascrivere e, se rispondi **annulla**, `sv()` esce
+    **senza toccare niente**.
+  - ⚠️ **Il timbro sta in una chiave SUA, fuori dai dati**: il **backup JSON non cambia di una
+    virgola** (verificato: dentro `spazioireos_opoc` non compare la parola «timbro»).
+  - ⚠️ **Vale per le schede dello STESSO browser.** ⚠️ **Dicitura nuova, scritta da Claude**, la
+    stessa di Dipendenti e USOINT.
+  - 🐞 **UN MIO ERRORE, trovato dalla prova in esecuzione e NON dal `node --check`**: al primo
+    tentativo nel file era entrata **solo la chiamata** `timbroSegna()`, non le funzioni — lo
+    script che le inseriva si era interrotto a metà e non aveva scritto niente. Il controllo di
+    sintassi **passava** (una funzione che non esiste è un errore a tempo di esecuzione, non di
+    sintassi) e il salvataggio **sarebbe andato in errore**. È la stessa trappola della ver139 di
+    Dipendenti, ed è la ragione per cui il §10.2 chiede le prove **in esecuzione**.
+  - **Provato in esecuzione** (`rev15op.cjs`, **15 controlli su 15**, e `dbg-timbro.cjs` in
+    isolamento): due schede vere aperte insieme — la seconda scrive 38,25 e salva senza domande
+    scrivendo il timbro, la prima scrive 41,5 e **avvisa**; rispondendo **annulla** l'archivio
+    resta **identico** e il timbro dell'altra **non viene toccato**; con **una scheda sola** non
+    chiede niente, il dato arriva davvero nell'archivio e dopo un **ricaricamento** salva ancora
+    senza domande.
 
 - ➖ **IL MENO DI UN NEGATIVO GIÀ IN ARCHIVIO NON SPARISCE PIÙ** (rev 14, 10/11/2026, punto
   **12** dell'elenco consegnato a Christian, sua risposta: «**Sistema**»).
