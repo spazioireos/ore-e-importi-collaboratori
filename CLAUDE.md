@@ -111,6 +111,13 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     resta **identico** e il timbro dell'altra **non viene toccato**; con **una scheda sola** non
     chiede niente, il dato arriva davvero nell'archivio e dopo un **ricaricamento** salva ancora
     senza domande.
+  - **Batteria rieseguita, tutta superata, zero falliti**: `mxop-1` 46 · `mxop-2` 54 · `mxop-3` 49
+    · `rev11` 8 · `rev14op` 15 · `rev14opb` 7 · `fix-b45` 8 · `g2-opoc` 9 · `g2b-opoc` 13 ·
+    `ic-fix3` 13 · `sc-op-rev12c` 7. ⚠️ In `rev14op` l'attesa della targhetta era scritta a mano
+    («rev 14»): aggiornata, non aggirata.
+    ⚠️ **Il ✔ Salva è nel percorso di `g2b-opoc`** (che prova il salvataggio vero, il
+    ricaricamento e gli import rifiutati) e di `ic-fix3`: entrambi **superati per intero**, quindi
+    il timbro non ha rotto il salvataggio di tutti i giorni.
 
 - ➖ **IL MENO DI UN NEGATIVO GIÀ IN ARCHIVIO NON SPARISCE PIÙ** (rev 14, 10/11/2026, punto
   **12** dell'elenco consegnato a Christian, sua risposta: «**Sistema**»).
