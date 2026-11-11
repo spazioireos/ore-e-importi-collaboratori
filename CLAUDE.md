@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 15 · 10nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 16 · 11nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -83,6 +83,46 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     nome già esistente compare l'avviso, rispondendo **no** il collaboratore non si crea (3 → 3)
     e rispondendo **sì** sì (3 → 4).
 
+- ⌨️ **LA VIRGOLA NON VIENE PIÙ INGOIATA, E LE FINESTRE SI LEGGONO** (rev 16, 11/11/2026,
+  due risposte di Christian ai punti **1** «correggi» e **2** «ok» del collaudo generale).
+  - 🔴 **1 — «22,99» nel «Costo orario €» diventava 2299**, cioè un errore di **×100 in
+    silenzio**: 10 ore facevano **€ 22.990,00** invece di € 229,90. La causa non era `raw()`,
+    che la virgola la sa leggere, ma le due caselle **`#nR`** (modulo *Nuovo Operatore*) e
+    **`#nyR`** (*Nuovo anno*), che erano **`<input type="number">`**: un campo di quel tipo
+    **ingoia la virgola** prima che il JavaScript la veda, e a `raw()` arrivava già `"2299"`.
+    Ora sono **`type="text" inputmode="decimal"`**: il testo arriva intero a `raw()`, che era
+    e resta il punto unico in cui si legge un numero scritto a mano, e sul telefono la
+    tastiera numerica compare lo stesso.
+    - ⚠️ **PREESISTENTE**, misurato identico su rev 7, rev 13 e rev 15.
+    - ⚠️ **`#nYr` NON è stato toccato**: è l'**anno**, non ha decimali, e lì `type="number"`
+      va bene. È rimasto l'unico `type="number"` su una casella di dati in tutte e quattro le
+      app.
+    - ⚠️ **Il divieto dei negativi della rev 11/rev 12 resta**: `raw()` scarta il segno meno
+      come prima (verificato: `-5` battuto entra come `5,00`).
+    - **Misurato in esecuzione** (`col-B2-virgola`, **7 controlli su 7**): `22,99` → tariffa
+      **22,99** e 10 ore = **€ 229,90**; `22.99` col punto → identico; `1234,56` → 1234,56;
+      `-10` → 10; vuoto → il valore di riserva 18; e nel *Nuovo anno* `23,75` → **23,75**
+      (nella rev 15 faceva 2375).
+  - 👁️ **2 — le 13 scritte a 11px nelle finestre**: `.modal label` e `.modal .cf-info` erano
+    **regole di classe**, e il blocco della rev 8 non le vedeva perché copre solo le misure
+    scritte nell'attributo `style`. Erano in **Nuovo Operatore** (5), **Nuovo anno** (7) e
+    **Report per data** (1), sotto il minimo di 12,5px del §10.6. Ora il blocco nuovo le porta
+    a **12,5px**, con la stessa esclusione `:not(table *)` di sempre.
+    ⚠️ **Dentro le tabelle non cambia niente**: lì valgono le righe basse della rev 5, i numeri
+    in neretto della rev 6 e il −40% della rev 7.
+    **Misurato** (`col-G2-finestre`, **29 controlli su 29**): le scritte sotto i 12,5px nelle
+    sette finestre passano da **13 a ZERO**; le **righe delle due tabelle dense restano
+    23·23·19·23·23·21**, identiche; le finestre non sbordano a **390px**; i comandi sotto i
+    40px fuori dalle tabelle restano **zero**.
+  - **Batteria rieseguita sulla rev 16, ZERO falliti**: `mxop-1` **46/0** · `mxop-2` **54/0** ·
+    `mxop-3` **49/0** · `rev11` **8/0** · `rev14op` **15/0** · `rev14opb` **7/0** · `rev15op`
+    **15/0** · `fix-b45` **8/0** · `g2-opoc` **9/0** · `g2b-opoc` **13/0** · `ic-fix3` **13/0** ·
+    `sc-op-rev12c` **7/0** · `col-A` **27/0** · `col-B` **20/0** · `col-D` **24/0** · `col-E`
+    **20/0** · `col-G` **29/0** · `col-H` **11/0** · `col-I` **27/0** · `col-K` **27/0**.
+    ⚠️ In **tre** script l'attesa della targhetta era scritta a mano («rev 15 · 10nov26»): resa
+    **dinamica** (si controlla solo che la targhetta ci sia e abbia la forma giusta), così non
+    invecchia più. **Aggiornate, non aggirate.**
+
 - 🔴 **COLLAUDO GENERALE DEL 11/11/2026 — UN DIFETTO GRAVE PREESISTENTE, TROVATO E NON
   CORRETTO** (serve la decisione di Christian). Per il resto la rev 15 ha retto: **~500 controlli
   superati**, batteria storica **258/0** (i 3 «falliti» sono fragilità note degli script),
@@ -102,7 +142,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
      il campo potrebbe accettare la virgola, quindi la gravità reale dipende dal browser.
      ⚠️ È la stessa porta che la rev 12 dichiarava chiusa: il divieto dei **negativi** è stato
      chiuso davvero (`-10` → 10), la **virgola** no. Il §10.2 chiede il contrario.
-     ⚠️ **NON corretto**: cambia come si interpreta ciò che si scrive, serve il suo via.
+     ✅ **CHIUSO dalla rev 16** (Christian: «correggi»): vedi la scheda ⌨️ qui sopra.
      🔎 Le altre tre app **non hanno questo problema**: `type="number"` su caselle di dati
      esiste **solo qui** (3 casi; il terzo, `#nYr`, è l'anno e non ha decimali).
   2. 🟠 **13 scritte a 11px in tre finestre di dialogo** (§10.6: minimo 12,5px fuori dalle
@@ -111,6 +151,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
      che il blocco della rev 8 non vede perché copre solo le misure scritte nell'attributo
      `style`. È la stessa famiglia del difetto B4 chiuso dalla rev 10. **PREESISTENTE** (rev 7 e
      rev 13 identiche). Le altre quattro finestre sono a posto.
+     ✅ **CHIUSO dalla rev 16** (Christian: «ok»): vedi la scheda ⌨️ qui sopra.
   3. 🟡 Osservazioni senza intervento: somma dei «secchi» a video **8.026,70 €** contro residuo
      **8.026,69 €** (un centesimo, arrotondamento riga per riga, i dati sono giusti); ogni
      ✔ Salva scarica da sé un file di backup (rete di sicurezza storica, non un salvataggio
