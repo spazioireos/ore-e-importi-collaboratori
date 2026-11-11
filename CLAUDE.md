@@ -83,6 +83,40 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     nome già esistente compare l'avviso, rispondendo **no** il collaboratore non si crea (3 → 3)
     e rispondendo **sì** sì (3 → 4).
 
+- 🔴 **COLLAUDO GENERALE DEL 11/11/2026 — UN DIFETTO GRAVE PREESISTENTE, TROVATO E NON
+  CORRETTO** (serve la decisione di Christian). Per il resto la rev 15 ha retto: **~500 controlli
+  superati**, batteria storica **258/0** (i 3 «falliti» sono fragilità note degli script),
+  **zero errori di pagina**, calcoli (ore, tariffe, **ritenuta d'acconto 20%**, residui «a
+  secchi» fra anni) **identici al centesimo** a un ricalcolo fatto a mano su 6 combinazioni,
+  isolamento completo dalle altre app (tocca **solo** le proprie chiavi), **nessun Firebase**,
+  **nessun dato personale** nel file, grafica confermata a 390 · 768 · 1280 · 1700px (righe
+  dense **23·23·19·23·23·21**, **zero** comandi sotto i 40px fuori dalle tabelle).
+  1. 🔴 **«22,99» BATTUTO NEL «Costo orario €» DIVENTA 2299**, cioè un errore di **×100 in
+     silenzio**. Le caselle `#nR` (modulo *Nuovo Operatore*) e `#nyR` (*Nuovo anno*) sono
+     **`<input type="number">`**, e un campo di quel tipo **ingoia la virgola**: restano le sole
+     cifre, e `raw()` — che la virgola la saprebbe leggere — riceve già `"2299"`. Misurato:
+     10 ore diventano **€ 22.990,00** invece di € 229,90; `#nyR`: `23,75` → **2375**.
+     Col **punto** (`22.99`) la stessa casella è corretta.
+     ⚠️ **PREESISTENTE**, misurato identico su **rev 7, rev 13 e rev 15**, e in Chromium con
+     locale **en-US** *e* **it-IT**. ⚠️ **Non verificato su un Chrome di sistema italiano**: lì
+     il campo potrebbe accettare la virgola, quindi la gravità reale dipende dal browser.
+     ⚠️ È la stessa porta che la rev 12 dichiarava chiusa: il divieto dei **negativi** è stato
+     chiuso davvero (`-10` → 10), la **virgola** no. Il §10.2 chiede il contrario.
+     ⚠️ **NON corretto**: cambia come si interpreta ciò che si scrive, serve il suo via.
+     🔎 Le altre tre app **non hanno questo problema**: `type="number"` su caselle di dati
+     esiste **solo qui** (3 casi; il terzo, `#nYr`, è l'anno e non ha decimali).
+  2. 🟠 **13 scritte a 11px in tre finestre di dialogo** (§10.6: minimo 12,5px fuori dalle
+     griglie dense): **Nuovo Operatore** 5, **Nuovo anno** 7, **Report per data** 1. Sono le
+     regole di **classe** `.modal label{font-size:11px}` e `.modal .cf-info{font-size:11px}`,
+     che il blocco della rev 8 non vede perché copre solo le misure scritte nell'attributo
+     `style`. È la stessa famiglia del difetto B4 chiuso dalla rev 10. **PREESISTENTE** (rev 7 e
+     rev 13 identiche). Le altre quattro finestre sono a posto.
+  3. 🟡 Osservazioni senza intervento: somma dei «secchi» a video **8.026,70 €** contro residuo
+     **8.026,69 €** (un centesimo, arrotondamento riga per riga, i dati sono giusti); ogni
+     ✔ Salva scarica da sé un file di backup (rete di sicurezza storica, non un salvataggio
+     automatico dei dati); il PIN è in chiaro in `spazioireos_opoc_pin` (protegge la schermata,
+     non i dati).
+
 - 🔐 **DUE SCHEDE NON SI CANCELLANO PIÙ A VICENDA IN SILENZIO** (rev 15, 10/11/2026, punto
   **4** dell'elenco, risposta di Christian: «**metti la stessa protezione di dipendenti**»).
   - 🔴 **Il difetto, misurato dal collaudo delle interconnessioni**: con **due schede aperte**
