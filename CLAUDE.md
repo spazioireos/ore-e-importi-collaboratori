@@ -157,6 +157,48 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
      ✔ Salva scarica da sé un file di backup (rete di sicurezza storica, non un salvataggio
      automatico dei dati); il PIN è in chiaro in `spazioireos_opoc_pin` (protegge la schermata,
      non i dati).
+     🚫 **IL PIN È CHIUSO il 12/11/2026: «no assolutamente hash».** Resta in chiaro, per sua
+     decisione: **non riproporlo.**
+
+- 💰 **IL CENTESIMO DEI «SECCHI»: CIRCOSCRITTO, E UNA COSA PIÙ GROSSA TROVATA ACCANTO**
+  (12/11/2026, Christian sul centesimo: «si può risolvere?»). **Nessuna riga di codice è stata
+  toccata**: il motore dei residui «a secchi» è fra le cose da non toccare senza richiesta.
+  - 📐 **Misurato a video** (`cent8d.cjs`, 5 controlli su 5), nel riquadro «Il credito ‹anno›
+    viene da:»:
+    | caso | somma delle righe | credito residuo | scarto |
+    |---|--:|--:|--:|
+    | nessuna liquidazione e nessuna rettifica | 5.287,71 € | 5.287,71 € | **0,00** |
+    | **una liquidazione** (10 h a 20,50) | 92,25 € | 92,26 € | **−0,01** |
+    | rettifica di **sole ore** (24,39 h) | 1.550,01 € | 2.050,00 € | **−499,99** |
+    | rettifica di **solo importo** (500 €) | 2.050,00 € | 1.550,00 € | **+500,00** |
+  - 🟡 **Il centesimo è circoscritto**: compare **solo** con una liquidazione o con un riporto
+    fra anni, ed è sempre **esattamente 0,01**. Misurato in isolamento sul codice vero
+    (`cent8.cjs`, `cent8b.cjs`): **0 scarti su 2.401** combinazioni senza liquidazioni,
+    **81 su 500** con una liquidazione, **65 su 500** con un riporto, **mai oltre un centesimo**.
+    La causa: le righe del riquadro sono `ore × tariffa` arrotondate **una per una**, mentre
+    `impRes` nasce da **un'altra catena** di arrotondamenti (`compOre` → `dispImp` → `impRes`).
+  - ✅ **Si risolve, e solo a video**: si arrotondano le righe e il centesimo che resta si mette
+    sulla **riga più grande**, così le righe sommano **esatte** al credito — è la quadratura che
+    si fa in contabilità. Costa che **una riga mostra un centesimo diverso** dal suo
+    ore × tariffa. ⚠️ Va fatta **nel disegno del riquadro** (riga ~1457), **non** in `bkResid`,
+    che alimenta anche il riporto fra gli anni e l'export Excel. ⚠️ E va applicata **solo quando
+    lo scarto è di pochi centesimi**, altrimenti nel caso qui sotto scaricherebbe centinaia di
+    euro su una riga. **In attesa del suo via libera.**
+  - 🟠 **LA COSA PIÙ GROSSA, trovata indagando il centesimo (OP-15)**: il pannello
+    **«Rettifica credito»** ha **due caselle indipendenti** (Ore e Importo €) e le due viaggiano
+    su **binari separati** — `rettOre` consuma i secchi ma **non** abbassa l'importo residuo,
+    `rettImp` abbassa l'importo residuo ma **non** tocca i secchi. Usandone **una sola**, il
+    riquadro in euro contraddice il credito **dell'intera rettifica** (misurato: **500 €**), e
+    **niente a video lo dice**. ⚠️ Con «**Azzera credito residuo**» non capita, perché quel
+    pulsante scrive **entrambe** le rettifiche. ⚠️ **PREESISTENTE**; può anche essere **voluto**
+    (sono due manopole distinte), ma allora il riquadro in euro dovrebbe dirlo.
+    **Segnalato e NON toccato**: serve la sua decisione, e una dicitura nuova.
+  - 🐞 **Due errori MIEI negli script, corretti prima di riportare qualunque numero**: la
+    prima stesura leggeva una **finestra di testo** di 420 caratteri dopo «viene da:», che
+    sconfinava nella tabella dell'anno successivo (scarti inventati di migliaia di euro); la
+    seconda agganciava il riquadro **dell'anno sbagliato**. Ora si parte dal titolo vero (il solo
+    `div` che contiene «viene da:» e **nessun altro `div`**) e si leggono **solo** le righe di
+    quel riquadro. ⚠️ **Un numero misurato con un selettore sbagliato non è una misura.**
 
 - 🔐 **DUE SCHEDE NON SI CANCELLANO PIÙ A VICENDA IN SILENZIO** (rev 15, 10/11/2026, punto
   **4** dell'elenco, risposta di Christian: «**metti la stessa protezione di dipendenti**»).
