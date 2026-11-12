@@ -7,7 +7,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
   backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 16 · 11nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 17 · 12nov26.**
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
@@ -160,9 +160,83 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
      🚫 **IL PIN È CHIUSO il 12/11/2026: «no assolutamente hash».** Resta in chiaro, per sua
      decisione: **non riproporlo.**
 
+- ⚖️ **IL RIQUADRO DEL CREDITO QUADRA, E LE DUE CASELLE DELLA RETTIFICA SI MUOVONO INSIEME**
+  (rev 17, 12/11/2026, due risposte di Christian: **1** «sistema» (il centesimo) e **2**
+  «**insieme**» (la Rettifica credito)).
+  - 📐 **1 — la QUADRATURA del riquadro «Il credito ‹anno› viene da:».** Le righe sono
+    `ore × tariffa` arrotondate **una per una**, mentre il credito residuo nasce da
+    **un'altra catena** di arrotondamenti (`compOre` → `dispImp` → `impRes`): la somma poteva
+    differire di **un centesimo**. Ora si arrotonda ogni riga e **il centesimo che resta si mette
+    sulla riga più grande**, come si fa in contabilità, così le righe sommano **esatte** al
+    credito. **Misurato**: con una liquidazione da 10 h a 20,50 il riquadro passa da **92,25**
+    (contro un credito di 92,26) a **92,26 = 92,26**; nel caso sano resta **5.287,71 = 5.287,71**,
+    identico.
+    - ⚠️ **Si tocca SOLO quello che si vede**: la quadratura sta nel **disegno del riquadro**
+      (riga ~1457), **non** in `bkResid`, che alimenta anche il **riporto fra gli anni** e
+      l'**export Excel**. Il motore dei residui «​a secchi» non è stato toccato.
+    - ⚠️ Si distribuisce **solo se lo scarto è di pochi centesimi** (fino a 0,05): se fosse
+      grande, le righe restano come sono. Serve per il caso qui sotto.
+  - ⚖️ **2 — le due caselle della «Rettifica credito» viaggiavano su BINARI SEPARATI.**
+    `rettOre` consumava i secchi ma **non** abbassava l'importo residuo; `rettImp` abbassava
+    l'importo residuo ma **non** toccava i secchi. Usandone **una sola** il riquadro in euro
+    contraddiceva il credito **dell'intera rettifica** (misurato sulla rev 16: scrivendo
+    **24,39 ore** il credito restava **2.050 €** e il riquadro diceva **1.550,01 €**; scrivendo
+    **500 €** il credito scendeva a **1.550 €** e il riquadro diceva ancora **2.050 €**), e
+    **niente a video lo diceva**.
+    - **Ora si muovono INSIEME**: scritte le **ore** si ricalcola l'**importo**, scritto
+      l'**importo** si ricalcolano le **ore**. Funzioni nuove **`rettSommaSecchi`**,
+      **`rettImpDaOre`**, **`rettOreDaImp`** e i due gestori **`rettSetOre`** / **`rettSetImp`**.
+    - 🔑 **Il valore si ricava dal MOTORE, non da una formula riscritta a mano**: si misura
+      di quanto scendono i secchi con quelle ore (`bkResid` chiamata due volte, con e senza la
+      rettifica) e quello è l'importo. Così la conversione segue **da sé** l'ordine di consumo
+      dei secchi e le loro **tariffe diverse**: **misurato**, 15 ore su due servizi a 20,50 e 30
+      danno **355,00 €** (10×20,50 + 5×30), e all'incontrario **355,00 € tornano 15,00 ore**.
+      Il verso inverso si trova **per bisezione** sulla stessa funzione (cresce ed è lineare a
+      tratti): nessuna formula duplicata, quindi non può scostarsi dal motore.
+    - ⚠️ **`bkResid`, `compLiq`, `azzeraCredito` e `resetRettifica` NON sono stati toccati**:
+      quei due pulsanti scrivevano già **entrambe** le rettifiche insieme. **Verificato**:
+      «Azzera credito residuo» chiude ancora il saldo a **zero ore e zero euro**, e «Annulla
+      rettifica» le azzera entrambe.
+    - ⚠️ **Il collegamento si fa quando SCRIVI**, non a ogni ridisegno: una coppia
+      **già in archivio** scritta con una casella sola (prima della rev 17) **resta com'è**
+      finché non si tocca una delle due caselle — allora si riallineano. Non si riscrive niente
+      alle spalle di Christian.
+    - ⚠️ **Conseguenza dichiarata**: la conversione dipende dai secchi, quindi dalle
+      liquidazioni registrate **in quel momento**. Aggiungendo **dopo** una liquidazione, la
+      coppia salvata può non essere più esatta al centesimo: si riallinea riscrivendo una delle
+      due caselle.
+    - ⚠️ **Il divieto dei negativi della rev 11/rev 12 resta**: **misurato**, un «-10» nelle
+      ore entra come **10** (e l'importo diventa 205,00); rimettendo **0** si azzerano entrambe.
+    - ⚠️ **Nessuna dicitura è stata toccata**: le due caselle si chiamano ancora *Ore* e
+      *Importo €*, i suggerimenti sono quelli di prima, e non è stato aggiunto nessun testo.
+  - **Provato in esecuzione** (`rev17op.cjs`, **23 controlli su 23**, zero errori di pagina), con
+    il **confronto diretto** sulla copia congelata della rev 16: tutti e quattro i casi misurati
+    sulla rev 16 si riproducono, e sulla rev 17 **quadrano**.
+  - **Batteria rieseguita sulla rev 17, ZERO falliti**: `mxop-1` **46/0** · `mxop-2` **54/0** ·
+    `mxop-3` **49/0** · `rev11` **8/0** · `rev14op` **15/0** · `rev14opb` **7/0** · `rev15op`
+    **15/0** · `rev17op` **23/0** · `fix-b45` **8/0** · `g2-opoc` **9/0** · `g2b-opoc` **13/0**
+    · `ic-fix3` **13/0** · `sc-op-rev12c` **7/0** · `col-A` **27/0** · `col-B` **20/0** ·
+    `col-B2` **7/0** · `col-B3` **3/0** · `col-C` **20/0** · `col-D` **24/0** · `col-E`
+    **20/0** · `col-G` **29/0** · `col-G2` **29/0** · `col-H` **11/0** · `col-I` **27/0** ·
+    `col-J` **13/0** · `col-K` **27/0**.
+    ✅ **La grafica non si muove**: `col-G` e `col-G2` restano **29/0** tutti e due, quindi righe
+    dense, finestre e comandi sono identici alla rev 16.
+    ⚠️ In **`col-B3`** l'attesa era **invecchiata**: la riga che doveva leggere la **rev 15**
+    leggeva in realtà `opoc`, cioè **l'app di oggi** (l'11/11 erano la stessa cosa). Dalla rev 16
+    il difetto della virgola è chiuso, quindi quel controllo cadeva mentre documentava il
+    passato. Ora legge la **copia congelata** della rev 15 e fa **3/0**, confermando che il
+    difetto era presente in rev 7, rev 13 **e** rev 15. **Aggiornata, non aggirata.**
+    🐞 **`rev16op.cjs` NON è mai girato verde, e non è una regressione**: si ferma sulla
+    schermata del PIN (il seme non porta il PIN e il suo percorso «Imposta il PIN» non combacia),
+    **su tutte e tre le copie** — rev 15, rev 16 e rev 17 allo stesso modo (misurato). Non è
+    nella batteria storica: la rev 16 è provata da **`col-B2-virgola`** e **`col-G2-finestre`**.
+    ⚠️ **Un difetto misurato con un banco che non entra nell'app non è un difetto.**
+
 - 💰 **IL CENTESIMO DEI «SECCHI»: CIRCOSCRITTO, E UNA COSA PIÙ GROSSA TROVATA ACCANTO**
   (12/11/2026, Christian sul centesimo: «si può risolvere?»). **Nessuna riga di codice è stata
   toccata**: il motore dei residui «a secchi» è fra le cose da non toccare senza richiesta.
+  ✅ **ENTRAMBI CHIUSI DALLA rev 17** lo stesso giorno («1 sistema» e «2 insieme»): vedi la
+  scheda ⚖️ qui sopra. Questa scheda resta come **misura di partenza**.
   - 📐 **Misurato a video** (`cent8d.cjs`, 5 controlli su 5), nel riquadro «Il credito ‹anno›
     viene da:»:
     | caso | somma delle righe | credito residuo | scarto |
@@ -467,6 +541,10 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Non toccare senza richiesta esplicita**: il motore dei residui "a secchi" (riporto per
   servizio e tariffa tra gli anni), il calcolo del codice fiscale (tabella Belfiore), la
   generazione dei contratti .docx/PDF, il formato di backup `opoc-3`.
+  ⚠️ **`bkResid` e `compLiq` restano intoccate anche dopo la rev 17**: la quadratura del
+  riquadro vive nel **disegno** e la conversione ore ↔ importo **interroga** `bkResid` senza
+  cambiarla. Chi dovesse rimetterci mano ricordi che `bkResid` alimenta anche il **riporto fra
+  gli anni** e l'**export Excel del credito**.
 
 ## Regole di lavoro (valgono sempre)
 

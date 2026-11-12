@@ -835,6 +835,55 @@ function resetRettifica(i,yr){
   yd.rettOre=0;yd.rettImp=0;
   markD();render();
 }
+/* ===== rev 17 (12/11/2026, Christian: «2 insieme») =====
+   Le DUE caselle della «Rettifica credito» si muovono INSIEME: scritte le ore si
+   ricalcola l'importo, scritto l'importo si ricalcolano le ore. Prima viaggiavano su
+   binari separati (rettOre consumava i secchi ma non abbassava l'importo residuo,
+   rettImp abbassava l'importo residuo ma non toccava i secchi), e usandone una sola il
+   riquadro «Il credito ... viene da:» contraddiceva il credito dell'intera rettifica.
+   Il valore si ricava dal MOTORE (bkResid), non da una formula riscritta a mano:
+   si misura quanto scendono i secchi con quelle ore, e quello e' l'importo. Cosi' la
+   conversione segue da se' l'ordine di consumo dei secchi e le loro tariffe diverse.
+   ATTENZIONE: bkResid NON e' stata toccata, e azzeraCredito/resetRettifica nemmeno
+   (quelli scrivono gia' entrambe le rettifiche insieme). */
+function rettSommaSecchi(op,yr,oreRett){
+  var yd=op.years[yr]; if(!yd)return 0;
+  var vecchio=yd.rettOre; yd.rettOre=oreRett;
+  var bk=[]; try{bk=bkResid(op,yr)}catch(e){bk=[]}
+  yd.rettOre=vecchio;
+  var tot=0;
+  for(var i=0;i<bk.length;i++){tot+=bk[i].hours*bk[i].rate}
+  return tot;
+}
+function rettImpDaOre(op,yr,ore){
+  if(!(ore>0))return 0;
+  return R2(rettSommaSecchi(op,yr,0)-rettSommaSecchi(op,yr,ore));
+}
+function rettOreDaImp(op,yr,euro){
+  if(!(euro>0))return 0;
+  /* la funzione ore -> importo cresce ed e' lineare a tratti: si cerca per bisezione
+     il numero di ore che toglie esattamente quell'importo. Nessuna formula duplicata. */
+  var hi=1,giri=0;
+  while(rettImpDaOre(op,yr,hi)<euro&&hi<1e7&&giri<40){hi=hi*2;giri++}
+  if(rettImpDaOre(op,yr,hi)<euro)return 0; /* non convertibile: nessun secchio con tariffa */
+  var lo=0;
+  for(var k=0;k<60;k++){var mid=(lo+hi)/2;if(rettImpDaOre(op,yr,mid)<euro){lo=mid}else{hi=mid}}
+  return R2((lo+hi)/2);
+}
+window.rettSetOre=function(i,yr,testo){
+  var op=A.d[i]; var yd=op.years[yr]; if(!yd)return;
+  var ore=raw(testo);
+  yd.rettOre=ore;
+  yd.rettImp=rettImpDaOre(op,yr,ore);
+  markD();render();
+};
+window.rettSetImp=function(i,yr,testo){
+  var op=A.d[i]; var yd=op.years[yr]; if(!yd)return;
+  var euro=raw(testo);
+  yd.rettImp=euro;
+  yd.rettOre=rettOreDaImp(op,yr,euro);
+  markD();render();
+};
 function eL(){return[0,0,0,0,0,0,0,0,0,0,0,0]}
 function eD(){return[null,null,null,null,null,null,null,null,null,null,null,null]}
 function eSvc(rt){return{name:null,residual:0,hours:eL(),rate:rt||18}}
@@ -1154,7 +1203,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 16 \u00b7 11nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 17 \u00b7 12nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -1444,14 +1493,34 @@ function rYB(idx,yr,ci){
   var hasRett=(cl.rettOre!==0||cl.rettImp!==0);
   h+='<div style="margin-top:8px;padding:8px 10px;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">';
   h+='<span style="font-weight:700;font-size:12px;color:#555">Rettifica credito:</span>';
-  h+='<span style="font-size:12px">Ore <input type="text" value="'+n2(cl.rettOre)+'" style="width:60px;text-align:right;background:#fff9c4;border:1px solid #ccc;border-radius:3px;padding:2px 4px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.rettOre=raw(this.value);markD();render()" title="Ore da sottrarre dal credito"></span>';
-  h+='<span style="font-size:12px">Importo € <input type="text" value="'+n2(cl.rettImp)+'" style="width:80px;text-align:right;background:#fff9c4;border:1px solid #ccc;border-radius:3px;padding:2px 4px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.rettImp=raw(this.value);markD();render()" title="Importo da sottrarre dal credito"></span>';
+  h+='<span style="font-size:12px">Ore <input type="text" value="'+n2(cl.rettOre)+'" style="width:60px;text-align:right;background:#fff9c4;border:1px solid #ccc;border-radius:3px;padding:2px 4px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="rettSetOre('+idx+',\''+yr+'\',this.value)" title="Ore da sottrarre dal credito"></span>';
+  h+='<span style="font-size:12px">Importo € <input type="text" value="'+n2(cl.rettImp)+'" style="width:80px;text-align:right;background:#fff9c4;border:1px solid #ccc;border-radius:3px;padding:2px 4px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="rettSetImp('+idx+',\''+yr+'\',this.value)" title="Importo da sottrarre dal credito"></span>';
   h+='<button class="btn" style="background:#c62828;color:#fff;font-size:12px;padding:4px 10px" onclick="azzeraCredito('+idx+',\''+yr+'\')">Azzera credito residuo</button>';
   if(hasRett){h+='<button class="btn" style="background:#607d8b;color:#fff;font-size:11px;padding:4px 8px" onclick="resetRettifica('+idx+',\''+yr+'\')">Annulla rettifica</button>';}
   if(hasRett){h+='<span style="font-size:11px;color:#e65100;font-style:italic">Credito rettificato di '+f2(cl.rettOre)+' ore / '+fE(cl.rettImp)+'</span>';}
   h+='</div>';
   // COMPOSIZIONE DEL CREDITO: da quale servizio proviene
   var comp=bkResid(op,yr);
+  /* rev 17 (12/11/2026, Christian: «1 sistema»). QUADRATURA del riquadro: le righe sono
+     ore x tariffa arrotondate UNA PER UNA, mentre il credito residuo nasce da un'altra
+     catena di arrotondamenti, quindi la somma poteva differire di UN centesimo (misurato:
+     solo con una liquidazione o un riporto fra anni, e mai di piu'). Si arrotonda ogni riga
+     e il centesimo che resta si mette sulla riga piu' grande, come si fa in contabilita':
+     cosi' le righe sommano ESATTE al credito. Si tocca SOLO quello che si vede — bkResid
+     non viene cambiata, perche' alimenta anche il riporto fra gli anni e l'export Excel.
+     Lo scarto si distribuisce SOLO se e' di pochi centesimi: se fosse grande (una rettifica
+     vecchia scritta in una casella sola, prima della rev 17) le righe restano come sono. */
+  var compEuro=[];
+  (function(){
+    var somma=0,i2;
+    for(i2=0;i2<comp.length;i2++){var v2=R2(comp[i2].hours*comp[i2].rate);compEuro.push(v2);somma=R2(somma+v2)}
+    var scarto=R2(cl.impRes-somma);
+    if(compEuro.length>0&&Math.abs(scarto)>0.0001&&Math.abs(scarto)<=0.05){
+      var big=0;
+      for(i2=1;i2<compEuro.length;i2++){if(Math.abs(compEuro[i2])>Math.abs(compEuro[big]))big=i2}
+      compEuro[big]=R2(compEuro[big]+scarto);
+    }
+  })();
   if(comp.length>0){
     h+='<div style="margin-top:8px;padding:8px 10px;background:#fbfbfb;border:1px solid #e0e0e0;border-radius:6px">';
     h+='<div style="font-weight:700;font-size:12px;color:#555;margin-bottom:4px">Il credito <span style="font-size:15px;font-weight:900;color:#1f4e82">'+yr+'</span> viene da:</div>';
@@ -1464,7 +1533,7 @@ function rYB(idx,yr,ci){
       h+='<span style="color:#888">anno '+cb.yr+'</span>';
       h+='<span style="color:#888">\u20ac/h '+f2(cb.rate)+'</span>';
       h+='<span style="color:#999;font-weight:400">'+f2(rM(cb.hours))+' ore</span>';
-      h+='<span style="font-weight:900;color:'+(neg?'#c62828':'#1b5e20')+'">'+fE(rM(cb.hours*cb.rate))+'</span>';
+      h+='<span style="font-weight:900;color:'+(neg?'#c62828':'#1b5e20')+'">'+fE(compEuro[q])+'</span>';
       if(neg)h+='<span style="font-size:10px;color:#c62828;font-style:italic">scoperto: liquidato pi\u00f9 del maturato</span>';
       h+='</div>';
     }
@@ -3669,7 +3738,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 16 \u00b7 11nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 17 \u00b7 12nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
