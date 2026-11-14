@@ -10,7 +10,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 19 · 14nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 20 · 14nov26.**
 - ☁️ **COLLABORATORI SUGGERISCE LE ORE DAI FOGLI ORE, ANCHE I LIGHT MENSILI** (rev 18, 14/11/2026,
   richiesta di Christian: «l'app collaboratori deve leggere le ore degli operatori anche light
   mensili e deve suggerirmele come già succede nel tabellone dell'app dipendenti». Sue due scelte:
@@ -33,9 +33,11 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     sessione Firebase sta nelle chiavi di Firebase, **fuori** da `spazioireos_opoc`: il **backup JSON
     non cambia di una virgola**.
   - **Dove compare**: nella scheda, nell'intestazione di **ogni mese** (sopra la colonna delle
-    celle editabili), in piccolo e in blu: **«TS N»** (rev 19: era «FO», rinominato per il kng — TS = foglio ore di un operatore) = ore dai fogli ore per quella persona quel
+    celle editabili), in piccolo e in **grigio** (`#64748b`; rev 20: era blu): **«TS N»** (rev 19: era «FO», rinominato per il kng — TS = foglio ore di un operatore) = ore dai fogli ore per quella persona quel
     mese (normali + light). Classe `.fo-sugg` (dentro la tabella densa, dove le misure piccole sono
-    l'eccezione dichiarata del §10.6). Compare **solo** da collegato e **solo** se il valore > 0;
+    l'eccezione dichiarata del §10.6). ⚠️ **rev 20**: i nomi dei mesi sono allineati in alto
+    (`th.month-hdr{vertical-align:top}`) così quelli col «TS» sotto non risultano più alzati; il
+    «TS ?» degli omonimi resta **ambra** (`#b26a00`) perché è un avviso. Compare **solo** da collegato e **solo** se il valore > 0;
     scollegato o senza abbinamento **non compare niente**. **Nessuna cella viene riempita e nessun
     calcolo (importo/liquidazione) cambia.**
   - 🔑 **Abbinamento per NOME** (COGNOME NOME) con `foChiave` (come Dipendenti ver149: ignora
