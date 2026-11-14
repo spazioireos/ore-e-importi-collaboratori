@@ -1208,7 +1208,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 18 \u00b7 14nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 19 \u00b7 14nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -1359,13 +1359,13 @@ function rYB(idx,yr,ci){
     h+='</div>';
   }
   // ORE EFFETTUATE
-  h+='<div class="sec-lbl" style="background:#eef5fc;color:#1f4e82;border-bottom:1px solid #b9d5f1">ORE EFFETTUATE'+((foStato==="collegato")?'<span style="font-weight:600;font-size:12.5px;color:#2f6fae;margin-left:10px">• «FO» sopra il mese = ore dal Foglio ore (suggerimento, non cambia niente)</span>':'')+'</div>';
+  h+='<div class="sec-lbl" style="background:#eef5fc;color:#1f4e82;border-bottom:1px solid #b9d5f1">ORE EFFETTUATE'+((foStato==="collegato")?'<span style="font-weight:600;font-size:12.5px;color:#2f6fae;margin-left:10px">• «TS» sopra il mese = ore dal Foglio ore (suggerimento, non cambia niente)</span>':'')+'</div>';
   h+='<table class="tbl-dense"><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th style="min-width:110px">Importo<br><span style="font-size:9px;font-weight:400">contrattuale</span></th><th>Res.'+(parseInt(yr)-1)+'</th>';
   var foSug=null;try{foSug=foSuggDi(op,yr);}catch(eFO){foSug=null;}
   for(var m=0;m<12;m++){h+='<th class="month-hdr">'+moYr(m,yr);
     if(foSug){
-      if(foSug.amb)h+='<div class="fo-sugg" style="color:#b26a00" title="In Fogli ore ci sono due persone con questo stesso nome: non posso sapere quali ore siano di chi, quindi non suggerisco. Distingui i nomi nelle due anagrafiche.">FO ?</div>';
-      else if(foSug.ore&&foSug.ore[m]>0)h+='<div class="fo-sugg" title="Ore risultanti dal Foglio ore per questo mese (operatori normali + light). Suggerimento non vincolante: non cambia niente.">FO '+foFmtOre(foSug.ore[m])+'</div>';
+      if(foSug.amb)h+='<div class="fo-sugg" style="color:#b26a00" title="In Fogli ore ci sono due persone con questo stesso nome: non posso sapere quali ore siano di chi, quindi non suggerisco. Distingui i nomi nelle due anagrafiche.">TS ?</div>';
+      else if(foSug.ore&&foSug.ore[m]>0)h+='<div class="fo-sugg" title="Ore risultanti dal Foglio ore (TS) per questo mese (operatori normali + light). Suggerimento non vincolante: non cambia niente.">TS '+foFmtOre(foSug.ore[m])+'</div>';
     }
     h+='</th>';}
   h+='<th>Ore anno</th><th>Ore+Res</th><th>Imp.Mat.</th></tr></thead><tbody>';
@@ -3755,7 +3755,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 18 \u00b7 14nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 19 \u00b7 14nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}

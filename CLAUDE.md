@@ -10,7 +10,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 18 · 14nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 19 · 14nov26.**
 - ☁️ **COLLABORATORI SUGGERISCE LE ORE DAI FOGLI ORE, ANCHE I LIGHT MENSILI** (rev 18, 14/11/2026,
   richiesta di Christian: «l'app collaboratori deve leggere le ore degli operatori anche light
   mensili e deve suggerirmele come già succede nel tabellone dell'app dipendenti». Sue due scelte:
@@ -33,17 +33,17 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     sessione Firebase sta nelle chiavi di Firebase, **fuori** da `spazioireos_opoc`: il **backup JSON
     non cambia di una virgola**.
   - **Dove compare**: nella scheda, nell'intestazione di **ogni mese** (sopra la colonna delle
-    celle editabili), in piccolo e in blu: **«FO N»** = ore dai fogli ore per quella persona quel
+    celle editabili), in piccolo e in blu: **«TS N»** (rev 19: era «FO», rinominato per il kng — TS = foglio ore di un operatore) = ore dai fogli ore per quella persona quel
     mese (normali + light). Classe `.fo-sugg` (dentro la tabella densa, dove le misure piccole sono
     l'eccezione dichiarata del §10.6). Compare **solo** da collegato e **solo** se il valore > 0;
     scollegato o senza abbinamento **non compare niente**. **Nessuna cella viene riempita e nessun
     calcolo (importo/liquidazione) cambia.**
   - 🔑 **Abbinamento per NOME** (COGNOME NOME) con `foChiave` (come Dipendenti ver149: ignora
     accenti e apostrofo in fine di parola). ⚠️ È la **stessa fragilità documentata**: due
-    **omonimi** non si possono distinguere → mostra **«FO ?»** invece di indovinare. Non esiste
+    **omonimi** non si possono distinguere → mostra **«TS ?»** invece di indovinare. Non esiste
     nessun codice condiviso raggiungibile da qui (il codice-operatore sta nei dati di *Dipendenti*).
   - ⚠️ **Diciture nuove, scritte da Claude**, su autorizzazione esplicita di Christian: il gruppo
-    «FOGLI ORE», il pulsante, la riga di legenda sotto «ORE EFFETTUATE» e il «FO»/«FO ?».
+    «FOGLI ORE», il pulsante, la riga di legenda sotto «ORE EFFETTUATE» e il «TS»/«TS ?» (rev 19: era «FO»).
     ⚠️ **«ORE EFFETTUATE» e le altre diciture storiche NON sono state toccate.**
   - **Funzioni nuove** (modulo in fondo allo `<script>`): `foNorm`, `foChiave`, `foNomeUtente`,
     `foParseMin`, `foOreEntry`, `foAggMese`, `foLightMese`, `foLeggiUtenti`, `foCostruisciAnno`,
@@ -55,7 +55,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   - **Provato in esecuzione** (`col-fo.cjs`, **12 controlli su 12**, banco **fake-Firebase**, zero
     errori di pagina): il pulsante compare; il login porta a «collegato»; ROSSI MARIO Gen **7**
     (4+1 il g2, 2 il g5, FERIE il g8 una volta) e Mar **8**; VERDI GIULIA light Gen **6** (due
-    materie), **Giu 5 = inv 3 + est 2**, Lug **4**; omonimo con accento → **«FO ?»**; nessun
+    materie), **Giu 5 = inv 3 + est 2**, Lug **4**; omonimo con accento → **«TS ?»**; nessun
     abbinamento → niente; scollegato → niente; il backup dati **non contiene** «firebase»/«fogliore».
     ⚠️ **Non verificato con Firebase vero**: le prove girano con una finta Firestore.
   - **Batteria storica rieseguita sulla rev 18, ZERO falliti nuovi**: `mxop-1` **46/0** · `mxop-2`
