@@ -11,6 +11,10 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Firebase (SOLA LETTURA di Fogli ore: suggerimento ore, rev 18) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -18,6 +22,7 @@ body{font-family:'Inter','Leelawadee UI','Leelawadee',sans-serif;background:#f4f
 .cover-header{background:#2f6fae;color:#fff;padding:10px 18px;text-align:center}
 .cover-header h1{font-size:20px;font-weight:900;letter-spacing:0.5px}
 .cover-header p{font-size:12px;opacity:0.7;margin-top:2px}
+.fo-sugg{font-size:9px;font-weight:700;color:#2f6fae;line-height:1.05;margin-top:2px;white-space:nowrap}
 .revtag{display:inline-block;font-size:11px;font-weight:600;line-height:1.1;padding:2px 7px;margin-left:8px;border-radius:999px;background:rgba(128,128,128,0.2);border:1px solid rgba(128,128,128,0.28);color:inherit;vertical-align:middle;letter-spacing:0.2px;white-space:nowrap}
 .cover-body{padding:6px 12px;max-width:100%}
 .toolbar{display:flex;gap:5px;margin-bottom:6px;align-items:center;flex-wrap:wrap}
@@ -1203,7 +1208,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 17 \u00b7 12nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 18 \u00b7 14nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -1227,6 +1232,12 @@ function rCov(){
   else h+='<button class="btn btn-sm" style="background:#eceff1;color:#90a4ae" disabled title="Nessuna modifica da salvare">\u2714 Salvato</button>';
   h+='<button class="btn btn-sm" style="background:#2f6fae;color:#fff" onclick="expJSON()" title="Scarica un backup completo: dati e modello del contratto">\u2b07 Backup</button>';
   h+='<button class="btn btn-sm" style="background:#fff;border:1px solid #2f6fae;color:#1f4e82" onclick="impJSON()" title="Ripristina i dati da un file di backup">\u2b06 Importa</button>';
+  h+='</div></div>';
+
+  // FOGLI ORE (SOLA LETTURA: suggerimento ore)
+  h+=grp('FOGLI ORE','#2f6fae');
+  h+=foBottoneHTML();
+  if(foStato==="errore")h+='<span style="font-size:12.5px;color:#c62828">non collegato</span>';
   h+='</div></div>';
 
   // ANAGRAFICHE
@@ -1348,9 +1359,15 @@ function rYB(idx,yr,ci){
     h+='</div>';
   }
   // ORE EFFETTUATE
-  h+='<div class="sec-lbl" style="background:#eef5fc;color:#1f4e82;border-bottom:1px solid #b9d5f1">ORE EFFETTUATE</div>';
+  h+='<div class="sec-lbl" style="background:#eef5fc;color:#1f4e82;border-bottom:1px solid #b9d5f1">ORE EFFETTUATE'+((foStato==="collegato")?'<span style="font-weight:600;font-size:12.5px;color:#2f6fae;margin-left:10px">• «FO» sopra il mese = ore dal Foglio ore (suggerimento, non cambia niente)</span>':'')+'</div>';
   h+='<table class="tbl-dense"><thead><tr style="background:'+yc.bg+'"><th style="min-width:78px"></th><th style="min-width:200px">Servizio</th><th style="min-width:110px">Importo<br><span style="font-size:9px;font-weight:400">contrattuale</span></th><th>Res.'+(parseInt(yr)-1)+'</th>';
-  for(var m=0;m<12;m++)h+='<th class="month-hdr">'+moYr(m,yr)+'</th>';
+  var foSug=null;try{foSug=foSuggDi(op,yr);}catch(eFO){foSug=null;}
+  for(var m=0;m<12;m++){h+='<th class="month-hdr">'+moYr(m,yr);
+    if(foSug){
+      if(foSug.amb)h+='<div class="fo-sugg" style="color:#b26a00" title="In Fogli ore ci sono due persone con questo stesso nome: non posso sapere quali ore siano di chi, quindi non suggerisco. Distingui i nomi nelle due anagrafiche.">FO ?</div>';
+      else if(foSug.ore&&foSug.ore[m]>0)h+='<div class="fo-sugg" title="Ore risultanti dal Foglio ore per questo mese (operatori normali + light). Suggerimento non vincolante: non cambia niente.">FO '+foFmtOre(foSug.ore[m])+'</div>';
+    }
+    h+='</th>';}
   h+='<th>Ore anno</th><th>Ore+Res</th><th>Imp.Mat.</th></tr></thead><tbody>';
   // Righe grigie: residuo portato dagli anni precedenti, con servizio di provenienza
   var port=bkPortati(op,yr);
@@ -3738,7 +3755,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 17 \u00b7 12nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 18 \u00b7 14nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
@@ -3797,7 +3814,77 @@ function applyTabOrder(){
 }
 function applyZeroStyle(){applyTabOrder();var inputs=document.querySelectorAll(".edit-cell input, .rate-in, .rate-hdr");for(var i=0;i<inputs.length;i++){if(raw(inputs[i].value)===0){inputs[i].classList.add("zero-val")}else{inputs[i].classList.remove("zero-val")}}}
 window.addEventListener('beforeunload',function(e){if(A&&A.dirty){e.preventDefault();e.returnValue='';return'Modifiche non salvate.'}});
+/* ===================== SUGGERIMENTO ORE DA "FOGLI ORE" (SOLA LETTURA, rev 18, 14/11/2026) =====================
+   Collaboratori NON scrive MAI su Fogli ore. Legge soltanto, come admin, le collection
+   "users", "timesheets" (operatori normali: somma dei giorni) e "lightsheets" (operatori
+   light: totale mensile; giugno e' spezzato inv/est e si sommano). Il risultato e' un
+   SUGGERIMENTO non vincolante, mostrato sopra la colonna di ogni mese nella scheda.
+   Progetto Firebase condiviso "spazio-ireos-foglio-ore" (stesso di Dipendenti/Fogli ore). */
+var FO_CFG={apiKey:"AIzaSyA-xbQcfzd6YwMT8y-YV7WDBCw-iwFH__k",authDomain:"spazio-ireos-foglio-ore.firebaseapp.com",projectId:"spazio-ireos-foglio-ore",storageBucket:"spazio-ireos-foglio-ore.firebasestorage.app",messagingSenderId:"230937360062",appId:"1:230937360062:web:5b10aa7246904ad13dd0ef"};
+var FO_RUOLI=["worker","editor"];
+var FO_FASCE=[["t1f","t1t"],["t2f","t2t"],["t3f","t3t"],["t4f","t4t"],["iF","iT"],["iF2","iT2"]];
+var FOapp=null,FOdb=null,FOauth=null,foStato="spento",foErr="",foUtente="";
+var FOcacheAnno={},FOpending={};
+function foDisponibile(){return typeof firebase!=="undefined"&&firebase&&firebase.firestore;}
+function foNorm(s){return String(s==null?"":s).replace(/\s+/g," ").trim().toUpperCase();}
+/* foChiave: come in Dipendenti (ver149). Toglie gli accenti (NFD) e l'apostrofo in fine di
+   parola, perche' "NICOLO'" e "NICOLÒ" sono la stessa persona. Serve SOLO a confrontare. */
+function foChiave(s){var t=foNorm(s);try{t=t.normalize("NFD").replace(/[̀-ͯ]/g,"");}catch(e){}t=t.replace(/['’´`ʼ]+(?=\s|$)/g,"");return t.replace(/\s+/g," ").trim();}
+function foNomeUtente(u){var cog=foNorm(u.cognome),nom=foNorm(u.nome);if(cog&&nom)return cog+" "+nom;var nm=foNorm(u.name);if(nm){var p=nm.split(" ");return p.length>1?(p[0]+" "+p.slice(1).join(" ")):nm;}return cog||nom||"";}
+/* parser orario TOLLERANTE (uguale a Fogli ore): "9:00","14.30","14h30","900"(=09:00),"130"(=01:30),"9"(=09:00) */
+function foParseMin(v){if(v==null)return null;var s=String(v).trim().toLowerCase().replace(/\s+/g,"");if(s==="")return null;var h=null,mi=null,mm;if((mm=s.match(/^(\d{1,2})[:.,h;'](\d{1,2})$/))){h=parseInt(mm[1],10);mi=parseInt(mm[2],10);}else if((mm=s.match(/^(\d{3,4})$/))){h=parseInt(mm[1].slice(0,mm[1].length-2),10);mi=parseInt(mm[1].slice(-2),10);}else if((mm=s.match(/^(\d{1,2})[:.,h;']?$/))){h=parseInt(mm[1],10);mi=0;}else return null;if(isNaN(h)||isNaN(mi)||h<0||h>24||mi<0||mi>59)return null;var t=h*60+mi;return(t<0||t>1440)?null:t;}
+function foOreEntry(e){if(!e||typeof e!=="object")return 0;var tot=0;for(var i=0;i<FO_FASCE.length;i++){var a=foParseMin(e[FO_FASCE[i][0]]),b=foParseMin(e[FO_FASCE[i][1]]);if(a===null||b===null)continue;if(b>a)tot+=(b-a)/60;}return tot;}
+/* somma le ore di UN mese da una lista di documenti "days" (uno per servizio).
+   L'assenza e' scritta su TUTTI i servizi del giorno: va contata UNA SOLA VOLTA e vale 0 ore. */
+function foAggMese(daysList){var ore={},ass={},j,k;for(j=0;j<(daysList||[]).length;j++){var days=daysList[j];if(!days||typeof days!=="object")continue;for(k in days){if(!Object.prototype.hasOwnProperty.call(days,k))continue;var d=parseInt(k,10);if(isNaN(d)||d<1||d>31)continue;var e=days[k];if(!e||typeof e!=="object")continue;var ab=foNorm(e.absence);if(ab!==""){if(!ass[d])ass[d]=ab;continue;}ore[d]=(ore[d]||0)+foOreEntry(e);}}var tot=0;for(var dd in ore){if(!ass[dd])tot+=ore[dd];}return tot;}
+/* mese 1..12 -> ore light di quel mese. Giugno (ci5 inv + ci6 est) si sommano.
+   Gen..Mag = ci 0..4 ; Lug..Dic = ci 7..12 (perche' il giugno doppio sposta l'indice). */
+function foLightMese(hy,m){if(!hy)return 0;function v(ci){var x=hy[ci];return(typeof x==="number"&&isFinite(x))?x:0;}if(m===6)return v(5)+v(6);var ci=(m<=5)?(m-1):m;return v(ci);}
+/* lettura utenti di Fogli ore: uid -> "COGNOME NOME", solo chi compila i fogli (worker/editor) */
+function foLeggiUtenti(){return FOdb.collection("users").get().then(function(us){var map={};us.forEach(function(doc){try{var u=doc.data()||{};if(FO_RUOLI.indexOf(String(u.role==null?"":u.role).trim().toLowerCase())===-1)return;var nome=foNomeUtente(u);if(nome)map[doc.id]=nome;}catch(e){}});return map;});}
+/* costruisce, per un ANNO, { chiave:[12 totali mensili] , __amb:{chiave:true} } unendo
+   timesheets (normali) e lightsheets (light). __amb marca gli omonimi: per loro NON si suggerisce. */
+function foCostruisciAnno(y){
+  var nomiPerChiave={};
+  function segna(ch,nome){if(!nomiPerChiave[ch])nomiPerChiave[ch]={};nomiPerChiave[ch][nome]=1;}
+  return foLeggiUtenti().then(function(utenti){
+    return FOdb.collection("timesheets").where("year","==",y).get().then(function(ts){
+      if(!ts.empty)return ts;
+      return FOdb.collection("timesheets").get();   /* dati storici con "year" non numerico: filtro lato client */
+    }).then(function(ts){
+      var perUM={};
+      ts.forEach(function(doc){try{var t=doc.data()||{};if(String(t.year)!==String(y))return;var mm=parseInt(t.month,10);if(isNaN(mm)||mm<1||mm>12)return;var u=String(t.workerUid==null?"":t.workerUid).trim();if(!u||!utenti[u])return;var kk=u+"|"+mm;if(!perUM[kk])perUM[kk]=[];perUM[kk].push(t.days);}catch(e){}});
+      var out={},kk;
+      for(kk in perUM){var sp=kk.split("|");var u=sp[0],mm=parseInt(sp[1],10);var nome=utenti[u];var ch=foChiave(nome);if(!ch)continue;segna(ch,nome);if(!out[ch])out[ch]=[0,0,0,0,0,0,0,0,0,0,0,0];out[ch][mm-1]+=foAggMese(perUM[kk]);}
+      return FOdb.collection("lightsheets").get().then(function(ls){
+        ls.forEach(function(doc){try{var o=doc.data()||{};var nome=foNorm(o.name);if(!nome)return;var ch=foChiave(nome);if(!ch)return;var hy=(o.hours&&o.hours[y])?o.hours[y]:null;if(!hy)return;segna(ch,nome);if(!out[ch])out[ch]=[0,0,0,0,0,0,0,0,0,0,0,0];for(var m=1;m<=12;m++)out[ch][m-1]+=foLightMese(hy,m);}catch(e){}});
+        var amb={},c,i;for(c in nomiPerChiave){if(Object.keys(nomiPerChiave[c]).length>1)amb[c]=true;}
+        for(c in out){for(i=0;i<12;i++)out[c][i]=Math.round(out[c][i]*100)/100;}
+        out.__amb=amb;return out;
+      });
+    });
+  });
+}
+/* avvia (una volta) la lettura dell'anno e poi ridisegna; intanto torna null (niente a video) */
+function foSuggerimentiAnno(yr){var y=parseInt(yr,10);if(isNaN(y))return null;if(foStato!=="collegato"||!FOdb)return null;if(FOcacheAnno[y])return FOcacheAnno[y];if(FOpending[y])return null;FOpending[y]=true;foCostruisciAnno(y).then(function(res){FOcacheAnno[y]=res;FOpending[y]=false;try{render();}catch(e){}}).catch(function(e){FOpending[y]=false;foErr=String(e&&e.message||e);try{render();}catch(e2){}});return null;}
+/* per un collaboratore: {ore:[12]} oppure {amb:true} oppure null */
+function foSuggDi(op,yr){var mp=foSuggerimentiAnno(yr);if(!mp)return null;var ch=foChiave(op&&op.name);if(!ch)return null;if(mp.__amb&&mp.__amb[ch])return{amb:true};var arr=mp[ch];if(!arr)return null;return{ore:arr};}
+function foFmtOre(v){var n=Math.round(Number(v)*100)/100;if(!isFinite(n))return"";if(n===Math.floor(n))return String(n);var s=n.toFixed(2);s=s.replace(/0+$/,"").replace(/\.$/,"");return s.replace(".",",");}
+/* avvio/accesso/uscita del collegamento (login admin a Firebase, SOLA LETTURA) */
+function foInit(){if(FOapp)return true;if(!foDisponibile()){foStato="nonsdk";return false;}try{FOapp=firebase.initializeApp(FO_CFG,"fogliore");FOdb=FOapp.firestore();FOauth=FOapp.auth();FOauth.onAuthStateChanged(function(user){if(user&&user.email){foStato="collegato";foUtente=user.email;}else{foStato="spento";foUtente="";}FOcacheAnno={};FOpending={};try{render();}catch(e){}});return true;}catch(e){foStato="errore";foErr=String(e&&e.message||e);return false;}}
+function foLogin(){if(!foInit()){alert("Il collegamento a Fogli ore non e' disponibile (SDK non caricato o sei offline).");return;}var em=prompt("Collega Fogli ore (SOLA LETTURA) — Email admin:","spazioireos@gmail.com");if(em===null)return;var pw=prompt("Password dell'account "+em+":");if(pw===null)return;foStato="collegando";try{render();}catch(e){}FOauth.signInWithEmailAndPassword(String(em).trim(),String(pw)).catch(function(e){foStato="errore";foErr=String(e&&e.message||e);alert("Accesso non riuscito: "+foErr);try{render();}catch(e2){}});}
+function foLogout(){if(FOauth){try{FOauth.signOut();}catch(e){}}FOcacheAnno={};FOpending={};foStato="spento";foUtente="";try{render();}catch(e){}}
+/* pulsante da mettere nella barra della copertina */
+function foBottoneHTML(){
+  if(foStato==="collegato")return'<button class="btn btn-sm" style="background:#e8f5e9;border:1px solid #2e7d32;color:#1b5e20" onclick="foLogout()" title="Collegato come '+foNorm(foUtente)+' — clicca per scollegare. La lettura e’ di sola lettura.">☁ Fogli ore ✓</button>';
+  if(foStato==="collegando")return'<button class="btn btn-sm" style="background:#eceff1;color:#607d8b" disabled>☁ Collegamento…</button>';
+  if(foStato==="nonsdk")return'<button class="btn btn-sm" style="background:#eceff1;color:#90a4ae" disabled title="SDK Firebase non caricato (sei offline?)">☁ Fogli ore non disponibile</button>';
+  return'<button class="btn btn-sm" style="background:#2f6fae;color:#fff" onclick="foLogin()" title="Collega Fogli ore in SOLA LETTURA per vedere, sopra ogni mese, le ore risultanti dai fogli ore (operatori normali e light). Non modifica nulla.">☁ Collega Fogli ore</button>';
+}
+window.foLogin=foLogin;window.foLogout=foLogout;
+
 var _origRender=render;render=function(){_origRender();setTimeout(applyZeroStyle,0)};render();
+try{foInit();}catch(e){}
 </script>
 </body>
 </html>

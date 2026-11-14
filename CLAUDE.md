@@ -5,9 +5,70 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 
 - **Unico file**: `index.html` (~212 KB), **JavaScript vanilla** (nessun React, nessun Babel).
 - **Dati**: `localStorage` (chiave principale `spazioireos_opoc`) + backup su Google Drive +
-  backup JSON automatico. Accesso con **PIN locale**. Nessun Firebase.
+  backup JSON automatico. Accesso con **PIN locale**. ⚠️ **Dalla rev 18 c'è ANCHE un collegamento
+  Firebase, ma in SOLA LETTURA** verso il progetto condiviso `spazio-ireos-foglio-ore`, solo per
+  **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
+  cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 17 · 12nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 18 · 14nov26.**
+- ☁️ **COLLABORATORI SUGGERISCE LE ORE DAI FOGLI ORE, ANCHE I LIGHT MENSILI** (rev 18, 14/11/2026,
+  richiesta di Christian: «l'app collaboratori deve leggere le ore degli operatori anche light
+  mensili e deve suggerirmele come già succede nel tabellone dell'app dipendenti». Sue due scelte:
+  **«Login admin in Collaboratori»** e il suggerimento **«sopra le celle, in piccolo»**).
+  - 🔴 **Prima la rev 18, Collaboratori NON aveva nessun collegamento cloud** (solo PIN +
+    `localStorage`) e le ore mensili erano solo quelle scritte a mano. Ora, come fa il **Tabellone
+    di Dipendenti** con la sua riga di confronto, legge **in SOLA LETTURA** le ore dai fogli ore e
+    le mostra come **suggerimento non vincolante**.
+  - **Che cosa legge** dal Firebase di Fogli ore (`spazio-ireos-foglio-ore`): `users` +
+    `timesheets` (operatori **normali**: somma dei giorni, con i **formati orari storici**
+    `900`/`130`/`14.30`/`14h30`/`9` e l'**assenza contata una volta sola** per giorno = 0 ore) **e**
+    `lightsheets` (operatori **light**, già mensili). ⚠️ **È la cosa che nemmeno Dipendenti fa**:
+    il suo confronto esclude i light; qui ci sono. Giugno light è **spezzato inv/est** (`ci5`+`ci6`)
+    e i due si **sommano**. Una persona può avere **più righe-materia** nei light: si sommano.
+  - **Login admin** (scelta di Christian): nuovo SDK Firebase 10.12.2 compat + un gruppo
+    **«FOGLI ORE»** in copertina col pulsante **«☁ Collega Fogli ore»** → chiede mail+password
+    dell'account **admin** `spazioireos@gmail.com` (le regole di Fogli ore lasciano leggere le ore
+    altrui, `timesheets` e `lightsheets`, **solo all'admin**). La sessione Firebase persiste da sé;
+    da collegato il pulsante diventa **«☁ Fogli ore ✓»** e scollega. ⚠️ **Il PIN locale resta** e la
+    sessione Firebase sta nelle chiavi di Firebase, **fuori** da `spazioireos_opoc`: il **backup JSON
+    non cambia di una virgola**.
+  - **Dove compare**: nella scheda, nell'intestazione di **ogni mese** (sopra la colonna delle
+    celle editabili), in piccolo e in blu: **«FO N»** = ore dai fogli ore per quella persona quel
+    mese (normali + light). Classe `.fo-sugg` (dentro la tabella densa, dove le misure piccole sono
+    l'eccezione dichiarata del §10.6). Compare **solo** da collegato e **solo** se il valore > 0;
+    scollegato o senza abbinamento **non compare niente**. **Nessuna cella viene riempita e nessun
+    calcolo (importo/liquidazione) cambia.**
+  - 🔑 **Abbinamento per NOME** (COGNOME NOME) con `foChiave` (come Dipendenti ver149: ignora
+    accenti e apostrofo in fine di parola). ⚠️ È la **stessa fragilità documentata**: due
+    **omonimi** non si possono distinguere → mostra **«FO ?»** invece di indovinare. Non esiste
+    nessun codice condiviso raggiungibile da qui (il codice-operatore sta nei dati di *Dipendenti*).
+  - ⚠️ **Diciture nuove, scritte da Claude**, su autorizzazione esplicita di Christian: il gruppo
+    «FOGLI ORE», il pulsante, la riga di legenda sotto «ORE EFFETTUATE» e il «FO»/«FO ?».
+    ⚠️ **«ORE EFFETTUATE» e le altre diciture storiche NON sono state toccate.**
+  - **Funzioni nuove** (modulo in fondo allo `<script>`): `foNorm`, `foChiave`, `foNomeUtente`,
+    `foParseMin`, `foOreEntry`, `foAggMese`, `foLightMese`, `foLeggiUtenti`, `foCostruisciAnno`,
+    `foSuggerimentiAnno`, `foSuggDi`, `foFmtOre`, `foInit`, `foLogin`, `foLogout`, `foBottoneHTML`.
+    L'anno si legge **una volta** e si mette in cache (`FOcacheAnno`); la lettura è asincrona e poi
+    ridisegna. Se la lettura cade, il suggerimento **semplicemente non compare** (nessun errore a
+    video). ⚠️ **Da ricordare**: `foAggMese`, `foParseMin`, `foChiave` sono il **gemello** di quelle
+    di Dipendenti — se un giorno cambiano lì, allineare qui.
+  - **Provato in esecuzione** (`col-fo.cjs`, **12 controlli su 12**, banco **fake-Firebase**, zero
+    errori di pagina): il pulsante compare; il login porta a «collegato»; ROSSI MARIO Gen **7**
+    (4+1 il g2, 2 il g5, FERIE il g8 una volta) e Mar **8**; VERDI GIULIA light Gen **6** (due
+    materie), **Giu 5 = inv 3 + est 2**, Lug **4**; omonimo con accento → **«FO ?»**; nessun
+    abbinamento → niente; scollegato → niente; il backup dati **non contiene** «firebase»/«fogliore».
+    ⚠️ **Non verificato con Firebase vero**: le prove girano con una finta Firestore.
+  - **Batteria storica rieseguita sulla rev 18, ZERO falliti nuovi**: `mxop-1` **46/0** · `mxop-2`
+    **54/0** · `mxop-3` **49/0** · `g2-opoc` **9/0** · `g2b-opoc` **13/0** · `rev11` **8/0** ·
+    `rev14op` **15/0** · `rev15op` **15/0** · `sc-op-rev12c` **7/0** · `ic-fix3` **13/0** ·
+    `col-fo` **12/0**. ⚠️ In **`mxop-1`** l'attesa **A03** era invecchiata: contava **17** pulsanti
+    in copertina; il nuovo gruppo FOGLI ORE ne aggiunge uno → **18** in **cinque** gruppi.
+    **Aggiornata, non aggirata.** ⚠️ `rev17op` non rieseguito (richiede il banco rev16 congelato,
+    non ricostruito; non tocca nulla di questa modifica).
+  - ⚠️ **L'isolamento dei DATI resta**: Collaboratori continua a scrivere **solo** le proprie
+    chiavi `spazioireos_opoc*` e **non scrive MAI** su Fogli ore. Cambia solo che ora **legge**
+    Fogli ore (e carica l'SDK Firebase da gstatic). La scheda «ISOLAMENTO CONFERMATO» della rev 13
+    più sotto va letta con questa avvertenza.
 - **Leggibilità (rev 2, 31/10/2026)**: blocco in fondo al `<style>`. Testo base a 15px, nessuna
   scritta sotto i 12px (c'erano 78 misure sotto i 10px), grigi chiari (#999/#aaa/#bbb) portati a
   `#4b5563`, caselle e pulsanti alti almeno 40px, bordo blu sulla casella attiva. Le misure
