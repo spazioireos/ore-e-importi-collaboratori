@@ -509,10 +509,72 @@ function paionoOperatori(a){
   }
   return uno;
 }
+/* rev 21 (19/11/2026, collaudo di Livello A). paionoOperatori guarda la FORMA, non il contenuto:
+   [{"name":"X"}] passava (ha `name`), sostituiva l'archivio, il disegno andava in errore e l'app
+   restava con la pagina BIANCA anche ricaricando. Ora, PRIMA di sostituire (§10.1), ogni
+   collaboratore deve avere la struttura minima che la pagina usa: `years` oggetto, ogni anno un
+   oggetto con `services` e `payments` in elenco, ogni servizio con `hours` in elenco, ogni
+   pagamento un oggetto. Si completa SOLO quello che completava gia' il caricamento storico (ld):
+   `services`/`payments` mancanti diventano elenchi vuoti, la tariffa mancante del servizio prende
+   quella dell'anno; un backup antichissimo con rate_2025/rate_2026 al posto di `years` si converte
+   come in ld. Tutto il resto si RIFIUTA, col motivo in scartaMotivo. */
+var scartaMotivo="";
+function strutturaOperatori(a){
+  scartaMotivo="";
+  function no(i,o,cosa){scartaMotivo="il collaboratore n. "+(i+1)+((o&&typeof o.name==="string")?" ("+o.name+")":"")+" "+cosa;return false}
+  function ogg(x){return !!x&&typeof x==="object"&&!Array.isArray(x)}
+  for(var i=0;i<a.length;i++){
+    var o=a[i];
+    if(o.name!=null&&typeof o.name!=="string")return no(i,o,"ha un nome che non è testo");
+    if(o.sheet!=null&&typeof o.sheet!=="string")return no(i,o,"ha un foglio che non è testo");
+    if(!o.years&&(o.rate_2025!==undefined||o.rate_2026!==undefined)){
+      var yrs={};
+      if(o.rate_2025!==undefined)yrs["2025"]={default_rate:o.rate_2025||18,services:o.services_2025||[],ore_liq:o.ore_liq_2025||[],liq_dates:o.liq_dates_2025||[],attrib:o.attrib_2025||[],payments:[]};
+      if(o.rate_2026!==undefined)yrs["2026"]={default_rate:o.rate_2026||18,services:o.services_2026||[],ore_liq:o.ore_liq_2026||[],liq_dates:o.liq_dates_2026||[],attrib:o.attrib_2026||[],payments:[]};
+      for(var ly in yrs){var lyd=yrs[ly];
+        if(Array.isArray(lyd.ore_liq)){for(var lm=0;lm<12;lm++){var lh=lyd.ore_liq[lm]||0;if(lh>0)lyd.payments.push({date:lyd.liq_dates&&lyd.liq_dates[lm]?lyd.liq_dates[lm]:"",hours:lh,rate:lyd.default_rate||18,attrib:lyd.attrib&&lyd.attrib[lm]?lyd.attrib[lm]:null})}}}
+      o.years=yrs;
+    }
+    if(!ogg(o.years))return no(i,o,"non ha gli anni (years)");
+    for(var y in o.years){
+      if(!Object.prototype.hasOwnProperty.call(o.years,y))continue;
+      var yd=o.years[y];
+      if(!ogg(yd))return no(i,o,"ha l'anno "+y+" non leggibile");
+      if(yd.payments==null)yd.payments=[];
+      if(yd.services==null)yd.services=[];
+      if(!Array.isArray(yd.services))return no(i,o,"ha i servizi del "+y+" che non sono un elenco");
+      if(!Array.isArray(yd.payments))return no(i,o,"ha le liquidazioni del "+y+" che non sono un elenco");
+      for(var s=0;s<yd.services.length;s++){
+        var sv=yd.services[s];
+        if(!ogg(sv))return no(i,o,"ha un servizio del "+y+" non leggibile");
+        if(!Array.isArray(sv.hours))return no(i,o,"ha un servizio del "+y+" senza le ore dei mesi");
+        if(sv.rate===undefined)sv.rate=yd.default_rate||18;
+      }
+      for(var p=0;p<yd.payments.length;p++){if(!ogg(yd.payments[p]))return no(i,o,"ha una liquidazione del "+y+" non leggibile")}
+    }
+  }
+  return true;
+}
+/* Prova a secco: disegna copertina e scheda di ogni collaboratore con i dati NUOVI, senza toccare
+   l'archivio. Se qualcosa lancia un errore, torna il messaggio (e l'import si rifiuta). */
+function provaDisegno(ops){
+  var s={d:A.d,sel:A.sel,v:A.v,modal:A.modal,q:A.q,fr:A.fr};
+  try{
+    A.d=JSON.parse(JSON.stringify(ops));   /* su una COPIA: la prova non deve cambiare i dati che si importano */
+    A.modal=null;A.q="";A.fr="";A.v="cover";rCov();
+    for(var i=0;i<A.d.length;i++){A.sel=i;A.v="sheet";rSh();}
+    return "";
+  }catch(e){return String(e&&e.message||e)}
+  finally{A.d=s.d;A.sel=s.sel;A.v=s.v;A.modal=s.modal;A.q=s.q;A.fr=s.fr}
+}
+/* Rete di sicurezza dopo l'import: fotografia di prima, e se il primo disegno va in errore si
+   rimette tutto com'era (archivio, modello, listino, codici comune). */
+function impFoto(){var f={d:A.d,v:A.v,modal:A.modal,sel:A.sel,dirty:A.dirty,k:{}};var ks=[LSK,TKEY,SKEY,BKEY];for(var i=0;i<ks.length;i++){try{f.k[ks[i]]=localStorage.getItem(ks[i])}catch(e){}}return f}
+function impRimetti(f){A.d=f.d;A.v=f.v;A.modal=null;A.sel=f.sel;A.dirty=f.dirty;for(var k in f.k){if(!Object.prototype.hasOwnProperty.call(f.k,k))continue;try{if(f.k[k]===null)localStorage.removeItem(k);else localStorage.setItem(k,f.k[k])}catch(e){}}}
 function scarta(data){
   // Accetta il formato nuovo e tutti i precedenti: un backup vecchio resta valido
-  if(Array.isArray(data))return paionoOperatori(data)?{operatori:data,modello:null,listino:null,belfiore:null}:null;
-  if(data&&Array.isArray(data.operatori))return paionoOperatori(data.operatori)?{operatori:data.operatori,modello:data.modello||null,
+  if(Array.isArray(data))return (paionoOperatori(data)&&strutturaOperatori(data))?{operatori:data,modello:null,listino:null,belfiore:null}:null;
+  if(data&&Array.isArray(data.operatori))return (paionoOperatori(data.operatori)&&strutturaOperatori(data.operatori))?{operatori:data.operatori,modello:data.modello||null,
     listino:data.listino||null,belfiore:data.belfiore||null}:null;
   return null;
 }
@@ -536,8 +598,11 @@ function scartaSicuro(testo){
   if(verBk>3){
     if(!confirm("ATTENZIONE: questo backup è di uno schema più recente (versione "+verBk+") di questo programma (versione 3).\n\nImportandolo alcuni dati potrebbero non essere letti correttamente.\n\nProcedo lo stesso?"))return undefined;
   }
+  scartaMotivo="";
   var pk=scarta(raw);
-  if(!pk)throw new Error("Formato non valido");
+  if(!pk)throw new Error("Formato non valido"+(scartaMotivo?": "+scartaMotivo+". Non ho toccato niente.":""));
+  /* rev 21: prova a secco del disegno PRIMA di sostituire l'archivio */
+  if(pk.operatori&&pk.operatori.length){var errD=provaDisegno(pk.operatori);if(errD)throw new Error("Formato non valido: con questi dati la pagina non si disegna ("+errD+"). Non ho toccato niente.");}
   if(!pk.operatori||!pk.operatori.length){
     if(!confirm("Il backup non contiene operatori: la lista risulterà vuota.\n\nProcedo?"))return undefined;
   }
@@ -568,6 +633,7 @@ function impJSON(){
       try{
         var pk=scartaSicuro(ev.target.result);
         if(pk===undefined)return;
+        var foto=impFoto();   /* rev 21: rete di sicurezza */
         A.d=pk.operatori;
         localStorage.setItem(LSK,JSON.stringify(pk.operatori));
         var msgM="";
@@ -575,7 +641,8 @@ function impJSON(){
           if(tplSet(pk.modello.nome||"modello.docx",pk.modello.b64))msgM=" + modello contratto";
         }
         msgM+=ripristinaExtra(pk);
-        A.dirty=false;A.v="cover";A.modal=null;render();
+        A.dirty=false;A.v="cover";A.modal=null;
+        try{render();}catch(eR){impRimetti(foto);try{render();}catch(eR2){}alert("Import annullato: con questi dati la pagina non si disegna ("+String(eR&&eR.message||eR)+"). Ho rimesso tutto com'era prima.");return;}
         toast("Backup ripristinato! ("+pk.operatori.length+" operatori"+msgM+")","#1565c0");
       }catch(err){alert("Errore: "+err.message);}
     };
@@ -675,7 +742,7 @@ function normDT(s){
   var p=function(n){return n<10?"0"+n:""+n};
   return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear();
 }
-function blurDT(el){var v=el.value.trim();if(!v){el.value="";el.style.color="";return;}var d=parseDT(v);if(d){el.value=normDT(v);el.style.color="#000"}else{el.style.color="#c62828"}}
+function blurDT(el){var v=el.value.trim();if(!v){el.value="";el.style.color="";return;}if(dtRifiuta(el))return;var d=parseDT(v);if(d){el.value=normDT(v);el.style.color="#000";try{el.defaultValue=el.value}catch(e){}}else{el.style.color="#c62828"}}
 /* rev 14 (10/11/2026, punto 12 di Christian: «Sistema»). Si ricorda com'era la casella
    all'ingresso: serve a blurFmt per capire se l'hai toccata o no. */
 function fcl(el){try{el.setAttribute("data-ini",el.value)}catch(e){}if(raw(el.value)===0)el.value=""}
@@ -688,7 +755,13 @@ function escHTML(s){if(s===null||s===undefined)return'';s=String(s);var map={'&'
    toPrecision(12) ripulisce il pelo prima di arrotondare. Vale anche per toFixed. */
 function R2(v,dec){dec=(dec==null)?2:dec;var n=Number(v);if(!isFinite(n))return 0;var seg=n<0?-1:1;n=Math.abs(n);var p=Math.pow(10,dec);return seg*(Math.round(Number((n*p).toPrecision(12)))/p)}
 function rM(v){return R2((parseFloat(v)||0))}
-function parseDT(s){
+/* rev 21 (19/11/2026, collaudo di Livello A). Una data IMPOSSIBILE come «31/02/2026» veniva
+   spostata in silenzio dal Date di JavaScript al 03/03/2026, e cosi' finiva nei dati e nei report.
+   Ora parseDT controlla che il giorno esista davvero (giorno e mese tornano identici) e torna null
+   se non esiste. dtParti riconosce la FORMA di una data (con o senza separatori), dtImpossibile dice
+   «ha la forma di una data ma quel giorno non esiste», dtRifiuta la respinge con un avviso breve
+   rimettendo la casella com'era. Il formato in cui le date sono salvate NON cambia. */
+function dtParti(s){
   if(!s)return null;
   s=String(s).trim();
   var m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
@@ -698,11 +771,27 @@ function parseDT(s){
     if(only.length===8)m=[s,only.slice(0,2),only.slice(2,4),only.slice(4,8)];
     else if(only.length===6)m=[s,only.slice(0,2),only.slice(2,4),only.slice(4,6)];
   }
-  if(m){var d=parseInt(m[1],10),mo=parseInt(m[2],10),y=parseInt(m[3],10);
-    if(y<100)y+=2000;
+  if(!m)return null;
+  var y=parseInt(m[3],10);if(y<100)y+=2000;
+  return{d:parseInt(m[1],10),mo:parseInt(m[2],10),y:y};
+}
+function parseDT(s){
+  var q=dtParti(s);
+  if(q){var d=q.d,mo=q.mo,y=q.y;
     if(d<1||d>31||mo<1||mo>12)return null;
-    return new Date(y,mo-1,d);}
+    var dt=new Date(y,mo-1,d);
+    if(dt.getDate()!==d||dt.getMonth()!==mo-1)return null;   /* rev 21: 31/02 non esiste */
+    return dt;}
   return null;
+}
+function dtImpossibile(s){return !!dtParti(s)&&!parseDT(s)}
+function dtRifiuta(el){
+  var v=String(el.value==null?"":el.value).trim();
+  var prima=String(el.defaultValue==null?"":el.defaultValue);
+  if(!dtImpossibile(v)||v===prima.trim())return false;
+  el.value=prima;el.style.color="";
+  toast("Data impossibile: «"+v+"» non esiste nel calendario. La casella è rimasta com'era.","#c62828");
+  return true;
 }
 function dtKey(s){var d=parseDT(s);if(!d)return "";var p=function(n){return n<10?"0"+n:""+n};return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
 function sortPayments(){
@@ -739,13 +828,18 @@ function compOre(op,yr){
   }
   return{oM:oM,totH:totH,totHRes:totHRes,totOreDisp:totHRes+totH,totImp:totImp,svcData:svcData}
 }
+/* rev 21 (19/11/2026, collaudo di Livello A, decisione di Christian: «la somma delle righe»).
+   Il TOTALE della ritenuta era ricalcolato come 20% del lordo totale (rM(totLordo*0.20)),
+   mentre ogni riga arrotonda la SUA ritenuta: il totale poteva differire di 1-2 centesimi dalla
+   somma delle righe (misurato: 350,87 contro 350,89, 33 anni su 240) e lordo - rit non tornava
+   col netto. Ora totRit e' la somma delle ritenute di riga. Righe, credito e residui NON cambiano. */
 function compLiq(op,yr){
   var co=compOre(op,yr);if(!co)return null;
   var cf=cfwd(op,yr);
   var dispH=co.totOreDisp+cf.h;
   var dispImp=rM(co.totImp+cf.a);
   var yd=op.years[yr];var pays=yd.payments||[];
-  var totHLiq=0,totLordo=0,totNetto=0,totRimborso=0,totGross=0;var rows=[];
+  var totHLiq=0,totLordo=0,totRit=0,totNetto=0,totRimborso=0,totGross=0;var rows=[];
   for(var p=0;p<pays.length;p++){
     var h=parseFloat(pays[p].hours)||0;var rt=parseFloat(pays[p].rate)||0;
     var isRimb=pays[p].rimborso===true;
@@ -763,13 +857,14 @@ function compLiq(op,yr){
     }else{
       lordo=calcLordo;rit=rM(lordo*0.20);netto=rM(lordo-rit);
       totLordo=rM(totLordo+lordo);
+      totRit=rM(totRit+rit);   /* rev 21: il totale e' la SOMMA delle ritenute di riga */
     }
     totNetto=rM(totNetto+netto);
     var balH=dispH-totHLiq;var balImp=rM(dispImp-totGross);
     var lordoTeor=calcLordo,ritTeor=rM(calcLordo*0.20);
     rows.push({date:pays[p].date,hours:h,rate:rt,lordo:lordo,rit:rit,netto:netto,lordoTeor:lordoTeor,ritTeor:ritTeor,attrib:pays[p].attrib,rimborso:isRimb,balH:balH,balImp:balImp});
   }
-  return{rows:rows,totHLiq:totHLiq,totLordo:totLordo,totRit:rM(totLordo*0.20),totNetto:totNetto,totRimborso:totRimborso,oreRes:rM(dispH-totHLiq-(parseFloat(yd.rettOre)||0)),impRes:rM(dispImp-totGross-(parseFloat(yd.rettImp)||0)),rettOre:parseFloat(yd.rettOre)||0,rettImp:parseFloat(yd.rettImp)||0,cfH:cf.h,cfA:cf.a,dispH:dispH,dispImp:dispImp}
+  return{rows:rows,totHLiq:totHLiq,totLordo:totLordo,totRit:totRit,totNetto:totNetto,totRimborso:totRimborso,oreRes:rM(dispH-totHLiq-(parseFloat(yd.rettOre)||0)),impRes:rM(dispImp-totGross-(parseFloat(yd.rettImp)||0)),rettOre:parseFloat(yd.rettOre)||0,rettImp:parseFloat(yd.rettImp)||0,cfH:cf.h,cfA:cf.a,dispH:dispH,dispImp:dispImp}
 }
 function gY(op){return Object.keys(op.years).sort()}
 function nY(op){var y=gY(op);return parseInt(y[y.length-1])+1}
@@ -1013,7 +1108,8 @@ function exportByDate(from,to){
         if(pk>=fromKey&&pk<=toKey){
           var h=parseFloat(pr.hours)||0;var rt=parseFloat(pr.rate)||0;
           var calcL=rM(h*rt);var isR=pr.rimborso===true;
-          var lordo=isR?0:calcL;var rit=isR?0:rM(calcL*0.20);var netto=isR?calcL:rM(calcL-rM(calcL*0.20));
+          /* rev 21 (Christian, 19/11/2026): il rimborso da' l'80%, come nella scheda (compLiq) */
+          var lordo=isR?0:calcL;var rit=isR?0:rM(calcL*0.20);var netto=isR?rM(calcL*0.80):rM(calcL-rM(calcL*0.20));
           rows.push({date:pr.date,dtKey:pk,name:op.name,sheet:op.sheet,year:yrs[y],hours:h,rate:rt,lordo:lordo,rit:rit,netto:netto,rimborso:isR,attrib:pr.attrib||""});
         }
       }
@@ -1208,7 +1304,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 20 \u00b7 14nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 21 \u00b7 19nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -1475,7 +1571,7 @@ function rYB(idx,yr,ci){
   for(var p=0;p<cl.rows.length;p++){
     var pr=cl.rows[p];var brc=pr.balH>=0?'res-big-pos':'res-big-neg';
     h+='<tr><td style="font-weight:700">'+(p+1)+'</td>';
-    h+='<td class="date-cell"><input value="'+escHTML(pr.date||'')+'" placeholder="gg/mm/aaaa" onblur="blurDT(this);'+P+'.payments['+p+'].date=this.value;markD()" onchange="'+P+'.payments['+p+'].date=this.value;markD()"></td>';
+    h+='<td class="date-cell"><input value="'+escHTML(pr.date||'')+'" placeholder="gg/mm/aaaa" onblur="blurDT(this);'+P+'.payments['+p+'].date=this.value;markD()" onchange="if(!dtImpossibile(this.value)){'+P+'.payments['+p+'].date=this.value;markD()}"></td>';
     h+='<td class="edit-cell"><input type="text" value="'+n2(pr.hours)+'" style="width:58px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.payments['+p+'].hours=raw(this.value);markD();render()"></td>';
     h+='<td class="edit-cell" style="font-size:9px"><span style="color:#888;margin-right:2px">€</span><input class="rate-in" type="text" value="'+n2(pr.rate)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.payments['+p+'].rate=raw(this.value);markD();render()"></td>';
     if(pr.rimborso){
@@ -2365,7 +2461,7 @@ function rMBulk(){
   };
   // variante data (auto-slash)
   var inpD=function(f,lbl,w){
-    return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(c[f]||"")+'" placeholder="gg/mm/aaaa" style="width:'+(w||95)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" oninput="bulkLive(\''+f+'\',this.value)" onchange="this.value=normDT(this.value);bulkSetCampo(\''+f+'\',this.value)"></div>';
+    return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(c[f]||"")+'" placeholder="gg/mm/aaaa" style="width:'+(w||95)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" oninput="bulkLive(\''+f+'\',this.value)" onchange="if(dtRifiuta(this)){bulkLive(\''+f+'\',this.value);return}this.value=normDT(this.value);bulkSetCampo(\''+f+'\',this.value)"></div>';
   };
   var sel=function(f,lbl,opts){
     var v=c[f]||"";
@@ -2498,7 +2594,8 @@ function doReport(){
 }
 // ===== RIEPILOGO MENSILE DEI COMPENSI (tutti gli operatori) =====
 // Stessa logica per-pagamento del report "Per data": compenso normale -> lordo/ritenuta/netto;
-// rimborso -> escluso da lordo e ritenuta, il netto pieno confluisce nel Netto.
+// rimborso -> escluso da lordo e ritenuta, il suo netto (l'80% del lordo, come nella scheda:
+// rev 21, decisione di Christian del 19/11/2026; prima era il lordo pieno) confluisce nel Netto.
 function calcMensile(){
   var map={};var senza={lordo:0,rit:0,netto:0,rimb:0,n:0};
   for(var i=0;i<A.d.length;i++){
@@ -2511,7 +2608,7 @@ function calcMensile(){
         var calcL=rM(h*rt);var isR=pr.rimborso===true;
         var lordo=isR?0:calcL;
         var rit=isR?0:rM(calcL*0.20);
-        var netto=isR?calcL:rM(calcL-rM(calcL*0.20));
+        var netto=isR?rM(calcL*0.80):rM(calcL-rM(calcL*0.20));   /* rev 21: rimborso = 80%, come nella scheda */
         var pk=dtKey(pr.date);
         var b;
         if(!pk){b=senza;}
@@ -3119,7 +3216,7 @@ function rAnag(i){
     // variante data (auto-slash)
     var fldD=function(f,lbl,w){
       var v=an[f]||"";
-      return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="gg/mm/aaaa" style="width:'+(w||90)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="this.value=normDT(this.value);anagSet('+i+',\''+f+'\',this.value)"></div>';
+      return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="gg/mm/aaaa" style="width:'+(w||90)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="if(dtRifiuta(this))return;this.value=normDT(this.value);this.defaultValue=this.value;anagSet('+i+',\''+f+'\',this.value)"></div>';
     };
     h+='<div style="padding:10px 14px">';
     h+='<div style="font-size:11px;font-weight:900;color:#37474f;margin-bottom:5px">DATI PERSONALI</div>';
@@ -3200,7 +3297,7 @@ function rAnag(i){
         // variante data: normalizza 11022025 -> 11/02/2025 all'uscita dal campo
         var afD=function(f,lbl,w){
           var v=at[f]||"";
-          return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="gg/mm/aaaa" style="width:'+(w||90)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="this.value=normDT(this.value);attoSet('+i+','+a+',\''+f+'\',this.value)"></div>';
+          return '<div style="display:flex;flex-direction:column;gap:1px"><label style="font-size:9px;font-weight:700;color:#555">'+lbl+'</label><input type="text" value="'+escHTML(v)+'" placeholder="gg/mm/aaaa" style="width:'+(w||90)+'px;font-size:11px;background:#fff9c4;border:1px solid #f59e0b;border-radius:3px;padding:3px 5px;font-family:\'Inter\',sans-serif" onchange="if(dtRifiuta(this))return;this.value=normDT(this.value);this.defaultValue=this.value;attoSet('+i+','+a+',\''+f+'\',this.value)"></div>';
         };
         h+='<div style="padding:8px 10px;background:#fff">';
         h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;margin-bottom:8px">';
@@ -3684,6 +3781,7 @@ function doRecoveryRestore(){
       try{
         var pk=scartaSicuro(ev.target.result);
         if(pk===undefined)return;
+        var foto=impFoto();   /* rev 21: rete di sicurezza */
         A.d=pk.operatori;
         localStorage.setItem(LSK,JSON.stringify(pk.operatori));
         var msgM="";
@@ -3691,8 +3789,10 @@ function doRecoveryRestore(){
           if(tplSet(pk.modello.nome||"modello.docx",pk.modello.b64))msgM=" + modello contratto";
         }
         msgM+=ripristinaExtra(pk);
+        A.dirty=false;A.v="cover";A.modal=null;
+        try{render();}catch(eR){impRimetti(foto);try{showRecovery();}catch(eR2){}alert("Import annullato: con questi dati la pagina non si disegna ("+String(eR&&eR.message||eR)+"). Ho rimesso tutto com'era prima.");return;}
         window._needsRecovery=false;
-        A.dirty=false;A.v="cover";A.modal=null;render();updateDriveUI();
+        updateDriveUI();
         toast("Dati recuperati! ("+pk.operatori.length+" operatori"+msgM+")","#2e7d32");
       }catch(err){alert("Errore: "+err.message)}
     };
@@ -3755,7 +3855,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 20 \u00b7 14nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 21 \u00b7 19nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
@@ -3848,17 +3948,32 @@ function foCostruisciAnno(y){
   var nomiPerChiave={};
   function segna(ch,nome){if(!nomiPerChiave[ch])nomiPerChiave[ch]={};nomiPerChiave[ch][nome]=1;}
   return foLeggiUtenti().then(function(utenti){
-    return FOdb.collection("timesheets").where("year","==",y).get().then(function(ts){
-      if(!ts.empty)return ts;
-      return FOdb.collection("timesheets").get();   /* dati storici con "year" non numerico: filtro lato client */
+    /* rev 21 (19/11/2026): un foglio ore con l'anno scritto come TESTO ("2026") veniva ignorato,
+       perche' la lettura per anno numerico trovava gia' gli altri e non guardava oltre. Ora si
+       leggono INSIEME l'anno numerico e l'anno testo (senza doppioni), e il confronto si fa come
+       NUMERO; se non c'e' niente, si legge tutto e si filtra qui (come prima). */
+    var qN=FOdb.collection("timesheets").where("year","==",y).get();
+    var qS=FOdb.collection("timesheets").where("year","==",String(y)).get();
+    return Promise.all([qN,qS]).then(function(rr){
+      var docs=[],visti={};
+      for(var r=0;r<rr.length;r++){rr[r].forEach(function(doc){if(visti[doc.id])return;visti[doc.id]=1;docs.push(doc);});}
+      if(docs.length)return docs;
+      return FOdb.collection("timesheets").get();   /* dati storici con "year" scritto in altro modo: filtro lato client */
     }).then(function(ts){
       var perUM={};
-      ts.forEach(function(doc){try{var t=doc.data()||{};if(String(t.year)!==String(y))return;var mm=parseInt(t.month,10);if(isNaN(mm)||mm<1||mm>12)return;var u=String(t.workerUid==null?"":t.workerUid).trim();if(!u||!utenti[u])return;var kk=u+"|"+mm;if(!perUM[kk])perUM[kk]=[];perUM[kk].push(t.days);}catch(e){}});
+      ts.forEach(function(doc){try{var t=doc.data()||{};if(Number(String(t.year==null?"":t.year).trim())!==y)return;var mm=parseInt(String(t.month==null?"":t.month).trim(),10);if(isNaN(mm)||mm<1||mm>12)return;var u=String(t.workerUid==null?"":t.workerUid).trim();if(!u||!utenti[u])return;var kk=u+"|"+mm;if(!perUM[kk])perUM[kk]=[];perUM[kk].push(t.days);}catch(e){}});
       var out={},kk;
       for(kk in perUM){var sp=kk.split("|");var u=sp[0],mm=parseInt(sp[1],10);var nome=utenti[u];var ch=foChiave(nome);if(!ch)continue;segna(ch,nome);if(!out[ch])out[ch]=[0,0,0,0,0,0,0,0,0,0,0,0];out[ch][mm-1]+=foAggMese(perUM[kk]);}
       return FOdb.collection("lightsheets").get().then(function(ls){
         ls.forEach(function(doc){try{var o=doc.data()||{};var nome=foNorm(o.name);if(!nome)return;var ch=foChiave(nome);if(!ch)return;var hy=(o.hours&&o.hours[y])?o.hours[y]:null;if(!hy)return;segna(ch,nome);if(!out[ch])out[ch]=[0,0,0,0,0,0,0,0,0,0,0,0];for(var m=1;m<=12;m++)out[ch][m-1]+=foLightMese(hy,m);}catch(e){}});
         var amb={},c,i;for(c in nomiPerChiave){if(Object.keys(nomiPerChiave[c]).length>1)amb[c]=true;}
+        /* rev 21 (19/11/2026): due ACCOUNT diversi (uid diversi) di Fogli ore sulla stessa chiave sono
+           due persone, anche se il nome e' scritto IDENTICO: prima le loro ore si sommavano in un solo
+           «TS N». Ora quella chiave e' ambigua («TS ?»). Si contano tutti gli account worker/editor,
+           ma si segnala solo se in quell'anno la chiave ha dati. ⚠️ I light NON sono account: le righe
+           -materia della stessa persona (stesso nome) continuano a sommarsi, come dalla rev 18. */
+        var uidPerChiave={},uu;for(uu in utenti){if(!Object.prototype.hasOwnProperty.call(utenti,uu))continue;var chU=foChiave(utenti[uu]);if(!chU)continue;if(!uidPerChiave[chU])uidPerChiave[chU]={};uidPerChiave[chU][uu]=1;}
+        for(c in uidPerChiave){if(out[c]&&Object.keys(uidPerChiave[c]).length>1)amb[c]=true;}
         for(c in out){for(i=0;i<12;i++)out[c][i]=Math.round(out[c][i]*100)/100;}
         out.__amb=amb;return out;
       });

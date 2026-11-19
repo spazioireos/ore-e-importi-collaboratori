@@ -24,3 +24,11 @@ questa cartella, con `COL_OUT` per la cartella dei file scaricati. `col-a01-lib.
 | `col-a01-graf.cjs` | 46/47 |
 | `col-a01-contr.cjs` | 13/15 (modello Word inventato) |
 | `col-a01-limiti.cjs` | 7/7 |
+
+## Rev 21 (19/11/2026)
+
+`col-rev21.cjs` prova le sei correzioni della rev 21 con il confronto diretto sulla rev 20 congelata (localizzata
+nel banco in `col20/`, oppure `COL20_URL`); `COL_PNG` salva le anteprime. Esito: **53 superati + 1 informativo, 0
+falliti**. Batteria `col-a01-*` sulla rev 21: base 46/47 + 1 parziale · calc 31/35 · dati 27/28 + 1 non verificato ·
+import2 **4/4** · ts **22/23** · graf 46/47 · contr **14/15** · limiti 7/7. Aggiornate (non aggirate) le attese di
+`C03` (targhetta letta dal file) e `K07` (data impossibile ora rifiutata).

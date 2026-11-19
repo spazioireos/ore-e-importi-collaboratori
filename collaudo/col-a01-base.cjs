@@ -74,7 +74,9 @@ const seed = [
   rec('C01', 'Copertina: gruppi di pulsanti', '5 gruppi (DATI, FOGLI ORE, ANAGRAFICHE, CONTRATTI, REPORT)', gruppi.map(g => g.t + ':' + g.n).join(' '), gruppi.length === 5);
   rec('C02', 'Copertina: pulsanti nei gruppi (2 anni di dati)', '18', totBtn, totBtn === 18);
   const rev = await page.textContent('.cover-header .revtag');
-  rec('C03', 'Targhetta revisione', 'rev 20 · 14nov26', rev, /rev 20/.test(rev));
+  // rev 21: l'attesa si legge dal file dell'app (prima era scritta a mano «rev 20» e invecchiava)
+  const revFile = (require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8').match(/rev (\d+) \\u00b7 (\d+[a-z]+\d+)/) || []).slice(1).join(' · ');
+  rec('C03', 'Targhetta revisione', 'rev ' + revFile, rev, rev.replace(/\s+/g, ' ').indexOf('rev ' + revFile) >= 0);
   const kpi = await page.textContent('.kpi-bar');
   rec('C04', 'KPI copertina: residui 2025 / 2026', 'Ore res.2025 13,00 · Imp.res.2025 € 342,50', kpi.replace(/\s+/g, ' ').slice(0, 160), kpi.includes('13,00') && kpi.includes('342,50'));
   await page.fill('#qSearch', 'beta'); await page.waitForTimeout(150);

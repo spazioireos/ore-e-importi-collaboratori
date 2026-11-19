@@ -10,7 +10,64 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 20 · 14nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 21 · 19nov26.**
+- 🧾 **SEI CORREZIONI DAL COLLAUDO DI LIVELLO A** (rev 21, 19/11/2026, nulla osta di Christian dopo il
+  collaudo integrale; il punto 6 su sua decisione esplicita: «il rimborso dà il 160 €, l'80%»).
+  **IN ANTEPRIMA, da approvare.**
+  1. 🔴 **Ritenuta del TOTALE = somma delle righe** (Christian: «la somma delle righe»). In `compLiq` il
+     totale era `rM(totLordo*0.20)`, mentre ogni riga arrotonda la sua `rM(lordo*0.20)`: il TOTALE
+     poteva differire di 1-2 centesimi e `lordo − rit ≠ netto`. Ora `totRit` si **somma** riga per
+     riga (`totRit=rM(totRit+rit)`). Si propaga da sé a scheda (riga TOTALE), Excel dell'anno (Riepilogo,
+     SALDO delle Liquidazioni, **Certificazioni**). *Per mese* e *Per data* sommavano già le righe.
+     **Misurato**: caso del collaudo **350,87 → 350,89** (lordo 1.754,35 − 350,89 = netto 1.403,46);
+     su 406 anni casuali cambiano **72** totali di ritenuta, **0** differenze su righe, credito, residui,
+     `bkResid`, `compOre` e ogni altro campo di `compLiq` rispetto alla rev 20.
+     ⚠️ **Solo questa riga di `compLiq` è stata toccata**; `bkResid` e il calcolo dei residui no.
+  2. 🔴 **Omonimi identici non si sommano più nel «TS»**. In `foCostruisciAnno` l'ambiguità scattava
+     solo con nomi **scritti diversi** sulla stessa chiave: due account «BIANCHI ANNA» davano un unico
+     «TS 8». Ora si contano gli **account (uid)** worker/editor per chiave: con **due o più** e dati
+     nell'anno → «TS ?». ⚠️ **I light non sono account**: le righe-materia della stessa persona (stesso
+     nome) **si sommano ancora**, e un account + una riga light con lo stesso nome pure (come rev 18).
+     Due omonimi **senza ore** nell'anno non mostrano niente.
+  3. 🔴 **Import con la forma giusta ma il contenuto rotto → pagina bianca**. `[{"name":"X"}]` passava
+     `paionoOperatori`. Ora, **prima** di sostituire: `strutturaOperatori` (dentro `scarta`) pretende
+     `years` oggetto, anni oggetto, `services`/`payments` in elenco, `hours` in elenco, pagamenti
+     oggetto, nome/foglio testo; completa **solo** ciò che completava già `ld` (elenchi mancanti, tariffa
+     del servizio) e converte i backup antichissimi `rate_2025`/`rate_2026`; poi `provaDisegno` disegna a
+     secco copertina e ogni scheda **su una copia**. Il motivo finisce nell'avviso («Errore: Formato non
+     valido: il collaboratore n. 1 (X) non ha gli anni (years). Non ho toccato niente.»). In più una
+     **rete di sicurezza** (`impFoto`/`impRimetti`) in `impJSON` e `doRecoveryRestore`: se il primo
+     disegno dopo l'import va in errore, si rimettono archivio, modello, listino e codici comune e si
+     avvisa («Import annullato: … Ho rimesso tutto com'era prima.»). ⚠️ I percorsi di **Google Drive**
+     non sono provabili al banco: `driveLoad` passa da `scarta`, quindi ne eredita la validazione
+     strutturale; `doRecoveryDrive` **non è stato toccato**.
+  4. 🟠 **Date impossibili**: `31/02/2026` diventava `03/03/2026` (il `Date` di JavaScript). Ora
+     `parseDT` controlla che il giorno esista (`dtParti`, `dtImpossibile`) e `dtRifiuta` respinge la data
+     con un avviso breve rimettendo la casella **com'era** (liquidazioni via `blurDT`, report *Per data*,
+     atto in blocco, anagrafica, atti). Un testo che non è una data resta come prima (rosso).
+     ⚠️ Il formato in cui le date sono salvate **non cambia**; una data impossibile **già in archivio**
+     non viene toccata (resta rossa).
+  5. 🟠 **Anno scritto come testo nei Fogli ore**: un `timesheets` con `year:"2026"` era ignorato (la
+     lettura per anno numerico trovava gli altri e non guardava oltre). Ora si leggono insieme
+     `year==2026` e `year=="2026"` senza doppioni, e si confronta come **numero**; il mese con
+     `parseInt` dopo `trim` (`"04"` → 4). Se nessuna delle due trova niente, si legge tutto come prima.
+  6. 🔴 **Rimborso = 80% anche nei report** (Christian, 19/11/2026). La **scheda** dava già 160 € per
+     10 h × 20 € col pallino (lordo e ritenuta 0, credito che scende del lordo pieno); *Per data* e
+     *Per mese* (e i loro Excel) davano **200**. Ora `netto = rM(calcL*0.80)` anche lì; «di cui rimborsi»
+     lo segue. **Misurato**: Per data 200 → **160**, Per mese febbraio netto 319,72 → **279,72** e «di cui
+     rimborsi» 200 → **160**; pagamenti senza pallino **identici** alla rev 20. La nota in fondo a
+     *Per mese* («il loro netto è incluso nella colonna Netto») resta vera e **non è stata toccata**.
+  - ⚠️ **Diciture nuove, scritte da Claude**: l'avviso «Data impossibile: «…» non esiste nel calendario.
+    La casella è rimasta com'era.», i motivi dopo «Formato non valido: …» e l'avviso «Import annullato:
+    …». Nessuna dicitura esistente toccata.
+  - **Provato in esecuzione** (`collaudo/col-rev21.cjs`, **53 controlli superati + 1 informativo, 0
+    falliti**, confronto diretto con la copia congelata della rev 20). Batteria `col-a01-*`: base
+    **46/47** + 1 parziale · calc **31/35** · dati **27/28** + 1 non verificato · import2 **4/4** · ts
+    **22/23** · graf **46/47** · contr **14/15** · limiti **7/7**. ⚠️ **Due attese aggiornate, non
+    aggirate**: `C03` (targhetta scritta a mano: ora si legge dal file) e `K07` (pretendeva la data
+    impossibile «in rosso» ma salvata: ora pretende il rifiuto). I falliti rimasti sono **gli stessi
+    della rev 20**: L05b (fascia «A DEBITO» per 0,01 €), R09/R10/K04 (autore e nomi dei file), F15 e
+    G-TSall (`vertical-align` dei mesi misurato **middle**, non top, già nella rev 20).
 - ☁️ **COLLABORATORI SUGGERISCE LE ORE DAI FOGLI ORE, ANCHE I LIGHT MENSILI** (rev 18, 14/11/2026,
   richiesta di Christian: «l'app collaboratori deve leggere le ore degli operatori anche light
   mensili e deve suggerirmele come già succede nel tabellone dell'app dipendenti». Sue due scelte:
@@ -604,6 +661,8 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
 - **Non toccare senza richiesta esplicita**: il motore dei residui "a secchi" (riporto per
   servizio e tariffa tra gli anni), il calcolo del codice fiscale (tabella Belfiore), la
   generazione dei contratti .docx/PDF, il formato di backup `opoc-3`.
+  ⚠️ **rev 21**: in `compLiq` è cambiato **solo** come si somma il totale della ritenuta (somma delle
+  righe, decisione di Christian); righe, credito e residui sono identici (misurato).
   ⚠️ **`bkResid` e `compLiq` restano intoccate anche dopo la rev 17**: la quadratura del
   riquadro vive nel **disegno** e la conversione ore ↔ importo **interroga** `bkResid` senza
   cambiarla. Chi dovesse rimetterci mano ricordi che `bkResid` alimenta anche il **riporto fra

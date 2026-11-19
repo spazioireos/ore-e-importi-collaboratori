@@ -78,7 +78,11 @@ async function modello() {
   const di = await page.$('.date-cell input');
   await di.fill('31/02/2026'); await di.press('Tab'); await page.waitForTimeout(150);
   const vd = await di.inputValue();
-  rec('K07', 'Data di pagamento impossibile «31/02/2026»', 'segnata in rosso, NON trasformata', `${vd} (dato ${await page.evaluate(() => A.d[0].years['2026'].payments[0].date)})`, vd === '31/02/2026');
+  const toastK = await page.evaluate(() => { const t = document.getElementById('toast'); return t ? t.textContent : ''; });
+  const datoK = await page.evaluate(() => A.d[0].years['2026'].payments[0].date);
+  // rev 21: l'attesa documentava il difetto («segnata in rosso, NON trasformata», ma salvata nei dati).
+  // Decisione del 19/11/2026: una data impossibile si RIFIUTA con un avviso e la casella resta com'era (qui vuota).
+  rec('K07', 'Data di pagamento impossibile «31/02/2026»', 'rifiutata con avviso, casella com\'era (vuota), nessun 03/03', `casella «${vd}» (dato «${datoK}»); avviso «${toastK}»`, vd === '' && datoK === '' && /Data impossibile/.test(toastK));
   page._risposte.push(true);
   await page.evaluate(() => delPay(0, '2026', 0));
   const dp = page._dialoghi.slice(-1)[0].msg;
