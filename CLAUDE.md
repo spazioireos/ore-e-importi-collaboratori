@@ -10,7 +10,31 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 21 · 19nov26.**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 22 · 19nov26 (IN ANTEPRIMA, da approvare).**
+- ✍️ **ENTRANDO IN UNA CASELLA NUMERICA IL CONTENUTO SI SELEZIONA TUTTO** (rev 22, 19/11/2026, **IN ANTEPRIMA,
+  da approvare**; richiesta di Christian: «consenti, quando entro in una cella per compilare le ore, che la precedente
+  scritta si selezioni tutta e io ci scriva sopra»).
+  - **Come**: funzione nuova **`selTutto(el)`** (accanto a `fcl`), chiamata in fondo a **`fcl`**, cioè **dopo** quello
+    che `fcl` fa già (ricorda `data-ini`, svuota lo zero): con un `setTimeout 0` seleziona tutto il testo
+    (`setSelectionRange`, ripiego su `select()`). Col mouse alcuni browser tolgono la selezione al rilascio del tasto:
+    due ascoltatori globali (`mousedown`/`mouseup`, in cattura) impediscono **solo il primo rilascio** dopo l'ingresso
+    (`_selAppena`), così **un secondo clic posiziona il cursore** come sempre. Il **Tab** selezionava già (lo fa
+    `applyTabOrder`): resta com'era.
+  - **Caselle toccate**: tutte quelle con `onfocus="fcl(this)"` — ore mensili (`.edit-cell`), residuo iniziale del
+    servizio, ore e €/h delle liquidazioni (`.rate-in`), tariffa del servizio (`.rate-in`), «Imp. contratt. pred.»
+    (`.rate-hdr`), «Rettifica credito» Ore e Importo € — più la **data della liquidazione** (`.date-cell`), che non
+    aveva `onfocus` e ora ha `onfocus="selTutto(this)"` (**non** `fcl`: una data non va svuotata).
+  - **NON toccate**: le caselle di testo libero (nome del servizio, attribuzione della liquidazione, anagrafica, atti),
+    le date dell'anagrafica, degli atti e della finestra *Report per data*, i moduli *Nuovo Operatore* / *Nuovo anno*.
+  - ⚠️ **Nessun valore cambia**: `blurFmt` con `data-ini`, `raw()` (il meno scartato) e `dtRifiuta` sono **identiche**.
+    Entrare e uscire senza scrivere non riformatta; un negativo in archivio resta col meno.
+  - **Provato in esecuzione** (`collaudo/col-rev22.cjs`, **25 superati su 25**, zero errori di pagina, confronto diretto
+    con la rev 21 dove il clic lasciava il cursore senza selezione): clic su 12,50 → tutto selezionato, «7» lo
+    sostituisce e ✔ Salva scrive 7; Tab seleziona la casella dopo; secondo clic posiziona il cursore; pressione lunga
+    di 300 ms tiene la selezione; tocco a 390px seleziona; casella a zero svuotata e di nuovo «0,00»; «-45,50» entra/esce
+    intatto; «-3» → 3; data selezionata, «31/02/2026» rifiutata, «20/03/2026» accettata; attribuzione (testo) senza
+    selezione. Batteria `col-a01-*` e `col-rev21.cjs` **identiche alla rev 21** (vedi `collaudo/LEGGIMI.md`).
+  - ⚠️ **Non verificato**: Safari/iOS veri (provato su Chromium, anche in modalità tocco).
 - 🧾 **SEI CORREZIONI DAL COLLAUDO DI LIVELLO A** (rev 21, 19/11/2026, nulla osta di Christian dopo il
   collaudo integrale; il punto 6 su sua decisione esplicita: «il rimborso dà il 160 €, l'80%»).
   **Approvata da Christian e portata su `main` il 19/11/2026 («Main»).**

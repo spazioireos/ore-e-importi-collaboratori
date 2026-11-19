@@ -745,7 +745,23 @@ function normDT(s){
 function blurDT(el){var v=el.value.trim();if(!v){el.value="";el.style.color="";return;}if(dtRifiuta(el))return;var d=parseDT(v);if(d){el.value=normDT(v);el.style.color="#000";try{el.defaultValue=el.value}catch(e){}}else{el.style.color="#c62828"}}
 /* rev 14 (10/11/2026, punto 12 di Christian: «Sistema»). Si ricorda com'era la casella
    all'ingresso: serve a blurFmt per capire se l'hai toccata o no. */
-function fcl(el){try{el.setAttribute("data-ini",el.value)}catch(e){}if(raw(el.value)===0)el.value=""}
+function fcl(el){try{el.setAttribute("data-ini",el.value)}catch(e){}if(raw(el.value)===0)el.value="";selTutto(el)}
+/* rev 22 (19/11/2026, Christian: «consenti, quando entro in una cella per compilare le ore, che la
+   precedente scritta si selezioni tutta e io ci scriva sopra»). Entrando in una casella numerica della
+   scheda (clic, tocco o Tab) tutto il contenuto risulta SELEZIONATO, cosi' il primo tasto lo sostituisce.
+   Si seleziona DOPO quello che fa fcl (data-ini e svuotamento dello zero): setTimeout 0.
+   Col mouse alcuni browser tolgono la selezione al rilascio del tasto: si impedisce SOLO il primo
+   rilascio dopo l'ingresso (_selAppena), cosi' un secondo clic posiziona il cursore come sempre.
+   ⚠️ Nessun valore viene cambiato: blurFmt (data-ini), raw() e dtRifiuta restano identiche. */
+var _selMd=null;
+function selTutto(el){
+  try{el._selAppena=true}catch(e){}
+  setTimeout(function(){
+    try{if(document.activeElement===el){if(el.setSelectionRange){el.setSelectionRange(0,String(el.value).length)}else if(el.select){el.select()}}}catch(e){}
+  },0);
+}
+document.addEventListener("mousedown",function(e){var t=e.target;if(t&&document.activeElement===t){try{t._selAppena=false}catch(x){}_selMd=null}else{_selMd=t}},true);
+document.addEventListener("mouseup",function(e){var t=e.target;if(_selMd&&t===_selMd&&t._selAppena){e.preventDefault()}if(t){try{t._selAppena=false}catch(x){}}_selMd=null},true);
 function markD(){if(!A.dirty){A.dirty=true;var b=document.getElementById('ubadge');if(b)b.style.display='inline-block'}}
 function toast(m,c){var o=document.getElementById('toast');if(o)o.remove();var d=document.createElement('div');d.id='toast';d.className='toast';d.setAttribute('role','alert');d.style.background=c||'#2e7d32';d.textContent=m;document.body.appendChild(d);setTimeout(function(){d.remove()},2200)}
 function escHTML(s){if(s===null||s===undefined)return'';s=String(s);var map={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;','/':'&#x2F;'};return s.replace(/[&<>"'\/]/g,function(m){return map[m]})}
@@ -1304,7 +1320,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 21 \u00b7 19nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 22 \u00b7 19nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -1571,7 +1587,7 @@ function rYB(idx,yr,ci){
   for(var p=0;p<cl.rows.length;p++){
     var pr=cl.rows[p];var brc=pr.balH>=0?'res-big-pos':'res-big-neg';
     h+='<tr><td style="font-weight:700">'+(p+1)+'</td>';
-    h+='<td class="date-cell"><input value="'+escHTML(pr.date||'')+'" placeholder="gg/mm/aaaa" onblur="blurDT(this);'+P+'.payments['+p+'].date=this.value;markD()" onchange="if(!dtImpossibile(this.value)){'+P+'.payments['+p+'].date=this.value;markD()}"></td>';
+    h+='<td class="date-cell"><input value="'+escHTML(pr.date||'')+'" placeholder="gg/mm/aaaa" onfocus="selTutto(this)" onblur="blurDT(this);'+P+'.payments['+p+'].date=this.value;markD()" onchange="if(!dtImpossibile(this.value)){'+P+'.payments['+p+'].date=this.value;markD()}"></td>';
     h+='<td class="edit-cell"><input type="text" value="'+n2(pr.hours)+'" style="width:58px" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.payments['+p+'].hours=raw(this.value);markD();render()"></td>';
     h+='<td class="edit-cell" style="font-size:9px"><span style="color:#888;margin-right:2px">€</span><input class="rate-in" type="text" value="'+n2(pr.rate)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.payments['+p+'].rate=raw(this.value);markD();render()"></td>';
     if(pr.rimborso){
@@ -3855,7 +3871,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 21 \u00b7 19nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 22 \u00b7 19nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
