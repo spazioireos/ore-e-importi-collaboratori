@@ -196,6 +196,23 @@ async function apriScheda(browser, url, id) {
     await cx.close();
   }
 
+  // T21 primo tasto prima del setTimeout (pagina occupata): la selezione si fa subito e quella in attesa
+  //     si annulla, così il carattere appena battuto NON viene selezionato e sostituito dal successivo
+  {
+    const r21 = await page.evaluate(() => {
+      const el = document.querySelectorAll('.tbl-dense td.edit-cell input')[1];
+      if (!el) return { err: 'casella non trovata' };
+      el.blur(); el.focus();                                   // fcl → selTutto: selezione in attesa
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true }));
+      const subito = { s: el.selectionStart, e: el.selectionEnd, len: el.value.length };
+      el.value = '1'; el.setSelectionRange(1, 1);               // il carattere è entrato
+      return new Promise(res => setTimeout(() => res({ subito, dopo: { v: el.value, s: el.selectionStart, e: el.selectionEnd } }), 60));
+    });
+    rec('T21', 'Primo tasto prima della selezione rinviata', 'selezione fatta subito; dopo il carattere il cursore resta in fondo («1», 1-1)', JSON.stringify(r21),
+      !r21.err && r21.subito.s === 0 && r21.subito.e === r21.subito.len && r21.dopo.v === '1' && r21.dopo.s === 1 && r21.dopo.e === 1);
+    await page.evaluate(() => { const el = document.activeElement; if (el) { el.value = el.getAttribute('data-ini') || el.value; el.blur(); } });
+  }
+
   rec('T99', 'Nessun errore di pagina (rev 22 e rev 21)', '0', (page._errori.concat(p21._errori)).join('|') || '0', page._errori.length === 0 && p21._errori.length === 0);
   L.riepilogo('col-rev22');
   await browser.close();

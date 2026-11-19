@@ -19,7 +19,10 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     (`setSelectionRange`, ripiego su `select()`). Col mouse alcuni browser tolgono la selezione al rilascio del tasto:
     due ascoltatori globali (`mousedown`/`mouseup`, in cattura) impediscono **solo il primo rilascio** dopo l'ingresso
     (`_selAppena`), così **un secondo clic posiziona il cursore** come sempre. Il **Tab** selezionava già (lo fa
-    `applyTabOrder`): resta com'era.
+    `applyTabOrder`): resta com'era. Se il **primo tasto arriva prima** del `setTimeout` (pagina occupata), un
+    ascoltatore `keydown` in cattura fa la selezione **subito** (`selOra`) e annulla quella in attesa: senza, il
+    carattere appena battuto veniva selezionato e sostituito dal successivo («12,5» → «2,5»; misurato sulla prima
+    stesura, controllo T21, e chiuso prima del commit finale).
   - **Caselle toccate**: tutte quelle con `onfocus="fcl(this)"` — ore mensili (`.edit-cell`), residuo iniziale del
     servizio, ore e €/h delle liquidazioni (`.rate-in`), tariffa del servizio (`.rate-in`), «Imp. contratt. pred.»
     (`.rate-hdr`), «Rettifica credito» Ore e Importo € — più la **data della liquidazione** (`.date-cell`), che non
@@ -28,7 +31,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
     le date dell'anagrafica, degli atti e della finestra *Report per data*, i moduli *Nuovo Operatore* / *Nuovo anno*.
   - ⚠️ **Nessun valore cambia**: `blurFmt` con `data-ini`, `raw()` (il meno scartato) e `dtRifiuta` sono **identiche**.
     Entrare e uscire senza scrivere non riformatta; un negativo in archivio resta col meno.
-  - **Provato in esecuzione** (`collaudo/col-rev22.cjs`, **25 superati su 25**, zero errori di pagina, confronto diretto
+  - **Provato in esecuzione** (`collaudo/col-rev22.cjs`, **25 superati su 25** (23 + V00/V01 + T21), zero errori di pagina, confronto diretto
     con la rev 21 dove il clic lasciava il cursore senza selezione): clic su 12,50 → tutto selezionato, «7» lo
     sostituisce e ✔ Salva scrive 7; Tab seleziona la casella dopo; secondo clic posiziona il cursore; pressione lunga
     di 300 ms tiene la selezione; tocco a 390px seleziona; casella a zero svuotata e di nuovo «0,00»; «-45,50» entra/esce

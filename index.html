@@ -756,10 +756,14 @@ function fcl(el){try{el.setAttribute("data-ini",el.value)}catch(e){}if(raw(el.va
 var _selMd=null;
 function selTutto(el){
   try{el._selAppena=true}catch(e){}
-  setTimeout(function(){
-    try{if(document.activeElement===el){if(el.setSelectionRange){el.setSelectionRange(0,String(el.value).length)}else if(el.select){el.select()}}}catch(e){}
-  },0);
+  try{if(el._selT)clearTimeout(el._selT)}catch(e){}
+  el._selT=setTimeout(function(){el._selT=null;selOra(el)},0);
 }
+/* se il primo tasto arriva prima del setTimeout (pagina occupata), la selezione si fa subito
+   e quella in attesa si annulla: altrimenti il carattere appena battuto verrebbe selezionato e
+   sostituito dal successivo («12,5» diventerebbe «2,5»). */
+function selOra(el){try{if(document.activeElement===el){if(el.setSelectionRange){el.setSelectionRange(0,String(el.value).length)}else if(el.select){el.select()}}}catch(e){}}
+document.addEventListener("keydown",function(e){var t=e.target;if(t&&t._selT){try{clearTimeout(t._selT)}catch(x){}t._selT=null;selOra(t)}},true);
 document.addEventListener("mousedown",function(e){var t=e.target;if(t&&document.activeElement===t){try{t._selAppena=false}catch(x){}_selMd=null}else{_selMd=t}},true);
 document.addEventListener("mouseup",function(e){var t=e.target;if(_selMd&&t===_selMd&&t._selAppena){e.preventDefault()}if(t){try{t._selAppena=false}catch(x){}}_selMd=null},true);
 function markD(){if(!A.dirty){A.dirty=true;var b=document.getElementById('ubadge');if(b)b.style.display='inline-block'}}

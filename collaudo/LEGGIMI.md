@@ -37,6 +37,6 @@ import2 **4/4** · ts **22/23** · graf 46/47 · contr **14/15** · limiti 7/7. 
 
 `col-rev22.cjs` prova la selezione di tutto il contenuto all'ingresso nelle caselle numeriche della scheda, con il
 confronto diretto sulla rev 21 (`COL21_URL`, predefinito `/col21/` nella stessa origine); `COL_PNG` salva
-`cella-selezionata.png`. Esito: **25/25**. Batteria sulla rev 22, identica alla rev 21: base 46/47 + 1 parziale ·
+`cella-selezionata.png`. Esito: **25/25** (con T21: primo tasto prima della selezione rinviata). Batteria sulla rev 22, identica alla rev 21: base 46/47 + 1 parziale ·
 calc 31/35 · dati 27/28 + 1 non verificato · import2 4/4 · ts 22/23 · graf 46/47 · contr 14/15 · limiti 7/7 ·
 `col-rev21.cjs` 53 + 1 informativo, 0 falliti.
