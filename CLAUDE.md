@@ -10,9 +10,9 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 22 · 19nov26 (IN ANTEPRIMA, da approvare).**
-- ✍️ **ENTRANDO IN UNA CASELLA NUMERICA IL CONTENUTO SI SELEZIONA TUTTO** (rev 22, 19/11/2026, **IN ANTEPRIMA,
-  da approvare**; richiesta di Christian: «consenti, quando entro in una cella per compilare le ore, che la precedente
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 22 · 19nov26 (approvata da Christian e portata su `main` il 19/11/2026: «main per le tre app»).**
+- ✍️ **ENTRANDO IN UNA CASELLA NUMERICA IL CONTENUTO SI SELEZIONA TUTTO** (rev 22, 19/11/2026, **approvata da Christian e portata su `main` il 19/11/2026: «main per le tre app»**;
+  richiesta di Christian: «consenti, quando entro in una cella per compilare le ore, che la precedente
   scritta si selezioni tutta e io ci scriva sopra»).
   - **Come**: funzione nuova **`selTutto(el)`** (accanto a `fcl`), chiamata in fondo a **`fcl`**, cioè **dopo** quello
     che `fcl` fa già (ricorda `data-ini`, svuota lo zero): con un `setTimeout 0` seleziona tutto il testo
