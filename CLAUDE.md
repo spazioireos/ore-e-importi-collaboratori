@@ -13,7 +13,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 21 · 19nov26.**
 - 🧾 **SEI CORREZIONI DAL COLLAUDO DI LIVELLO A** (rev 21, 19/11/2026, nulla osta di Christian dopo il
   collaudo integrale; il punto 6 su sua decisione esplicita: «il rimborso dà il 160 €, l'80%»).
-  **IN ANTEPRIMA, da approvare.**
+  **Approvata da Christian e portata su `main` il 19/11/2026 («Main»).**
   1. 🔴 **Ritenuta del TOTALE = somma delle righe** (Christian: «la somma delle righe»). In `compLiq` il
      totale era `rM(totLordo*0.20)`, mentre ogni riga arrotonda la sua `rM(lordo*0.20)`: il TOTALE
      poteva differire di 1-2 centesimi e `lordo − rit ≠ netto`. Ora `totRit` si **somma** riga per
