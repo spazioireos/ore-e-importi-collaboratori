@@ -10,7 +10,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 23 · 20nov26, sul ramo di lavoro, da approvare** (su `main` c'è la rev 22 · 19nov26).
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 23 · 20nov26 — approvata da Christian e portata su `main` il 20/11/2026** («Main per tutto»).
 - 🧾 **rev 23 (20/11/2026, risposte di Christian al collaudo integrato: «2, Christian», «3, aggiungere conferma», «6, correggi,
   tuttavia, in collaboratori, se il debito è effettivamente di 1 centesimo, lascia»)**:
   1. **Autore «Christian»** nei metadati di **tutti e cinque** gli Excel (prima solo il Riepilogo mensile, con «Christian
