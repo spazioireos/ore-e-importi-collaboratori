@@ -44,7 +44,7 @@ async function modello() {
   const msgFin = page._dialoghi.filter(x => /Lettera generata/.test(x.msg)).map(x => x.msg.replace(/\n+/g, ' ')).join('');
   rec('K02', 'Contratto .docx dal modello: segnaposto compilati (anche quello spezzato da Word)', 'ROSSI MARIO, CF, 1.500,00 euro complessivi, 01 settembre 2026, proroga fino al 31 agosto 2027', `${d.nome}: ${testo.slice(0, 260)}`, /ROSSI MARIO/.test(testo) && /RSSMRA80A01H501U/.test(testo) && /1\.500,00/.test(testo) && /complessivi/.test(testo) && /01 settembre 2026/.test(testo) && /31 agosto 2027/.test(testo));
   rec('K03', 'Segnaposto sconosciuto segnalato a fine generazione', 'avviso «rimasti dei segnaposto non compilati: {{INESISTENTE}}»', msgFin.slice(0, 200), /INESISTENTE/.test(msgFin));
-  rec('K04', 'Nome del file del contratto (§10.5)', '«… - ggmmmaa - verN - HH.MM.docx»', d.nome, /\d{2}[a-z]{3}\d{2} - ver/.test(d.nome), /\d{2}[a-z]{3}\d{2} - ver/.test(d.nome) ? 'SUPERATO' : 'FALLITO');
+  rec('K04', 'Nome del file del contratto (§10.5)', '«… - ggmmmaa - revN - HH.MM.docx» (rev 23)', d.nome, /\d{2}[a-z]{3}\d{2} - rev\d+ - \d{2}\.\d{2}\.docx$/.test(d.nome), /\d{2}[a-z]{3}\d{2} - rev\d+ - \d{2}\.\d{2}\.docx$/.test(d.nome) ? 'SUPERATO' : 'FALLITO');
   // contratti in blocco (PDF in zip)
   page._risposte.push(true);
   const zp = await L.scarica(page, () => page.evaluate(() => lettereBlocco()));

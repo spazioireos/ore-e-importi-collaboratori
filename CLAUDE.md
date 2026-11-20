@@ -10,7 +10,26 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 22 · 19nov26 (approvata da Christian e portata su `main` il 19/11/2026: «main per le tre app»).**
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 23 · 20nov26, sul ramo di lavoro, da approvare** (su `main` c'è la rev 22 · 19nov26).
+- 🧾 **rev 23 (20/11/2026, risposte di Christian al collaudo integrato: «2, Christian», «3, aggiungere conferma», «6, correggi,
+  tuttavia, in collaboratori, se il debito è effettivamente di 1 centesimo, lascia»)**:
+  1. **Autore «Christian»** nei metadati di **tutti e cinque** gli Excel (prima solo il Riepilogo mensile, con «Christian
+     Canonica»; gli altri quattro non ne avevano). Anche i `meta` della pagina.
+  2. **Nomi dei file secondo la convenzione** «[descrizione] - ggmmmaa - rev23 - HH.MM.ext», senza trattini bassi: funzione nuova
+     **`nomeFile(desc,ext)`** con **`REV_FILE`** (da aggiornare a ogni revisione) e `MESI_FILE`, accanto a `rM`. Toccati: backup
+     automatico e backup (`.json`), Excel dell'anno, Report liquidazioni (le date con «-» e « al »), Credito per progetto,
+     Riepilogo anagrafiche, Riepilogo mensile compensi, lo `.zip` e i `.docx`/`.pdf` dei contratti (`nomeContratto`: la parte
+     «Contratto COGNOME anno» e il controllo dei doppioni sono identici, si aggiungono data, revisione e ora).
+     ⚠️ **NON toccati i nomi su Google Drive** (servono a ritrovare il backup). ⚠️ La schermata di recupero diceva il vecchio nome
+     del backup automatico: ora dice il nuovo e ricorda che quelli di prima si chiamano `backup_operatori_occasionali.json`.
+  3. **«Annulla rettifica» chiede conferma** (ore e importo che tornano a zero; finché non si salva si recupera ricaricando).
+  4. **Mesi allineati in alto anche col «TS» sotto**: la regola della rev 20 `th.month-hdr{vertical-align:top}` era battuta da
+     `.tbl-dense th{…vertical-align:middle}` (stessa forza, scritta dopo). Aggiunta `.tbl-dense th.month-hdr{vertical-align:top}`.
+  5. **La fascia «A DEBITO» per € 0,01 RESTA, di proposito**: nel caso del collaudo (75 h a 22,99 liquidate in due righe) si sono
+     pagati 172,43 + 1.551,83 = **1.724,26** contro **1.724,25** maturati: il centesimo in più è stato pagato davvero.
+  ⚠️ **Diciture nuove, scritte da Claude**: la conferma di «Annulla rettifica» e la frase sul nome del backup nel recupero.
+  **Provato**: batteria `col-a01-*` (R09, R10, K04, T11, F15, G-TSall ora superati; L05b aggiornato alla decisione).
+  Storia: rev 22 · 19nov26 (approvata da Christian e portata su `main` il 19/11/2026: «main per le tre app»).
 - ✍️ **ENTRANDO IN UNA CASELLA NUMERICA IL CONTENUTO SI SELEZIONA TUTTO** (rev 22, 19/11/2026, **approvata da Christian e portata su `main` il 19/11/2026: «main per le tre app»**;
   richiesta di Christian: «consenti, quando entro in una cella per compilare le ore, che la precedente
   scritta si selezioni tutta e io ci scriva sopra»).
@@ -851,7 +870,7 @@ esplicitamente**: una valutazione teorica del codice non sostituisce una verific
 
 - Nome file: `[descrizione] - ggMMMaa - verN - HH.MM.ext` (mesi italiani minuscoli, ora di Roma,
   senza underscore).
-- Autore nei metadata sempre **"Christian Canonica"**; veri file Office, mai testo camuffato;
+- Autore nei metadata sempre **"Christian"** (decisione di Christian del 20/11/2026: «2, Christian»; prima qui c'era «Christian Canonica»); veri file Office, mai testo camuffato;
   elenchi nominativi in **STAMPATELLO**.
 - **Versioni sequenziali, mai saltate**, ognuna verificata. Prima di un cambiamento grosso
   Christian fornisce la versione attuale stabile come punto di salvataggio, per poter tornare

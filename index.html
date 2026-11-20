@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="author" content="Christian Canonica">
+<meta name="author" content="Christian">
 <meta name="copyright" content="Spazio Ireos Societa Cooperativa Sociale ETS">
-<meta name="description" content="Gestione Operatori Occasionali - Spazio Ireos Societa Cooperativa Sociale ETS - Autore: Christian Canonica">
+<meta name="description" content="Gestione Operatori Occasionali - Spazio Ireos Societa Cooperativa Sociale ETS - Autore: Christian">
 <title>Operatori Occasionali - Spazio Ireos</title>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -210,6 +210,7 @@ table td{padding:1px 4px}
 .tbl-dense button{min-height:22px;padding-top:0;padding-bottom:0;line-height:1.05}
 .tbl-dense td{padding:0 4px;vertical-align:middle}
 .tbl-dense th{padding:1px 5px;line-height:1.15;vertical-align:middle}
+.tbl-dense th.month-hdr{vertical-align:top}   /* rev 23: la regola della rev 20 era battuta da quella qui sopra (stessa forza, scritta dopo) */
 
 /* ========== TELEFONO E LEGGIBILITA' (rev 8 - 07nov26) ==========
    Trovati con l'audit generale del gestionale, provati in esecuzione, corretti
@@ -472,7 +473,7 @@ function sv(){
     var blob=new Blob([JSON.stringify(A.d)],{type:"application/json"});
     var url=URL.createObjectURL(blob);
     var a=document.createElement("a");
-    a.href=url;a.download="backup_operatori_occasionali.json";
+    a.href=url;a.download=nomeFile("Spazio Ireos Backup automatico operatori occasionali","json");
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }catch(e2){console.log("Download backup:",e2.message)}
@@ -615,7 +616,7 @@ function expJSON(){try{
   var blob=new Blob([JSON.stringify(pacchetto(),null,2)],{type:"application/json"});
   var url=URL.createObjectURL(blob);
   var a=document.createElement("a");
-  a.href=url;a.download="Backup_OperatoriOccasionali_"+stamp+"_Spazio_Ireos.json";
+  a.href=url;a.download=nomeFile("Spazio Ireos Backup operatori occasionali","json");
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast("Backup scaricato!","#1565c0");
@@ -775,6 +776,11 @@ function escHTML(s){if(s===null||s===undefined)return'';s=String(s);var map={'&'
    toPrecision(12) ripulisce il pelo prima di arrotondare. Vale anche per toFixed. */
 function R2(v,dec){dec=(dec==null)?2:dec;var n=Number(v);if(!isFinite(n))return 0;var seg=n<0?-1:1;n=Math.abs(n);var p=Math.pow(10,dec);return seg*(Math.round(Number((n*p).toPrecision(12)))/p)}
 function rM(v){return R2((parseFloat(v)||0))}
+/* rev 23 (20/11/2026, Christian: «correggi»): i nomi dei file esportati seguono la convenzione
+   «[descrizione] - ggmmmaa - revN - HH.MM.ext», senza trattini bassi. REV_FILE va aggiornata a ogni revisione. */
+var REV_FILE="rev23";
+var MESI_FILE=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+function nomeFile(desc,ext){var d=new Date();var p=function(n){return n<10?"0"+n:""+n};return desc+" - "+p(d.getDate())+MESI_FILE[d.getMonth()]+String(d.getFullYear()).slice(2)+" - "+REV_FILE+" - "+p(d.getHours())+"."+p(d.getMinutes())+"."+ext}
 /* rev 21 (19/11/2026, collaudo di Livello A). Una data IMPOSSIBILE come «31/02/2026» veniva
    spostata in silenzio dal Date di JavaScript al 03/03/2026, e cosi' finiva nei dati e nei report.
    Ora parseDT controlla che il giorno esista davvero (giorno e mese tornano identici) e torna null
@@ -952,6 +958,7 @@ function azzeraCredito(i,yr){
 }
 function resetRettifica(i,yr){
   var yd=A.d[i].years[yr];
+  if(!confirm("Annullare la rettifica del credito "+yr+"?\nOre: "+soloTesto(f2(parseFloat(yd.rettOre)||0))+" \u2192 0\nImporto: "+soloTesto(fE(parseFloat(yd.rettImp)||0))+" \u2192 0\n\nFinch\u00e9 non premi \u2714 Salva la puoi recuperare ricaricando la pagina."))return;   /* rev 23: conferma (Christian, 20/11/2026) */
   yd.rettOre=0;yd.rettImp=0;
   markD();render();
 }
@@ -1040,7 +1047,7 @@ function exportCreditoProgetto(){
   }
   var keys=Object.keys(mappa);
   keys.sort(function(a,b){return (mappa[b].eurPos-mappa[b].eurNeg)-(mappa[a].eurPos-mappa[a].eurNeg)});
-  var wb=XLSX.utils.book_new();
+  var wb=XLSX.utils.book_new();wb.Props={Author:"Christian",Title:"Credito per progetto"};
   // Foglio 1: riepilogo per progetto, positivi e negativi NON compensati
   var r1=[["CREDITO RESIDUO PER PROGETTO"],
     ["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],
@@ -1070,13 +1077,13 @@ function exportCreditoProgetto(){
   ws2['!cols']=[{wch:38},{wch:8},{wch:32},{wch:16},{wch:11},{wch:10},{wch:11},{wch:11}];
   XLSX.utils.book_append_sheet(wb,ws2,"Dettaglio operatori");
   var dt=new Date();var p2=function(n){return n<10?"0"+n:""+n};
-  XLSX.writeFile(wb,"Spazio Ireos Credito per progetto "+p2(dt.getDate())+p2(dt.getMonth()+1)+dt.getFullYear()+".xlsx");
+  XLSX.writeFile(wb,nomeFile("Spazio Ireos Credito per progetto","xlsx"));
   toast("Report credito per progetto scaricato","#2e7d32");
   }catch(e){toast("Errore report: "+e.message,"#c62828")}
 }
 function exportYear(yr){
   if(typeof XLSX==="undefined"){alert("Libreria Excel in caricamento, riprova tra qualche secondo.");return;}
-  var wb=XLSX.utils.book_new();
+  var wb=XLSX.utils.book_new();wb.Props={Author:"Christian",Title:"Operatori occasionali"};
   var r1=[["RIEPILOGO OPERATORI OCCASIONALI - ANNO "+yr],["Spazio Ireos soc. Cooperativa sociale - C.F./P.IVA 06314390961"],[],
     ["N.","Operatore","Foglio","Res.Ore "+(parseInt(yr)-1),"Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic","Tot.Ore","Imp.Maturato","Ore Liq.","Lordo","Rit.20%","Netto","Ore Residue","Imp.Residuo"]];
   var n=0;
@@ -1109,7 +1116,7 @@ function exportYear(yr){
   if(cn>0){var t3=["","TOTALI"];for(var col=2;col<r3[4].length;col++){var sum=0;for(var r=4;r<r3.length;r++){var v=r3[r][col];if(typeof v==='number')sum+=v}t3.push(sum)}r3.push([]);r3.push(t3)}
   var ws3=XLSX.utils.aoa_to_sheet(r3);ws3['!cols']=[{wch:4},{wch:35},{wch:12},{wch:14},{wch:14},{wch:14},{wch:10},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws3,"Certificazioni "+yr);
-  XLSX.writeFile(wb,"Operatori_Occasionali_"+yr+"_Spazio_Ireos.xlsx");toast("Excel "+yr+" scaricato!","#1b5e20");
+  XLSX.writeFile(wb,nomeFile("Spazio Ireos Operatori occasionali "+yr,"xlsx"));toast("Excel "+yr+" scaricato!","#1b5e20");
 }
 
 // ADMIN REPORT: liquidations by date
@@ -1149,8 +1156,8 @@ function exportByDate(from,to){
   else{aoa.push([]);aoa.push(["","","Nessuna liquidazione trovata nel periodo"]);}
   var ws=XLSX.utils.aoa_to_sheet(aoa);
   ws["!cols"]=[{wch:4},{wch:13},{wch:32},{wch:16},{wch:6},{wch:8},{wch:8},{wch:12},{wch:12},{wch:12},{wch:22}];
-  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Report liquidazioni");
-  var fn="Report_Liquidazioni_"+fromKey+(fromKey!==toKey?"_"+toKey:"")+"_Spazio_Ireos.xlsx";
+  var wb=XLSX.utils.book_new();wb.Props={Author:"Christian",Title:"Report liquidazioni"};XLSX.utils.book_append_sheet(wb,ws,"Report liquidazioni");
+  var fn=nomeFile("Spazio Ireos Report liquidazioni "+String(from).replace(/\//g,"-")+(fromKey!==toKey?" al "+String(to).replace(/\//g,"-"):""),"xlsx");
   XLSX.writeFile(wb,fn);
   toast("Report scaricato ("+rows.length+" righe)","#1b5e20");
 }
@@ -1291,14 +1298,14 @@ function exportAnagExcel(){
         rows.push(r);
       }
     }
-    var wb=XLSX.utils.book_new();
+    var wb=XLSX.utils.book_new();wb.Props={Author:"Christian",Title:"Riepilogo anagrafiche"};
     var ws=XLSX.utils.aoa_to_sheet(rows);
     var wcols=[{wch:32},{wch:7},{wch:18}];
     for(var w=0;w<PERS_FIELDS.length+ATTO_FIELDS.length-1;w++)wcols.push({wch:18});
     ws['!cols']=wcols;
     XLSX.utils.book_append_sheet(wb,ws,"Anagrafiche e atti");
     var dt=new Date();var p3=function(n){return n<10?"0"+n:""+n};
-    XLSX.writeFile(wb,"Spazio Ireos Riepilogo anagrafiche "+p3(dt.getDate())+p3(dt.getMonth()+1)+dt.getFullYear()+".xlsx");
+    XLSX.writeFile(wb,nomeFile("Spazio Ireos Riepilogo anagrafiche","xlsx"));
     toast("Riepilogo anagrafiche scaricato","#2e7d32");
   }catch(e){toast("Errore export: "+e.message,"#c62828")}
 }
@@ -1324,7 +1331,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 22 \u00b7 19nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 23 \u00b7 20nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -2441,7 +2448,7 @@ function lettereBlocco(){
       zipOut.generateAsync({type:"blob"}).then(function(blob){
         var url=URL.createObjectURL(blob);
         var a=document.createElement("a");a.href=url;
-        a.download="Contratti "+annoZip+".zip";
+        a.download=nomeFile("Contratti "+annoZip,"zip");
         document.body.appendChild(a);a.click();document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(url)},2000);
         var fin="Generati "+fatti+" contratti in PDF nel file zip.";
@@ -2751,10 +2758,10 @@ function exportMensile(){
     var tot=["TOTALE GENERALE",gL,gR,gN];if(anyRimb)tot.push(gRi);tot.push(gn);aoa.push([]);aoa.push(tot);
     var ws=XLSX.utils.aoa_to_sheet(aoa);
     var wcols=[{wch:16},{wch:14},{wch:14},{wch:14}];if(anyRimb)wcols.push({wch:14});wcols.push({wch:16});ws["!cols"]=wcols;
-    var wb=XLSX.utils.book_new();wb.Props={Author:"Christian Canonica",Title:"Riepilogo mensile compensi"};
+    var wb=XLSX.utils.book_new();wb.Props={Author:"Christian",Title:"Riepilogo mensile compensi"};
     XLSX.utils.book_append_sheet(wb,ws,"Riepilogo mensile");
     var dt=new Date();var p=function(n){return n<10?"0"+n:""+n};
-    XLSX.writeFile(wb,"Riepilogo_Mensile_Compensi_"+p(dt.getDate())+p(dt.getMonth()+1)+dt.getFullYear()+"_Spazio_Ireos.xlsx");
+    XLSX.writeFile(wb,nomeFile("Spazio Ireos Riepilogo mensile compensi","xlsx"));
     toast("Riepilogo mensile scaricato","#1b5e20");
   }catch(e){toast("Errore export: "+e.message,"#c62828")}
 }
@@ -3045,7 +3052,7 @@ function nomeContratto(i,idx,usati){
     while(usati[f]){f=base+" ("+k+")";k++}
     usati[f]=true;base=f;
   }
-  return base+".docx";
+  return nomeFile(base,"docx");   /* rev 23: data, revisione e ora nel nome */
 }
 function mergeDocx(buf,i,idx){
   var m=mergeMap(i,idx);
@@ -3784,7 +3791,7 @@ function showRecovery(){
   el.innerHTML='<div class="recovery-screen">'+
     '<h1>\u26a0\ufe0f Dati locali non trovati</h1>'+
     '<p>Il browser non contiene dati salvati. Questo succede se hai cancellato la cache o se usi un browser diverso.<br><br>'+
-    '<strong>Se hai il file di backup</strong> (backup_operatori_occasionali.json nella cartella Download), caricalo qui sotto.</p>'+
+    '<strong>Se hai il file di backup</strong> (\u00abSpazio Ireos Backup automatico operatori occasionali - \u2026.json\u00bb nella cartella Download; quelli fatti prima della rev 23 si chiamano backup_operatori_occasionali.json), caricalo qui sotto.</p>'+
     '<button class="recovery-btn recovery-primary" onclick="doRecoveryRestore()">\u2B06 Carica backup dal PC</button>'+
     '<br><button class="recovery-btn recovery-secondary" onclick="doRecoveryDrive()">Recupera da Google Drive</button>'+
     '<br><br><button class="recovery-btn recovery-secondary" style="font-size:12px;color:#999" onclick="doRecoverySkip()">Inizia da zero (programma vuoto)</button>'+
@@ -3875,7 +3882,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 22 \u00b7 19nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 23 \u00b7 20nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}

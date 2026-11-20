@@ -51,7 +51,7 @@ const seed = [
   const credH = 3 + 75 - 78, credE = R2(R2(3 * 10.03) + R2(75 * 22.99) - sL);
   rec('L05', 'Ore e importo a credito dopo le liquidazioni (ricalcolo a mano)', `${credH} h / € ${credE}`, `${tot[9]} / ${tot[10]}`, num(tot[9]) === credH && num(tot[10]) === credE);
   const debG = await page.evaluate(() => /A DEBITO/.test(document.querySelector('.year-block').textContent));
-  rec('L05b', 'Ore liquidate = ore lavorate (75 h a 22,99 in due righe): niente fascia A DEBITO', 'nessuna fascia rossa per arrotondamenti di riga', debG ? 'fascia «A DEBITO» per € 0,01' : 'nessuna fascia', !debG);
+  rec('L05b', 'Ore liquidate = ore lavorate (75 h a 22,99 in due righe): 172,43 + 1.551,83 = 1.724,26 pagati contro 1.724,25 maturati', 'fascia «A DEBITO» per € 0,01: debito VERO di un centesimo, si lascia (Christian, 20/11/2026: «se il debito è effettivamente di 1 centesimo, lascia»)', debG ? 'fascia «A DEBITO» per € 0,01' : 'nessuna fascia', debG);
 
   // ---------- DELTA: rimborso ----------
   await apriOp('DELTA PROVA');
@@ -68,7 +68,7 @@ const seed = [
   const wbM = XLSX.read(require('fs').readFileSync(fx.percorso));
   const aoaM = XLSX.utils.sheet_to_json(wbM.Sheets[wbM.SheetNames[0]], { header: 1 });
   const febX = aoaM.find(r => r[0] === 'Feb 2026');
-  rec('R03', 'Per mese → Excel: vero .xlsx, stessi numeri, autore', 'Feb netto = valore a video; Author Christian Canonica', `${fx.nome}; Feb ${JSON.stringify(febX)}; Author=${wbM.Props && wbM.Props.Author}`, febX && febX[3] === num(feb[3]) && wbM.Props && wbM.Props.Author === 'Christian Canonica');
+  rec('R03', 'Per mese → Excel: vero .xlsx, stessi numeri, autore', 'Feb netto = valore a video; Author Christian', `${fx.nome}; Feb ${JSON.stringify(febX)}; Author=${wbM.Props && wbM.Props.Author}`, febX && febX[3] === num(feb[3]) && wbM.Props && wbM.Props.Author === 'Christian');
   // report per data
   await page.evaluate(() => { A.modal = 'report'; render(); });
   await page.fill('#repFrom', '05/02/2026');
@@ -104,7 +104,7 @@ const seed = [
   const sporchi = (totY || []).filter(v => typeof v === 'number' && String(v).replace('-', '').split('.')[1] && String(v).split('.')[1].length > 4);
   rec('R07', 'Excel anno 2026: fogli e saldo GAMMA', 'Riepilogo/Liquidazioni/Certificazioni; saldo lordo 1754,35', `${wbY.SheetNames.join(',')}; saldo ${JSON.stringify(saldoG && saldoG.slice(5, 8))}; file ${fy.nome}`, wbY.SheetNames.length === 3 && saldoG && saldoG[5] === sL);
   rec('R08', 'Excel anno: riga TOTALI senza numeri «sporchi» (es. 0,30000000000004)', 'tutti a 2 decimali', sporchi.length ? 'sporchi: ' + sporchi.join(',') : 'puliti', sporchi.length === 0);
-  rec('R09', 'Excel anno: autore nei metadati (§10.1)', 'Author Christian Canonica', (wbY.Props && wbY.Props.Author) || 'NESSUN AUTORE', !!(wbY.Props && wbY.Props.Author === 'Christian Canonica'));
+  rec('R09', 'Excel anno: autore nei metadati (§10.1)', 'Author Christian', (wbY.Props && wbY.Props.Author) || 'NESSUN AUTORE', !!(wbY.Props && wbY.Props.Author === 'Christian'));
   rec('R10', 'Nome dei file esportati secondo §10.5', '«descrizione - ggmmmaa - verN - HH.MM.ext» senza trattini bassi', `${fy.nome} · ${fd.nome} · ${fx.nome}`, !/_/.test(fy.nome + fd.nome + fx.nome));
   // Credito per progetto
   const fc = await L.scarica(page, () => page.evaluate(() => exportCreditoProgetto()));
