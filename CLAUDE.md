@@ -10,7 +10,12 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 23 · 20nov26 — approvata da Christian e portata su `main` il 20/11/2026** («Main per tutto»).
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale sul ramo di lavoro: rev 24 · 21nov26 — NON ancora approvata, NON su `main`** (su `main` la rev 23).
+- 📏 **rev 24 (21/11/2026, Christian: «4 … sistema»; collaudo N19)**: un nome lunghissimo senza spazi (300 caratteri) allargava la
+  copertina (2820px su 1500) e la scheda (6481px). Solo CSS, in fondo al `<style>`: `.op-card{min-width:0}` (il cartellino resta
+  nella sua colonna e il nome finisce coi puntini, come già previsto da `.on`), `.os` e il nome nella testata della scheda vanno a
+  capo (`overflow-wrap:anywhere`, `min-width:0` sul primo blocco della testata). **Misurato**: copertina e scheda larghe come lo
+  schermo a 1500 e 390px; con i nomi normali niente cambia (batteria grafica). `REV_FILE` = «rev24».
 - 🧾 **rev 23 (20/11/2026, risposte di Christian al collaudo integrato: «2, Christian», «3, aggiungere conferma», «6, correggi,
   tuttavia, in collaboratori, se il debito è effettivamente di 1 centesimo, lascia»)**:
   1. **Autore «Christian»** nei metadati di **tutti e cinque** gli Excel (prima solo il Riepilogo mensile, con «Christian
