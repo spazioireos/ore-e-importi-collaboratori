@@ -10,7 +10,7 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale sul ramo di lavoro: rev 24 · 21nov26 — NON ancora approvata, NON su `main`** (su `main` la rev 23).
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 24 · 21nov26 — approvata da Christian e portata su `main` il 21/11/2026 («Main»)** (prima su `main` la rev 23).
 - 📏 **rev 24 (21/11/2026, Christian: «4 … sistema»; collaudo N19)**: un nome lunghissimo senza spazi (300 caratteri) allargava la
   copertina (2820px su 1500) e la scheda (6481px). Solo CSS, in fondo al `<style>`: `.op-card{min-width:0}` (il cartellino resta
   nella sua colonna e il nome finisce coi puntini, come già previsto da `.on`), `.os` e il nome nella testata della scheda vanno a
