@@ -40,3 +40,11 @@ confronto diretto sulla rev 21 (`COL21_URL`, predefinito `/col21/` nella stessa 
 `cella-selezionata.png`. Esito: **25/25** (con T21: primo tasto prima della selezione rinviata). Batteria sulla rev 22, identica alla rev 21: base 46/47 + 1 parziale ·
 calc 31/35 · dati 27/28 + 1 non verificato · import2 4/4 · ts 22/23 · graf 46/47 · contr 14/15 · limiti 7/7 ·
 `col-rev21.cjs` 53 + 1 informativo, 0 falliti.
+
+## Rev 25 (23/11/2026, sul ramo di lavoro)
+
+`col-rev25.cjs`: la lettura caduta dei «TS» non va più in giro infinito (riprova dopo 60 s) e i suggerimenti si
+rileggono dopo 5 minuti, ridisegnando solo se cambiati e mai con il cursore in una casella. Confronto con la rev 24 congelata
+(`/col24/`, oppure `COL24_URL`: si fa con `localizza.py` su `git show <commit rev 24>:index.html`). Esito **25/25**. Batteria sulla
+rev 25: base 47/47 · calc 35/35 · dati 27/28 + 1 non verificato · import2 4/4 · ts 23/23 · graf 47/47 · contr 15/15 · limiti 7/7 ·
+rev21 53 + 1 informativo · rev22 25/25.

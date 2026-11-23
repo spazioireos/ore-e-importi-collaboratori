@@ -10,7 +10,18 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 24 · 21nov26 — approvata da Christian e portata su `main` il 21/11/2026 («Main»)** (prima su `main` la rev 23).
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 25 · 23nov26 — sul ramo di lavoro, da approvare** (su `main` la rev 24, approvata da Christian il 21/11/2026: «Main»).
+- 🔁 **rev 25 (23/11/2026, analisi delle interconnessioni chiesta da Christian; sul ramo di lavoro)**: il collegamento in sola
+  lettura con Fogli ore aveva due difetti, misurati. (1) **Lettura caduta = giro infinito**: se la lettura dei «TS» falliva (linea
+  caduta, permessi, accesso con un account non admin) il `catch` ridisegnava, il ridisegno rifaceva la lettura e così via —
+  **431 letture in 2 secondi** sulla rev 24 e la scheda inservibile (una cella non si riusciva a cliccare). Ora, dopo un errore,
+  `foSuggerimentiAnno` non riprova prima di **60 s** (`FOfallito`, `FO_RIPROVA`) e non ridisegna. (2) **Suggerimenti vecchi**: restavano
+  quelli del primo accesso fino al ricaricamento (interconnessioni B4-09). Ora dopo **5 minuti** (`FOletto`, `FO_SCADE`) si rileggono
+  mostrando intanto quelli di prima, e si ridisegna (`foRidisegna`) **solo se sono cambiati** e **mai mentre il cursore è in una
+  casella** (si aspetta che esca). Login e scollegamento azzerano anche i due nuovi registri. **Nessuna dicitura, nessun dato, nessun
+  calcolo toccati**; in Fogli ore non si scrive niente. **Provato**: `collaudo/col-rev25.cjs` **25/25** (3 cicli di linea caduta e
+  3 di modifica in Fogli ore, confronto con la rev 24 in `/col24/`); batteria `col-a01-*` e `col-rev21/22` tutte senza falliti;
+  interconnessioni `ic-01-b4` 13/0 + B4-09 parziale (il test non aspetta i 5 minuti: dichiarato).
 - 📏 **rev 24 (21/11/2026, Christian: «4 … sistema»; collaudo N19)**: un nome lunghissimo senza spazi (300 caratteri) allargava la
   copertina (2820px su 1500) e la scheda (6481px). Solo CSS, in fondo al `<style>`: `.op-card{min-width:0}` (il cartellino resta
   nella sua colonna e il nome finisce coi puntini, come già previsto da `.on`), `.os` e il nome nella testata della scheda vanno a
