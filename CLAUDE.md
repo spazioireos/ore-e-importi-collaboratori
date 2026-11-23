@@ -10,8 +10,8 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 25 · 23nov26 — sul ramo di lavoro, da approvare** (su `main` la rev 24, approvata da Christian il 21/11/2026: «Main»).
-- 🔁 **rev 25 (23/11/2026, analisi delle interconnessioni chiesta da Christian; sul ramo di lavoro)**: il collegamento in sola
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 25 · 23nov26 — approvata da Christian e portata su `main` il 23/11/2026 («main»)** (prima su `main` la rev 24).
+- 🔁 **rev 25 (23/11/2026, analisi delle interconnessioni chiesta da Christian; su `main` dal 23/11/2026: «main»)**: il collegamento in sola
   lettura con Fogli ore aveva due difetti, misurati. (1) **Lettura caduta = giro infinito**: se la lettura dei «TS» falliva (linea
   caduta, permessi, accesso con un account non admin) il `catch` ridisegnava, il ridisegno rifaceva la lettura e così via —
   **431 letture in 2 secondi** sulla rev 24 e la scheda inservibile (una cella non si riusciva a cliccare). Ora, dopo un errore,
