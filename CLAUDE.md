@@ -10,7 +10,25 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 25 · 23nov26 — approvata da Christian e portata su `main` il 23/11/2026 («main»)** (prima su `main` la rev 24).
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 26 · 25nov26 — sul ramo di lavoro, da approvare** (su `main` la rev 25, approvata da Christian il 23/11/2026: «main»).
+- 📄 **rev 26 (25/11/2026, Christian: «In Collaboratori la lettera del contratto non legge alcuni campi compilati nella webapp» →
+  «il file word riporta LUOGO DI RESIDENZA» → «è scritto proprio così. Nu\*»)**: il modello Word di Christian scrive i segnaposto **a parole**
+  ({{LUOGO DI RESIDENZA}}), mentre l'app riconosceva solo la forma {{LUOGO_RESIDENZA}}; quel segnaposto restava nella lettera e, per i nomi con
+  gli spazi, **nemmeno l'avviso** «sono rimasti dei segnaposto non compilati» lo segnalava. Tre interventi, solo nella generazione delle lettere:
+  1. **`canonSegn`** (in `normalizzaSegnaposto`): il nome fra le graffe si riduce alla forma dell'app — maiuscole, accenti tolti, spazi e segni
+     → «_», via le parole di collegamento (`SEGN_COLLEG`: DI, DEL, DELLA, E…), più pochi sinonimi (`SEGN_SINON`: INDIRIZZO_RESIDENZA →
+     IND_RESIDENZA, CF → CODICE_FISCALE…). Quindi {{LUOGO DI RESIDENZA}}, {{Data di nascita}}, {{LUOGO_DI_RESIDENZA}} valgono come i nomi
+     dell'app, anche se Word li spezza in più blocchi. Il modello memorizzato **non va ricaricato**.
+  2. **Sette segnaposto nuovi** in `mergeMap`, per campi della scheda che nessun segnaposto leggeva: {{SESSO}}, {{CAP_RESIDENZA}},
+     {{IND_DOMICILIO}}, {{CAP_DOMICILIO}}, {{LUOGO_DOMICILIO}}, {{TIPO_ATTO}}, {{NOTE}}. Nell'avviso «Alcuni dati non sono compilati» contano
+     **solo se il modello li usa** (`SEGN_REV26`, secondo parametro di `mergeMancanti`): con un modello di prima l'avviso è identico.
+     Per questo nella lettera singola l'avviso arriva dopo aver letto il modello (prima arrivava prima).
+  3. **`segnRimasti`**: l'avviso finale elenca ogni {{…}} rimasto nel testo, in qualunque forma.
+  ⚠️ **Conseguenza dichiarata**: la riga «Segnaposto non presenti nel modello» del messaggio finale elenca anche i sette nuovi, se il modello non
+  li usa. ⚠️ **La cadenza di pagamento resta fuori dalle lettere**, come dice la scheda. ⚠️ Nessun dato, calcolo o dicitura toccati.
+  **Provato**: `collaudo/col-rev26.cjs` **15/15** (modello inventato «a parole» con un segnaposto spezzato da Word, confronto con la rev 25 in
+  `/col25/`: là {{LUOGO DI RESIDENZA}} restava e non era segnalato; modello di prima: lettera, avvisi e conferma in blocco identici alla rev 25);
+  batteria `col-a01-*` e `col-rev21/22/25` come prima (in `col-rev25` la targhetta ora si legge dal file). ⚠️ **Non provato sul modello Word vero** (sta solo nel browser di Christian).
 - 🔁 **rev 25 (23/11/2026, analisi delle interconnessioni chiesta da Christian; su `main` dal 23/11/2026: «main»)**: il collegamento in sola
   lettura con Fogli ore aveva due difetti, misurati. (1) **Lettura caduta = giro infinito**: se la lettura dei «TS» falliva (linea
   caduta, permessi, accesso con un account non admin) il `catch` ridisegnava, il ridisegno rifaceva la lettura e così via —

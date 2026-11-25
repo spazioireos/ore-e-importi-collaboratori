@@ -786,7 +786,7 @@ function R2(v,dec){dec=(dec==null)?2:dec;var n=Number(v);if(!isFinite(n))return 
 function rM(v){return R2((parseFloat(v)||0))}
 /* rev 23 (20/11/2026, Christian: «correggi»): i nomi dei file esportati seguono la convenzione
    «[descrizione] - ggmmmaa - revN - HH.MM.ext», senza trattini bassi. REV_FILE va aggiornata a ogni revisione. */
-var REV_FILE="rev25";
+var REV_FILE="rev26";
 var MESI_FILE=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
 function nomeFile(desc,ext){var d=new Date();var p=function(n){return n<10?"0"+n:""+n};return desc+" - "+p(d.getDate())+MESI_FILE[d.getMonth()]+String(d.getFullYear()).slice(2)+" - "+REV_FILE+" - "+p(d.getHours())+"."+p(d.getMinutes())+"."+ext}
 /* rev 21 (19/11/2026, collaudo di Livello A). Una data IMPOSSIBILE come «31/02/2026» veniva
@@ -1339,7 +1339,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 25 \u00b7 23nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 26 \u00b7 25nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -2964,6 +2964,14 @@ function mergeMap(i,idx){
   m.LUOGO_RESIDENZA=an.luogoRes||"";
   m.CODICE_FISCALE=an.cf||"";
   m.EMAIL=an.email||"";
+  /* rev 26 (25/11/2026, Christian: «Nu*»): campi della scheda che prima nessun segnaposto leggeva. */
+  m.SESSO=an.sesso||"";
+  m.CAP_RESIDENZA=an.capRes||"";
+  m.IND_DOMICILIO=an.indDom||"";
+  m.CAP_DOMICILIO=an.capDom||"";
+  m.LUOGO_DOMICILIO=an.luogoDom||"";
+  m.TIPO_ATTO=at.tipoAtto||"";
+  m.NOTE=at.note||"";
   m.QUALIFICA=at.qualifica||"";
   m.TIPO_AMBITO=at.tipoAmbito||"";
   m.STRUTTURA=at.struttura||"";
@@ -2989,9 +2997,16 @@ function mergeMap(i,idx){
   return m;
 }
 // Elenco segnaposto non compilati (per avvisare prima di generare)
-function mergeMancanti(m){
+/* rev 26: i segnaposto aggiunti dalla rev 26 si segnalano vuoti solo se il modello li contiene (presenti),
+   cosi' l'avviso per i modelli di prima resta identico. */
+var SEGN_REV26={SESSO:1,CAP_RESIDENZA:1,IND_DOMICILIO:1,CAP_DOMICILIO:1,LUOGO_DOMICILIO:1,TIPO_ATTO:1,NOTE:1};
+function mergeMancanti(m,presenti){
   var out=[];
-  for(var k in m){if(Object.prototype.hasOwnProperty.call(m,k)&&String(m[k]).replace(/^\s+|\s+$/g,"")==="")out.push(k)}
+  for(var k in m){
+    if(!Object.prototype.hasOwnProperty.call(m,k))continue;
+    if(SEGN_REV26[k]&&!(presenti&&presenti[k]))continue;
+    if(String(m[k]).replace(/^\s+|\s+$/g,"")==="")out.push(k);
+  }
   return out;
 }
 function genContratto(i,idx){
@@ -3033,14 +3048,44 @@ function onTplFile(inp){
 }
 // Word puo' spezzare un segnaposto su piu' blocchi interni: qui lo ricompone.
 // Agisce solo se il contenuto fra le graffe e' un nome valido, e mai a cavallo di paragrafi o tabelle.
+/* rev 26 (25/11/2026, Christian: «e' scritto proprio cosi'. Nu*»): un segnaposto scritto a parole, come
+   {{LUOGO DI RESIDENZA}}, non veniva riconosciuto e restava nella lettera. Ora il nome si riduce alla forma
+   dell'app: maiuscole, accenti tolti, spazi e segni -> "_", via le parole di collegamento (DI, DEL, E...),
+   piu' pochi sinonimi (INDIRIZZO -> IND, CF -> CODICE_FISCALE). {{LUOGO DI RESIDENZA}} = {{LUOGO_RESIDENZA}}. */
+var SEGN_COLLEG={DI:1,DEL:1,DELLO:1,DELLA:1,DELL:1,DEI:1,DEGLI:1,DELLE:1,DA:1,DAL:1,DALLA:1,IL:1,LO:1,LA:1,L:1,I:1,GLI:1,LE:1,E:1,ED:1};
+var SEGN_SINON={INDIRIZZO_RESIDENZA:"IND_RESIDENZA",INDIRIZZO_DOMICILIO:"IND_DOMICILIO",CF:"CODICE_FISCALE",
+  C_F:"CODICE_FISCALE",LUOGO_NASCITA:"LUOGO_NASCITA",CAP_RES:"CAP_RESIDENZA",CAP_DOM:"CAP_DOMICILIO",
+  IND_RES:"IND_RESIDENZA",IND_DOM:"IND_DOMICILIO",LUOGO_RES:"LUOGO_RESIDENZA",LUOGO_DOM:"LUOGO_DOMICILIO",
+  DATA_INIZIO:"DATA_AVVIO",DATA_FINE:"DATA_CONCLUSIONE",PROROGA_TACITA:"DATA_PROROGA_TACITA"};
+function canonSegn(s){
+  var acc={"\u00c0":"A","\u00c1":"A","\u00c8":"E","\u00c9":"E","\u00cc":"I","\u00cd":"I","\u00d2":"O","\u00d3":"O","\u00d9":"U","\u00da":"U"};
+  var u=String(s||"").toUpperCase(),t="";
+  for(var i=0;i<u.length;i++){var c=u.charAt(i);if(acc[c])c=acc[c];t+=((c>="A"&&c<="Z")||(c>="0"&&c<="9"))?c:"_"}
+  var p=t.split("_"),q=[];
+  for(var j=0;j<p.length;j++){if(p[j]!==""&&!SEGN_COLLEG[p[j]])q.push(p[j])}
+  var n=q.join("_");
+  return SEGN_SINON[n]||n;
+}
 function normalizzaSegnaposto(xml){
   var re=/\{\{((?:[^<>{}]|<[^>]*>)*?)\}\}/g;
   return xml.replace(re,function(tutto,dentro){
     if(dentro.indexOf("</w:p>")>=0||dentro.indexOf("<w:p ")>=0||dentro.indexOf("<w:tbl")>=0)return tutto;
     var pulito=dentro.replace(/<[^>]*>/g,"");
-    if(pulito.length>0&&/^[A-Z0-9_]+$/.test(pulito))return "{{"+pulito+"}}";
+    if(pulito.length>0&&/^[A-Z0-9_]+$/.test(pulito)){var cs=canonSegn(pulito);return "{{"+(cs||pulito)+"}}"}   /* rev 26: anche {{LUOGO_DI_RESIDENZA}} */
+    /* rev 26: nome a parole (lettere, numeri, spazi, apostrofi, punti, trattini), al piu' 60 caratteri */
+    var piano=pulito.replace(/&apos;|&#39;/g,"'").replace(/^\s+|\s+$/g,"");
+    if(piano.length>0&&piano.length<=60&&/^[A-Za-z0-9\u00c0-\u00ff _'\u2019.\-]+$/.test(piano)){
+      var cn=canonSegn(piano);
+      if(cn.length>0)return "{{"+cn+"}}";
+    }
     return tutto;
   });
+}
+/* rev 26: segnaposto rimasti nel testo, in qualunque forma (anche con spazi o spezzati da Word) */
+function segnRimasti(xml){
+  var txt=xml.replace(/<[^>]*>/g,""),rr=txt.match(/\{\{[^{}]{1,80}\}\}/g),out=[];
+  if(rr){for(var z=0;z<rr.length;z++){if(out.indexOf(rr[z])<0)out.push(rr[z])}}
+  return out;
 }
 // Nome del contratto: "Contratto COGNOME ANNO"; col nome se c'e' omonimia
 function nomeContratto(i,idx,usati){
@@ -3064,15 +3109,17 @@ function nomeContratto(i,idx,usati){
 }
 function mergeDocx(buf,i,idx){
   var m=mergeMap(i,idx);
-  var manc=mergeMancanti(m);
-  if(manc.length>0){
-    if(!confirm("Alcuni dati non sono compilati e resteranno vuoti nel documento:\n\n"+manc.join(", ")+"\n\nGenero lo stesso?"))return;
-  }
   JSZip.loadAsync(buf).then(function(zip){
     var fx=zip.file("word/document.xml");
     if(!fx){alert("Il file scelto non sembra un documento Word valido.");return}
     return fx.async("string").then(function(xml){
       xml=normalizzaSegnaposto(xml);
+      /* rev 26: l'avviso dei dati mancanti si fa dopo aver letto il modello, per sapere se usa i segnaposto nuovi */
+      var presenti={};for(var kp in m){if(Object.prototype.hasOwnProperty.call(m,kp)&&xml.indexOf("{{"+kp+"}}")>=0)presenti[kp]=true}
+      var manc=mergeMancanti(m,presenti);
+      if(manc.length>0){
+        if(!confirm("Alcuni dati non sono compilati e resteranno vuoti nel documento:\n\n"+manc.join(", ")+"\n\nGenero lo stesso?"))return;
+      }
       var trovati=0,nonTrovati=[];
       for(var k in m){
         if(!Object.prototype.hasOwnProperty.call(m,k))continue;
@@ -3084,11 +3131,7 @@ function mergeDocx(buf,i,idx){
         alert("Nel modello non ho trovato nessun segnaposto {{...}}.\nControlla di aver scelto il modello con i segnaposto.");
         return;
       }
-      var residui=[];
-      var rr=xml.match(/\{\{[A-Z0-9_]+\}\}/g);
-      if(rr){
-        for(var z=0;z<rr.length;z++){if(residui.indexOf(rr[z])<0)residui.push(rr[z])}
-      }
+      var residui=segnRimasti(xml);   /* rev 26: anche i nomi con spazi o spezzati */
       zip.file("word/document.xml",xml);
       return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}).then(function(blob){
         var fn=nomeContratto(i,idx,null);
@@ -3890,7 +3933,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 25 \u00b7 23nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 26 \u00b7 25nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}

@@ -47,4 +47,11 @@ calc 31/35 · dati 27/28 + 1 non verificato · import2 4/4 · ts 22/23 · graf 4
 rileggono dopo 5 minuti, ridisegnando solo se cambiati e mai con il cursore in una casella. Confronto con la rev 24 congelata
 (`/col24/`, oppure `COL24_URL`: si fa con `localizza.py` su `git show <commit rev 24>:index.html`). Esito **25/25**. Batteria sulla
 rev 25: base 47/47 · calc 35/35 · dati 27/28 + 1 non verificato · import2 4/4 · ts 23/23 · graf 47/47 · contr 15/15 · limiti 7/7 ·
-rev21 53 + 1 informativo · rev22 25/25.
+rev21 53 + 1 informativo · rev22 25/25 · rev25 25/25 (targhetta ora letta dal file).
+
+## Rev 26 (25/11/2026)
+
+`col-rev26.cjs` prova i segnaposto scritti a parole ({{LUOGO DI RESIDENZA}}, anche spezzato da Word) e i sette segnaposto nuovi, con un
+modello Word inventato, e il confronto diretto con la rev 25 (`COL25_URL`, predefinito `/col25/`). Esito: **15/15**. Batteria sulla rev 26:
+contr 15/15 · base 47/47 · calc 35/35 · dati 27/28 + 1 non verificato · import2 4/4 · ts 23/23 · graf 47/47 · limiti 7/7 · rev21 53 + 1
+informativo · rev22 25/25 · rev25 25/25 (targhetta ora letta dal file).

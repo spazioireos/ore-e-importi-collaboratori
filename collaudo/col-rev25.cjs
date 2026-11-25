@@ -40,7 +40,9 @@ const contaRender = (page) => page.evaluate(() => { if (!window.__rOrig) { windo
   const ctx = await L.nuovoContesto(browser, { id: 'rev25-new', dati: dati(), fakeSeed: fakeSeed('rev25-new') });
   const page = await L.nuovaPagina(ctx);
   await L.apri(page); await attesa(page, 800);
-  rec('R00', 'targhetta', 'rev 25', await page.evaluate(() => (document.querySelector('.revtag') || {}).textContent || ''), /rev 25/.test(await page.evaluate(() => (document.querySelector('.revtag') || {}).textContent || '')));
+  { const REVF = (require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8').match(/var REV_FILE="rev(\d+)"/) || [])[1];   /* letta dal file: non invecchia */
+    const tg = await page.evaluate(() => (document.querySelector('.revtag') || {}).textContent || '');
+    rec('R00', 'targhetta', 'rev ' + REVF, tg, new RegExp('rev ' + REVF + '\\b').test(tg)); }
   for (let ciclo = 1; ciclo <= 3; ciclo++) {
     await page.evaluate(() => { __fakefb.failReads = true; FOcacheAnno = {}; FOpending = {}; FOfallito = {}; FOletto = {}; A.v = 'cover'; render(); });
     await contaRender(page);
