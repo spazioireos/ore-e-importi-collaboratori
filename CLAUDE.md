@@ -10,9 +10,9 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 26 · 25nov26 — sul ramo di lavoro, da approvare** (su `main` la rev 25, approvata da Christian il 23/11/2026: «main»).
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 26 · 25nov26 — approvata da Christian e portata su `main` il 25/11/2026 («Main»)** (prima su `main` la rev 25).
 - 📄 **rev 26 (25/11/2026, Christian: «In Collaboratori la lettera del contratto non legge alcuni campi compilati nella webapp» →
-  «il file word riporta LUOGO DI RESIDENZA» → «è scritto proprio così. Nu\*»)**: il modello Word di Christian scrive i segnaposto **a parole**
+  «il file word riporta LUOGO DI RESIDENZA» → «è scritto proprio così. Nu\*»; su `main` dal 25/11/2026: «Main»)**: il modello Word di Christian scrive i segnaposto **a parole**
   ({{LUOGO DI RESIDENZA}}), mentre l'app riconosceva solo la forma {{LUOGO_RESIDENZA}}; quel segnaposto restava nella lettera e, per i nomi con
   gli spazi, **nemmeno l'avviso** «sono rimasti dei segnaposto non compilati» lo segnalava. Tre interventi, solo nella generazione delle lettere:
   1. **`canonSegn`** (in `normalizzaSegnaposto`): il nome fra le graffe si riduce alla forma dell'app — maiuscole, accenti tolti, spazi e segni
