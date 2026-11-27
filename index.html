@@ -786,7 +786,7 @@ function R2(v,dec){dec=(dec==null)?2:dec;var n=Number(v);if(!isFinite(n))return 
 function rM(v){return R2((parseFloat(v)||0))}
 /* rev 23 (20/11/2026, Christian: «correggi»): i nomi dei file esportati seguono la convenzione
    «[descrizione] - ggmmmaa - revN - HH.MM.ext», senza trattini bassi. REV_FILE va aggiornata a ogni revisione. */
-var REV_FILE="rev26";
+var REV_FILE="rev27";
 var MESI_FILE=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
 function nomeFile(desc,ext){var d=new Date();var p=function(n){return n<10?"0"+n:""+n};return desc+" - "+p(d.getDate())+MESI_FILE[d.getMonth()]+String(d.getFullYear()).slice(2)+" - "+REV_FILE+" - "+p(d.getHours())+"."+p(d.getMinutes())+"."+ext}
 /* rev 21 (19/11/2026, collaudo di Livello A). Una data IMPOSSIBILE come «31/02/2026» veniva
@@ -1339,7 +1339,7 @@ function rCadenzaBox(){
   return h;
 }
 function rCov(){
-  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 26 \u00b7 25nov26</span></p></div><div class="cover-body">';
+  var h='<div class="cover-header"><h1>OPERATORI OCCASIONALI</h1><p>Spazio Ireos soc. Cooperativa sociale \u2014 '+A.d.length+' schede <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 27 \u00b7 27nov26</span></p></div><div class="cover-body">';
   var kpis={},allYrs={};
   for(var i=0;i<A.d.length;i++){var yrs=gY(A.d[i]);for(var y=0;y<yrs.length;y++){allYrs[yrs[y]]=1;var cl=compLiq(A.d[i],yrs[y]);if(!cl)continue;if(!kpis[yrs[y]])kpis[yrs[y]]={oR:0,iR:0};kpis[yrs[y]].oR+=cl.oreRes;kpis[yrs[y]].iR+=cl.impRes}}
   var kYrs=Object.keys(kpis).sort();
@@ -1532,7 +1532,7 @@ function rYB(idx,yr,ci){
     h+='<span onclick="toggleLock('+idx+',\''+yr+'\','+s+')" style="cursor:pointer;font-size:12px;margin-right:2px;vertical-align:middle" title="'+(lk?'Bloccato: clicca per sbloccare e modificare':'Sbloccato: clicca per bloccare')+'">'+(lk?'\ud83d\udd12':'\ud83d\udd13')+'</span>';
     h+='<span style="color:#888;margin-right:1px">€</span>';
     var sm=svc.startM||0;
-    var msubL=meseSubentro(op,yr,s);
+    var msubL=Math.min(meseSubentro(op,yr,s),meseFineMan(svc));   /* rev 27: anche la fine scelta a mano */
     if(lk){
       h+='<span style="font-weight:700;font-size:13px" title="Importo contrattuale bloccato">'+n2(srt)+'</span>';
       if(sm>0)h+='<div style="font-size:8px;color:#607d8b;font-weight:700;margin-top:1px">dal mese: '+MESI_IT[sm]+'</div>';
@@ -1542,6 +1542,12 @@ function rYB(idx,yr,ci){
       h+='<input class="rate-in" style="width:44px" type="text" value="'+n2(srt)+'" onfocus="fcl(this)" onblur="blurFmt(this)" onchange="'+P+'.services['+s+'].rate=raw(this.value);markD();render()">';
       h+='<div style="margin-top:2px"><span style="font-size:8px;color:#555">dal </span><select onchange="setStartM('+idx+',\''+yr+'\','+s+',this.value)" style="font-size:9px;font-family:\'Inter\',sans-serif;border:1px solid #bbb;border-radius:3px;background:#fff">';
       for(var mm=0;mm<12;mm++)h+='<option value="'+mm+'"'+(sm===mm?' selected':'')+'>'+MESI_IT[mm]+'</option>';
+      h+='</select></div>';
+      /* rev 27 (27/11/2026, Christian: «quel servizio è semplicemente finito -ad esempio a giugno- e mi confonde vedere
+         righe gialline compilabili nei mesi successivi»): l'ultimo mese del servizio. Dicembre = nessuna chiusura. */
+      var em=meseFineSel(svc);
+      h+='<div style="margin-top:2px"><span style="font-size:8px;color:#555">al </span><select onchange="setEndM('+idx+',\''+yr+'\','+s+',this.value)" style="font-size:9px;font-family:\'Inter\',sans-serif;border:1px solid #bbb;border-radius:3px;background:#fff" title="Ultimo mese del servizio: i mesi dopo non si compilano">';
+      for(var me=0;me<12;me++)h+='<option value="'+me+'"'+(em===me?' selected':'')+'>'+MESI_IT[me]+'</option>';
       h+='</select></div>';
       h+='<div style="margin-top:2px"><span style="font-size:8px;color:#555">ruolo </span><input type="text" value="'+escHTML(svc.ruolo===undefined||svc.ruolo===null?"":svc.ruolo)+'" placeholder="1" style="width:26px;font-size:9px;text-align:center;background:#fff9c4;border:1px solid #bbb;border-radius:3px;padding:1px" title="Numera i ruoli diversi sullo stesso servizio (1, 2...): righe con ruoli diversi non vengono mai chiuse fra loro" onchange="'+P+'.services['+s+'].ruolo=this.value||null;markD();render()"></div>';
       if(msubL<12)h+='<div style="font-size:8px;color:#c62828;font-weight:900;margin-top:1px">chiuso da '+meseAnno(msubL,yr)+'</div>';
@@ -1558,12 +1564,14 @@ function rYB(idx,yr,ci){
       h+='<td class="comp" style="background:#eceff1;color:#999;text-align:center" title="Cella residuo bloccata - il residuo si calcola automaticamente">\u2013</td>';
     }
     var msub=meseSubentro(op,yr,s);
+    var mfin=meseFineMan(svc);   /* rev 27 (27/11/2026): servizio chiuso a mano, «al ‹mese›» */
+    var perFine=(mfin<msub);if(perFine)msub=mfin;
     for(var m=0;m<12;m++){
       if(m>=msub&&!(svc.hours[m]>0)){
         // Da qui in poi subentra la nuova tariffa dello stesso servizio
-        h+='<td class="comp" style="background:#eceff1;color:#b0bec5;text-align:center" title="Da '+MESI_IT[msub]+' su questo servizio vale la nuova tariffa: usa l\'altra riga">\u2013</td>';
+        h+='<td class="comp" style="background:#eceff1;color:#b0bec5;text-align:center" title="'+(perFine?'Servizio chiuso a '+MESI_IT[mfin-1]+': non compilabile. Per riaprirlo apri il lucchetto e rimetti \u00abal Dicembre\u00bb':'Da '+MESI_IT[msub]+' su questo servizio vale la nuova tariffa: usa l\'altra riga')+'">\u2013</td>';
       }else if(m>=msub&&svc.hours[m]>0){
-        h+='<td class="comp" style="background:#fff3e0;color:#e65100;font-weight:700" title="Ore inserite prima del cambio tariffa: restano nei calcoli, non modificabili">'+n2(svc.hours[m])+'</td>';
+        h+='<td class="comp" style="background:#fff3e0;color:#e65100;font-weight:700" title="'+(perFine?'Ore inserite dopo la chiusura del servizio: restano nei calcoli, non modificabili':'Ore inserite prima del cambio tariffa: restano nei calcoli, non modificabili')+'">'+n2(svc.hours[m])+'</td>';
       }else if(m<sm&&!(svc.hours[m]>0)){
         // Mese precedente all'inizio contrattuale: bloccato
         h+='<td class="comp" style="background:#eceff1;color:#b0bec5;text-align:center" title="Mese precedente all\'inizio contrattuale ('+MESI_IT[sm]+'): non compilabile">\u2013</td>';
@@ -3609,6 +3617,24 @@ function setStartM(i,yr,s,val){
   svc.startM=nm;
   markD();render();
 }
+/* rev 27 (27/11/2026): chiusura a mano di un servizio. svc.endM = ultimo mese (0-11); assente o 11 = aperto fino a Dicembre.
+   Come lo «startM» (setStartM): le ore gia' scritte dopo restano nei conti ma non si modificano; nessun calcolo cambia. */
+function meseFineSel(svc){var e=(svc&&svc.endM!==undefined&&svc.endM!==null)?parseInt(svc.endM,10):11;return (isNaN(e)||e<0||e>11)?11:e}
+function meseFineMan(svc){return meseFineSel(svc)+1}
+function setEndM(i,yr,s,val){
+  var svc=A.d[i].years[yr].services[s];
+  var ne=parseInt(val,10);if(isNaN(ne)||ne<0||ne>11)ne=11;
+  var sm=svc.startM||0;
+  if(ne<sm){alert("Il servizio non pu\u00f2 finire prima di iniziare ("+MESI_IT[sm]+"). Scegli un mese da "+MESI_IT[sm]+" in poi.");render();return}
+  var oreDopo=0;var mesiConOre=[];
+  for(var m=ne+1;m<12;m++){var hv=svc.hours[m]||0;if(hv>0){oreDopo+=hv;mesiConOre.push(MESI_IT[m]+" ("+soloTesto(f2(hv))+"h)")}}
+  if(oreDopo>0){
+    var msg="ATTENZIONE: i mesi dopo "+MESI_IT[ne]+" contengono gi\u00e0 delle ore:\n\n"+mesiConOre.join("\n")+"\n\nTotale: "+soloTesto(f2(oreDopo))+" ore\n\nSe procedi, queste ore RESTANO nei calcoli ma le celle diventano non modificabili.\nPer modificarle rimetti \u00abal Dicembre\u00bb.\n\nProcedere?";
+    if(!confirm(msg)){render();return}
+  }
+  if(ne===11)delete svc.endM;else svc.endM=ne;
+  markD();render();
+}
 function toggleLock(i,yr,s){
   var svc=A.d[i].years[yr].services[s];
   // Stato effettivo: se non definito, il servizio e' considerato BLOCCATO.
@@ -3933,7 +3959,7 @@ function renderPin(){
   var el=document.getElementById('app');
   var h='<div class="pin-overlay"><div class="pin-box">';
   h+='<h2>OPERATORI OCCASIONALI</h2>';
-  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 26 \u00b7 25nov26</span></p>';
+  h+='<p>Spazio Ireos soc. Cooperativa sociale <span class="revtag" title="Revisione dell\u2019app: serve a capire se stai vedendo la versione aggiornata">rev 27 \u00b7 27nov26</span></p>';
   if(pinMode==="set"){h+='<p style="font-weight:700;color:#000">Imposta il PIN (6 cifre)</p>';}
   else if(pinMode==="confirm"){h+='<p style="font-weight:700;color:#000">Conferma il PIN</p>';}
   else{h+='<p style="font-weight:700;color:#000">Inserisci il PIN</p>';}
