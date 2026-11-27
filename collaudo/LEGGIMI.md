@@ -56,7 +56,8 @@ modello Word inventato, e il confronto diretto con la rev 25 (`COL25_URL`, prede
 contr 15/15 · base 47/47 · calc 35/35 · dati 27/28 + 1 non verificato · import2 4/4 · ts 23/23 · graf 47/47 · limiti 7/7 · rev21 53 + 1
 informativo · rev22 25/25 · rev25 25/25 (targhetta ora letta dal file).
 
-## Rev 27 (27/11/2026, in anteprima)
+## Rev 27 (27/11/2026, su `main` dal 27/11/2026)
 
 `col-rev27.cjs` prova la chiusura a mano di un servizio («al ‹mese›»), con il confronto diretto sulla rev 26 (`COL26_URL`, predefinito
-`/col26/`); `COL_PNG` salva le anteprime. Esito: **19/19**.
+`/col26/`); `COL_PNG` salva le anteprime. Esito: **19/19**. Batteria sulla rev 27 identica alla rev 26; in `col-rev26.cjs` la revisione
+attesa (targhetta e nome del file) ora si legge dal file dell'app.

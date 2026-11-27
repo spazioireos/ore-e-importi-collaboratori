@@ -5,6 +5,7 @@ const L = require('./col-a01-lib.cjs');
 const { rec } = L;
 const fs = require('fs');
 const JSZip = require('/home/user/rendicontazione-usoint/collaudo/comune/.strumenti/node_modules/jszip');
+const REVF = (require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8').match(/var REV_FILE="rev(\d+)"/) || [])[1];   /* letta dal file: non invecchia */
 const URL25 = process.env.COL25_URL || L.URL.replace('/col/', '/col25/');
 const par = t => `<w:p><w:r><w:t xml:space="preserve">${t}</w:t></w:r></w:p>`;
 async function modello(corpo) {
@@ -61,7 +62,7 @@ async function lettera(browser, url, b64, anag, id) {
   const bN = await modello(NUOVO), bV = await modello(VECCHIO);
   const n25 = await lettera(browser, URL25, bN, anagPiena, 'r26-a');
   const n26 = await lettera(browser, L.URL, bN, anagPiena, 'r26-b');
-  rec('S00', 'Versioni a confronto', 'rev 25 e rev 26', `${n25.targa.trim()} / ${n26.targa.trim()}`, /rev 25/.test(n25.targa) && /rev 26/.test(n26.targa));
+  rec('S00', 'Versioni a confronto', 'rev 25 e rev ' + REVF, `${n25.targa.trim()} / ${n26.targa.trim()}`, /rev 25/.test(n25.targa) && new RegExp('rev ' + REVF + '\\b').test(n26.targa));
   rec('S01', 'rev 25 · {{LUOGO DI RESIDENZA}} resta scritto (difetto riprodotto)', 'nella lettera «{{LUOGO DI RESIDENZA}}», nessun avviso', `${n25.testo.match(/residente a [^ ]+ [^ ]+ [^ ]+/)} · avviso: ${/rimasti dei segnaposto/.test(n25.fine) ? 'sì ' + (n25.fine.match(/compilati:([^.]*)/) || [])[1] : 'no'}`,
     /\{\{LUOGO DI RESIDENZA\}\}/.test(n25.testo) && !/LUOGO DI RESIDENZA/.test(n25.fine));
   rec('S02', 'rev 26 · {{LUOGO DI RESIDENZA}} (anche spezzato da Word) diventa la residenza', '«residente a MILANO»', n26.testo.match(/residente a [^ ]+/), /residente a MILANO/.test(n26.testo) && !/LUOGO DI RESIDENZA/.test(n26.testo));
@@ -83,7 +84,7 @@ async function lettera(browser, url, b64, anag, id) {
   rec('S11', 'Modello di prima: conferma dei contratti in blocco identica alla rev 25', 'identica', v26.confBlocco.slice(0, 160), v25.confBlocco === v26.confBlocco);
   const s25 = v25.fine.replace(/Lettera generata: .*?\.docx/, ''), s26 = v26.fine.replace(/Lettera generata: .*?\.docx/, '');
   rec('S12', 'Modello di prima: {{INESISTENTE}} ancora segnalato', 'avviso con {{INESISTENTE}}', (s26.match(/compilati:([^.]*)/) || [''])[0], /\{\{INESISTENTE\}\}/.test(s26));
-  rec('S13', 'Nome del file: revisione 26', '«… - rev26 - HH.MM.docx»', v26.nome, /- rev26 - \d{2}\.\d{2}\.docx$/.test(v26.nome));
+  rec('S13', 'Nome del file: revisione dell\'app', '«… - rev' + REVF + ' - HH.MM.docx»', v26.nome, new RegExp('- rev' + REVF + ' - \\d{2}\\.\\d{2}\\.docx$').test(v26.nome));
   const err = [n26, c26, v26].reduce((a, x) => a.concat(x.errori), []);
   rec('S14', 'Errori di pagina sulla rev 26', '0', err.length + (err.length ? ': ' + err.join(' | ') : ''), err.length === 0);
   await browser.close();

@@ -10,17 +10,19 @@ ore mensili per servizio, tariffe, liquidazioni con ritenuta d'acconto, residui.
   **suggerire** le ore dai fogli ore: i **dati propri** restano in `localStorage` (il PIN non
   cambia) e **non si scrive MAI** su Fogli ore. Vedi la scheda ☁️ qui sotto.
 - **Numero di revisione**: targhetta `<span class="revtag">rev N · ggmmmaa</span>` nella
-  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 27 · 27nov26 — sul ramo di lavoro, in anteprima, in attesa del Nu\* di Christian** (su `main` la rev 26, approvata il 25/11/2026: «Main»).
+  copertina (`rCov`) e nella schermata del PIN (`renderPin`). **Attuale: rev 27 · 27nov26 — approvata da Christian e portata su `main` il 27/11/2026 («Nu\* e poi main»)** (prima su `main` la rev 26).
 - 🚪 **rev 27 (27/11/2026, Christian: «nelle tabelle annue di ogni collaboratore … chiudere l'importo utilizzato» → «se desidero che le celle dei
   mesi successivi si blocchino, mi serve poterlo fare» → «quel servizio è semplicemente finito -ad esempio a giugno- e mi confonde vedere righe
-  gialline compilabili nei mesi successivi»; IN ANTEPRIMA, in attesa del Nu\*)**: un servizio si chiude **a mano** dal mese scelto. Col lucchetto
+  gialline compilabili nei mesi successivi»; su `main` dal 27/11/2026: «Nu\* e poi main»)**: un servizio si chiude **a mano** dal mese scelto. Col lucchetto
   aperto, sotto «dal ‹mese›» c'è la tendina **«al ‹mese›»** (`setEndM`, dato facoltativo `svc.endM` = ultimo mese 0-11; assente o Dicembre = aperto).
   I mesi dopo diventano grigi «–» e non si compilano; sotto la tariffa la scritta già esistente «chiuso da ‹mese›». Si combina con la chiusura
   automatica per cambio tariffa (`meseSubentro`): vale il mese che arriva prima (`meseFineMan`, `meseFineSel`). Ore già scritte dopo il mese scelto:
   avviso coi mesi (come `setStartM`), confermando restano nei conti ma arancioni e non modificabili. Fine prima del «dal» rifiutata. «+ Anno»
   (`cloneSvcs`) **non** copia la chiusura. **Nessun calcolo toccato** (ore, maturato, liquidazioni, credito identici: misurato). ⚠️ **Diciture nuove,
   scritte da Claude**: «al», i suggerimenti delle celle chiuse, i due avvisi. **Provato**: `collaudo/col-rev27.cjs` **19/19** (confronto con la rev 26 in
-  `/col26/`, salvataggio e ricarica, 390px). Batteria `col-a01-*` da rieseguire dopo il Nu\*.
+  `/col26/`, salvataggio e ricarica, 390px). Batteria come prima: contr 15/15 · base 47/47 · calc 35/35 · dati 27/28 + 1 non verificato ·
+  import2 4/4 · ts 23/23 · graf 47/47 · limiti 7/7 · rev21 53 + 1 informativo · rev22 25/25 · rev25 25/25 · rev26 15/15 (in `col-rev26` la
+  revisione attesa ora si legge dal file).
 - 📄 **rev 26 (25/11/2026, Christian: «In Collaboratori la lettera del contratto non legge alcuni campi compilati nella webapp» →
   «il file word riporta LUOGO DI RESIDENZA» → «è scritto proprio così. Nu\*»; su `main` dal 25/11/2026: «Main»)**: il modello Word di Christian scrive i segnaposto **a parole**
   ({{LUOGO DI RESIDENZA}}), mentre l'app riconosceva solo la forma {{LUOGO_RESIDENZA}}; quel segnaposto restava nella lettera e, per i nomi con
